@@ -405,8 +405,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.3.1';
-const APP_BUILD = '2026-08-11 20:15 UTC';
+const APP_VERSION = '2.3.2';
+const APP_BUILD = '2026-08-11 21:00 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
@@ -1883,7 +1883,21 @@ function looksLikeClosingStyleQuestion(text) {
   // gibt?" oder "Ob es einen Zeugen für den Unfall gibt, weißt du das?" – wurde ersatzlos entfernt,
   // der eigentlich gemeinte Story-Completeness-Check-Fall ("... den wir heute noch nicht berührt
   // haben") wird bereits vom eigenen, spezifischeren Muster weiter unten abgedeckt.
-  return /möchtest du (noch|vielleicht vor)?( noch)? etwas (ergänzen|hinzufügen|sagen|mitteilen)|gibt es noch (etwas|ein(en|e)?\b)|magst du (mir )?erzählen,? wie es für dich (in diesem moment )?war|bevor wir (die sitzung |dieses kapitel )?(abschließen|beenden)|möchtest du mir noch etwas (sagen|mitteilen)|fällt dir noch (et)?was ein|(die|den) wir (heute |bisher )?noch nicht (berührt|besprochen|erwähnt) haben|nach allem,? was du (erzählt|berichtet) hast|für die letzte (einordnung|frage)\b|eine letzte bitte|möchtest du in einer (späteren|weiteren) sitzung/i.test(text || '');
+  //
+  // v2.3.2 (echter Nutzer-Testlauf "Stille Warnung im Herbstnebel"): ZWEI reale Abschlussfragen
+  // wurden übersehen, in BEIDEN Fällen wegen zu enger Wort-Adjazenz. (1) "Möchtest du noch etwas
+  // zu dem genauen Ablauf des Ereignisses ergänzen, oder sollen wir zum Abschluss kommen?" – das
+  // bisherige Muster verlangte "etwas" DIREKT gefolgt von "ergänzen" etc., aber in der Praxis steht
+  // so gut wie immer ein beschreibender Einschub dazwischen ("etwas Wichtiges ergänzen", "etwas zu
+  // dem genauen Ablauf ... ergänzen") – das Muster hat dadurch faktisch nie gegriffen. Jetzt erlaubt
+  // ein Lückenfenster von bis zu 40 Zeichen zwischen "etwas" und dem Verb. (2) Die Formulierung
+  // "sollen wir zum Abschluss kommen" nutzt eine ganz andere Verbkonstruktion als "abschließen"/
+  // "beenden" und wurde von keinem bisherigen Muster erfasst – dafür jetzt ein eigenes, neues Muster.
+  // Diese Erkennungslücke war der Grund, warum in besagtem Testlauf gar keine Zäsur-Nachricht
+  // erschien und die Sitzung stattdessen über den generischen Fallback ("Magst du mir mehr zu den
+  // Fakten ...") ausgelaufen ist, statt sauber über die mechanische Zäsur in die Abschlussphase zu
+  // wechseln.
+  return /möchtest du (noch|vielleicht vor)?( noch)? etwas.{0,40}(ergänzen|hinzufügen|sagen|mitteilen)|gibt es noch (etwas|ein(en|e)?\b)|magst du (mir )?erzählen,? wie es für dich (in diesem moment )?war|bevor wir.{0,20}(abschließen|beenden)|(sollen|können|wollen) wir (jetzt |hier )?zum abschluss (kommen|übergehen)|möchtest du mir noch etwas (sagen|mitteilen)|fällt dir noch (et)?was ein|(die|den) wir (heute |bisher )?noch nicht (berührt|besprochen|erwähnt) haben|nach allem,? was du (erzählt|berichtet) hast|für die letzte (einordnung|frage)\b|eine letzte bitte|möchtest du in einer (späteren|weiteren) sitzung/i.test(text || '');
 }
 
 // Erkennt, ob im bisherigen Gesprächsverlauf der Tod, eine schwere Verletzung oder ein
@@ -1944,7 +1958,19 @@ function looksLikeAftermathQuestion(text) {
   // erfasst; (2) das Verb-Muster erfasste nur "verändert"/"entwickelt", nicht das ebenso gängige
   // "ausgewirkt" (bzw. "auswirkt"/"Auswirkung") – genau das Verb, das in allen drei realen Fällen
   // benutzt wurde. Beide Lücken sind jetzt geschlossen.
-  return /nach (dem|diesem) (unfall|ereignis|sturm|vorfall|erlebnis)|zwischen dem (unfall|ereignis|sturm|vorfall|erlebnis|geschehen)|in den (darauffolgenden )?(tagen|wochen|monaten|jahren)( danach)?|\bin dieser zeit\b|im laufe der zeit|jahre später|jahrestag|gedenktag|\bseitdem\b|\balltag\b|\bheute\b|\btherapie\b|therapeutin|therapeuten\b|wie (hast du|habt ihr|haben sie) (gelernt|es geschafft)\b.{0,40}umzugehen|wie (bist du|seid ihr|sind sie) damit umgegangen|mit (diesem|dem) verlust|deine? routine|\britual\b|was hat (dich|dir|sie|ihn|euch) (getragen|gehalten|geholfen)|abgesehen von .{0,30}(therapie|verarbeitung)|sonst noch geholfen|\b(beziehung|verhältnis|freundschaft)\b.{0,90}(verändert|entwickelt|ausgewirkt|auswirkt|beeinflusst)|\bauswirkung\b.{0,90}\b(beziehung|verhältnis|freundschaft)\b|\bdas schwerste daran\b|\bauf diese wahrheit\b|\bnachdem\b.{0,60}(überwunden|verarbeitet|vorbei|geschafft)/i.test(text || '');
+  //
+  // v2.3.2 (echter Nutzer-Testlauf "Stille Warnung im Herbstnebel", ein Mobbing-/Machtmissbrauchsfall
+  // statt eines Unfalls): ZWEI weitere reale Nachwirkungsfragen rutschten durch, beide themenbedingt
+  // außerhalb der bisher abgedeckten Unfall-Vokabel. (1) "Wie hat sich dein KONTAKT zu Julia in der
+  // Zeit nach dem VERFAHREN entwickelt – seid ihr weiterhin befreundet?" – "Kontakt" fehlte im
+  // Beziehungswort-Muster (nur Beziehung/Verhältnis/Freundschaft), und "Verfahren" fehlte in der
+  // Ereignis-Wortliste (nur unfall/ereignis/sturm/vorfall/erlebnis, alles unfalltypisch). (2) "Wie
+  // stellt sich für dich PERSÖNLICH der gesamte Ablauf der Kündigung dar, wenn du auf diese Zeit
+  // zurückblickst?" – eine reflektierende Rückblick-Formulierung ganz ohne die bisherigen
+  // Signalwörter. Dafür ein neues, gezielt auf "stellt sich ... persönlich ... dar" begrenztes
+  // Muster (bewusst NICHT allein an "zurückblickst" aufgehängt, weil rückblickende KAUSALITÄTS-
+  // Fragen wie "Gab es Warnzeichen, wenn du zurückblickst?" ausdrücklich erwünscht bleiben sollen).
+  return /nach (dem|diesem) (unfall|ereignis|sturm|vorfall|erlebnis|verfahren|prozess)|zwischen dem (unfall|ereignis|sturm|vorfall|erlebnis|geschehen|verfahren)|in den (darauffolgenden )?(tagen|wochen|monaten|jahren)( danach)?|\bin dieser zeit\b|im laufe der zeit|jahre später|jahrestag|gedenktag|\bseitdem\b|\balltag\b|\bheute\b|\btherapie\b|therapeutin|therapeuten\b|wie (hast du|habt ihr|haben sie) (gelernt|es geschafft)\b.{0,40}umzugehen|wie (bist du|seid ihr|sind sie) damit umgegangen|mit (diesem|dem) verlust|deine? routine|\britual\b|was hat (dich|dir|sie|ihn|euch) (getragen|gehalten|geholfen)|abgesehen von .{0,30}(therapie|verarbeitung)|sonst noch geholfen|\b(beziehung|verhältnis|freundschaft|kontakt)\b.{0,90}(verändert|entwickelt|ausgewirkt|auswirkt|beeinflusst)|\bauswirkung\b.{0,90}\b(beziehung|verhältnis|freundschaft|kontakt)\b|\bdas schwerste daran\b|\bauf diese wahrheit\b|\bnachdem\b.{0,60}(überwunden|verarbeitet|vorbei|geschafft)|stellt sich (für dich|für sie)\b.{0,60}\bdar\b/i.test(text || '');
 }
 
 // Erkennt Selbsthilfe-/Lebensweisheits-Fragen (siehe "KEINE SELBSTHILFE-/LEBENSWEISHEITS-FRAGEN" im
