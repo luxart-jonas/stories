@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Archiv – arkaa</title>
+<link rel="icon" href="../assets/icon-512.png" />
+<style>
+  :root {
+    --bg: #faf7f2;
+    --ink: #2b2620;
+    --muted: #756e63;
+    --accent: #8a5a44;
+    --accent-light: #f1e4da;
+    --sage: #5f8a6b;
+    --border: #e7e0d6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--ink);
+  }
+  header { padding: 18px 24px; border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; text-decoration: none; color: var(--ink); }
+  .brand img { width: 30px; height: 30px; border-radius: 8px; }
+  main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+  .box { max-width: 480px; text-align: center; }
+  .badge {
+    width: 60px; height: 60px; border-radius: 16px; background: var(--accent-light);
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 22px;
+  }
+  .badge svg { width: 28px; height: 28px; color: var(--accent); }
+  h1 { font-size: 26px; margin: 0 0 12px; }
+  p { color: var(--muted); font-size: 15.5px; line-height: 1.6; margin: 0 0 28px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; font-weight: 600; text-decoration: none;
+    padding: 12px 22px; border-radius: 999px; font-size: 14.5px; margin: 0 6px 10px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-ghost { background: #fff; color: var(--ink); border: 1px solid var(--border); }
+  footer { padding: 20px 24px; text-align: center; font-size: 12.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href="../">
+    <img src="../assets/icon-192.png" alt="" />
+    arkaa
+  </a>
+</header>
+
+<main>
+  <div class="box">
+    <div class="badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    </div>
+    <h1>Das Archiv entsteht gerade</h1>
+    <p>
+      Hier werden bald die veröffentlichten Geschichten aus arkaa zu lesen, zu durchsuchen und zu
+      entdecken sein – geordnet nach Ort, Zeit und Thema. Bis es so weit ist: Trag am besten schon
+      jetzt deine eigene Geschichte bei.
+    </p>
+    <a class="btn btn-primary" href="../interview/">Zum Interview</a>
+    <a class="btn btn-ghost" href="../">Zurück zur Startseite</a>
+  </div>
+</main>
+
+<footer>arkaa — ein Archiv für die Geschichten aller Menschen.</footer>
+
+</body>
+</html>
