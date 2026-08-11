@@ -4,15 +4,18 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Archiv – arkaa</title>
+<link rel="manifest" href="../manifest.json" />
+<meta name="theme-color" content="#14b8a6" />
 <link rel="icon" href="../assets/icon-512.png" />
+<link rel="apple-touch-icon" href="../assets/icon-512.png" />
 <style>
   :root {
     --bg: #faf7f2;
     --ink: #2b2620;
     --muted: #756e63;
-    --accent: #8a5a44;
-    --accent-light: #f1e4da;
-    --sage: #5f8a6b;
+    --accent: #14b8a6;
+    --accent-light: #e0f7f4;
+    --sage: #0f766e;
     --border: #e7e0d6;
   }
   * { box-sizing: border-box; }
@@ -68,6 +71,14 @@
 </main>
 
 <footer>arkaa — ein Archiv für die Geschichten aller Menschen.</footer>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('../service-worker.js', { scope: '../' }).catch(() => {});
+    });
+  }
+</script>
 
 </body>
 </html>

@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>arkaa – Das Archiv der echten Geschichten</title>
 <meta name="description" content="arkaa ist ein offenes, dauerhaftes Archiv für persönliche Erinnerungen. Erzähl deine Geschichte im Interview mit einer KI – anonym oder mit deinem Namen, privat oder öffentlich." />
-<link rel="manifest" href="assets/site-manifest.json" />
-<meta name="theme-color" content="#8a5a44" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#14b8a6" />
 <link rel="icon" href="assets/icon-512.png" />
 <link rel="apple-touch-icon" href="assets/icon-512.png" />
 <style>
@@ -15,11 +15,11 @@
     --panel: #ffffff;
     --ink: #2b2620;
     --muted: #756e63;
-    --accent: #8a5a44;
-    --accent-dark: #6e4635;
-    --accent-light: #f1e4da;
-    --sage: #5f8a6b;
-    --sage-light: #e7f0e8;
+    --accent: #14b8a6;
+    --accent-dark: #0d9488;
+    --accent-light: #e0f7f4;
+    --sage: #0f766e;
+    --sage-light: #dbeeec;
     --border: #e7e0d6;
   }
   * { box-sizing: border-box; }
@@ -259,7 +259,11 @@
       <div class="section-head">
         <span class="tag">Sicherheit &amp; Kontrolle</span>
         <h2>Deine Geschichte, deine Entscheidung</h2>
-        <p>Klick auf eine Karte für mehr Details.</p>
+        <p>
+          Gerade bei persönlichen, manchmal schweren Erinnerungen muss Vertrauen zuerst kommen.
+          Deshalb ist bei arkaa von Anfang an geregelt, wem deine Geschichte gehört, wer sie sieht
+          und wie sorgfältig mit heiklen Themen umgegangen wird. Klick auf eine Karte für Details.
+        </p>
       </div>
       <div class="cards" id="info-cards">
         <div class="card" data-open="false">
@@ -278,6 +282,20 @@
         <div class="card" data-open="false">
           <button type="button" aria-expanded="false">
             <span class="icon-badge">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="19" height="8" rx="4"/><circle cx="8" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>
+            </span>
+            <span class="card-title">Privat oder öffentlich</span>
+            <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="card-body"><div class="card-body-inner">
+            Nicht jede Geschichte muss veröffentlicht werden. Dein Interview bleibt zunächst
+            ausschließlich bei dir – erst wenn du das aktiv bestätigst, wird es Teil des
+            öffentlichen Archivs.
+          </div></div>
+        </div>
+        <div class="card" data-open="false">
+          <button type="button" aria-expanded="false">
+            <span class="icon-badge">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3.5v6c0 5-3.4 8.7-8 10.5-4.6-1.8-8-5.5-8-10.5v-6z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg>
             </span>
             <span class="card-title">Manipulationssicher &amp; eingeordnet</span>
@@ -291,7 +309,7 @@
         <div class="card" data-open="false">
           <button type="button" aria-expanded="false">
             <span class="icon-badge">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
             </span>
             <span class="card-title">Du behältst die Kontrolle</span>
             <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
@@ -299,6 +317,35 @@
           <div class="card-body"><div class="card-body-inner">
             Ob privat oder öffentlich: Deine Geschichte gehört dir. Du kannst sie jederzeit
             vollständig löschen – ohne Rückfrage, ohne Umweg.
+          </div></div>
+        </div>
+        <div class="card" data-open="false">
+          <button type="button" aria-expanded="false">
+            <span class="icon-badge">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+            </span>
+            <span class="card-title">Sensible Themen mit Sorgfalt</span>
+            <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="card-body"><div class="card-body-inner">
+            Erzählst du von etwas Schwerem – einem Verlust, einem Unrecht, einer Grenzüberschreitung
+            – geht die KI behutsam vor: Sie drängt nicht und lässt dir die Kontrolle über die Tiefe
+            deiner Erzählung. Namen von Einrichtungen oder Dritten kannst du vor einer Veröffentlichung
+            auf Wunsch anonymisieren lassen.
+          </div></div>
+        </div>
+        <div class="card" data-open="false">
+          <button type="button" aria-expanded="false">
+            <span class="icon-badge">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            </span>
+            <span class="card-title">Wer deine Daten sieht</span>
+            <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="card-body"><div class="card-body-inner">
+            Bis zur Veröffentlichung liegt deine Geschichte ausschließlich bei dir. arkaa verkauft
+            keine Daten, zeigt keine Werbung und nutzt keine Algorithmen, um Aufmerksamkeit zu lenken
+            – siehe „Was wir nicht tun“ weiter unten.
           </div></div>
         </div>
       </div>
@@ -429,6 +476,14 @@
       btn.setAttribute('aria-expanded', String(!isOpen));
     });
   });
+
+  // Ein gemeinsamer Service Worker für die ganze arkaa-Seite (Scope "/"), damit eine
+  // installierte App zwischen Startseite, Interview und Archiv navigieren kann.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    });
+  }
 </script>
 
 </body>

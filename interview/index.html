@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>KI-Interviewmaschine – Prototyp</title>
-<link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#8a5a44" />
-<link rel="icon" href="icon-512.png" />
-<link rel="apple-touch-icon" href="icon-512.png" />
+<title>Interview – arkaa</title>
+<link rel="manifest" href="../manifest.json" />
+<meta name="theme-color" content="#14b8a6" />
+<link rel="icon" href="../assets/icon-512.png" />
+<link rel="apple-touch-icon" href="../assets/icon-512.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-title" content="Stories" />
+<meta name="apple-mobile-web-app-title" content="arkaa" />
 <meta name="mobile-web-app-capable" content="yes" />
 <style>
   :root {
@@ -17,10 +17,10 @@
     --panel: #ffffff;
     --ink: #2b2620;
     --muted: #756e63;
-    --accent: #8a5a44;
-    --accent-light: #f1e4da;
+    --accent: #14b8a6;
+    --accent-light: #e0f7f4;
     --border: #e7e0d6;
-    --ki-bubble: #f1e4da;
+    --ki-bubble: #e0f7f4;
     --user-bubble: #e7f0ec;
   }
   * { box-sizing: border-box; }
@@ -143,6 +143,7 @@
 <div id="simulation-status-bar" style="display:none; position:sticky; top:0; z-index:9997; background:#2e5f8a; color:#fff; padding:9px 14px; font-size:13px; line-height:1.4; align-items:center; justify-content:space-between; gap:10px;">
   <span id="simulation-status-bar-text">🎭 Simulation läuft …</span>
   <span style="white-space:nowrap;">
+    <button id="btn-sim-bar-continue" type="button" style="display:none; background:#fff; color:#2e5f8a; font-weight:700; border:1px solid #fff; border-radius:4px; padding:2px 10px; cursor:pointer; margin-right:6px;">▶ Weiter</button>
     <button id="btn-sim-bar-stop" type="button" style="background:none; border:1px solid #fff; color:#fff; border-radius:4px; padding:2px 8px; cursor:pointer;">⏹ Stoppen</button>
     <button id="btn-sim-bar-close" type="button" style="display:none; background:none; border:1px solid #fff; color:#fff; border-radius:4px; padding:2px 8px; cursor:pointer; margin-left:6px;">✕</button>
   </span>
@@ -150,6 +151,7 @@
 
 <header>
   <div>
+    <a href="../index.html" style="display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--muted); text-decoration:none; margin-bottom:4px;" title="Zurück zur arkaa-Startseite">← arkaa</a>
     <h1 id="project-name-display" title="Klicken zum Wechseln/Anlegen eines Projekts">Lade …</h1>
     <div class="sub" id="interview-status">Kein Interview ausgewählt</div>
     <div class="sub" id="version-badge" style="color:#2e7d4f;"></div>
@@ -185,6 +187,17 @@
           <textarea id="review-correction-input" placeholder="Was möchtest du ändern, ergänzen oder löschen? (z. B. „Bei der Frage zur Schwester war das eigentlich anders: …”)"></textarea>
           <button id="btn-review-correction-send" class="primary">Senden</button>
         </div>
+      </div>
+
+      <!-- ARCHIV-PDF (v2.2.0, auf Wunsch des Nutzers: "wenn ich das Interview abgesegnet habe kommt
+           es ins Archiv. Als schön gestaltetes PDF ... nimm hierzu den Originaltext ... generiere
+           auch einen Titel"). Erscheint anstelle der Ja/Nein-Buttons, sobald der Status
+           "abgeschlossen" ist (siehe maybeShowReviewPrompt) – sowohl direkt nach dem Absegnen als
+           auch beim späteren erneuten Öffnen eines bereits abgeschlossenen Interviews. -->
+      <div id="review-done-block" style="display:none;">
+        <div style="margin-bottom:10px; font-size:13.5px;">🎉 Danke, diese Geschichte ist jetzt abgeschlossen. Du kannst sie dir als schön gestaltetes PDF fürs Archiv erstellen lassen – auf Basis des Originaltexts, mit automatisch generiertem Titel.</div>
+        <button id="btn-archiv-pdf" type="button" class="primary">📄 Archiv-PDF erstellen</button>
+        <div class="hint" id="archiv-pdf-status" style="margin-top:8px;"></div>
       </div>
     </div>
 
@@ -1373,6 +1386,8 @@ function newInterviewRecord(id, projectId) {
     simulationStory: null, // nur bei Testmodus-Simulationen gesetzt: die geheime, interne Story (siehe SIMULATIONSMODUS)
     redaction: null, // zwischengespeichertes Ergebnis der nachträglichen Redaktion (siehe REDAKTION / "redigierte Version"), null bis zum ersten Export
     steeringHintShown: false, // wurde der einmalige Steuerungs-Hinweis nach der 5. Frage schon gezeigt? (siehe showSteeringHintIfNeeded)
+    simulationHintShown: false, // wurde der einmalige Simulations-Hinweis nach der Eröffnungsfrage schon gezeigt? (siehe SIMULATIONSMODUS)
+    archivTitle: null, // automatisch generierter Titel fürs Archiv-PDF (siehe generateArchivTitle), erst nach Abschluss gesetzt
   };
 }
 // --- PFLICHTPUNKT-MECHANIK (v2.0.0) -----------------------------------------
@@ -1507,6 +1522,8 @@ function migrateDB(db) {
     if (iv.pendingPersonClarification === undefined) iv.pendingPersonClarification = null;
     if (iv.redaction === undefined) iv.redaction = null;
     if (iv.steeringHintShown === undefined) iv.steeringHintShown = false;
+    if (iv.simulationHintShown === undefined) iv.simulationHintShown = false;
+    if (iv.archivTitle === undefined) iv.archivTitle = null;
   }
   if (!db.currentProjectId || !db.projects.find(p => p.id === db.currentProjectId)) {
     db.currentProjectId = db.projects.length ? db.projects[db.projects.length - 1].id : null;
@@ -2822,6 +2839,22 @@ function buildSteeringHintBubble() {
   return div;
 }
 
+// Entspricht buildSteeringHintBubble() oben, aber für den SIMULATIONSMODUS (v2.2.0, auf Wunsch des
+// Nutzers): Erklärt gleich zu Beginn einer Simulation, dass die Simulation ab jetzt nach jeder
+// Frage pausiert und die Person optional selbst eingreifen kann. Wird einmalig direkt nach der
+// ersten KI-Frage einer Simulation gezeigt (siehe runSimulation, iv.simulationHintShown).
+function buildSimulationHintBubble() {
+  const div = document.createElement('div');
+  div.className = 'bubble hint';
+  div.style.alignSelf = 'center';
+  div.style.background = '#3a6b3a';
+  div.style.color = '#fff';
+  div.style.maxWidth = '90%';
+  div.style.textAlign = 'center';
+  div.textContent = '💡 Die Simulation pausiert jetzt nach jeder Frage. Klicke oben auf „▶ Weiter", damit die KI automatisch antwortet – oder gib stattdessen selbst eine Antwort ein und klicke auf „Senden", um das Interview an dieser Stelle selbst zu steuern. Dieselbe Möglichkeit hast du auch am Ende bei der Abschluss-Überprüfung.';
+  return div;
+}
+
 // `iv` ist optional (z.B. beim Leeren der Ansicht nach dem Löschen eines Interviews): nur wenn es
 // übergeben wird UND iv.steeringHintShown bereits true ist, wird die Hinweis-Sprechblase direkt
 // nach der 5. KI-Frage mitgerendert (siehe showSteeringHintIfNeeded).
@@ -2841,6 +2874,9 @@ function renderMessages(messages, iv) {
     messagesEl.appendChild(div);
     if (m.role === 'ki') {
       kiCount++;
+      if (kiCount === 1 && iv && iv.simulationStory && iv.simulationHintShown) {
+        messagesEl.appendChild(buildSimulationHintBubble());
+      }
       if (kiCount === 5 && iv && iv.steeringHintShown) {
         messagesEl.appendChild(buildSteeringHintBubble());
       }
@@ -3030,12 +3066,13 @@ async function requestAndHandleReply(iv) {
     iv.closingQuestionsAsked += 1;
   } else if (phase === 'done') {
     iv.phase = 'done';
-    // ROHTEXT-ÜBERPRÜFUNG (v2.1.3): Bei einem echten Interview wartet der Status jetzt erst auf die
-    // Bestätigung der Person (siehe maybeShowReviewPrompt), statt sofort "abgeschlossen" zu sein.
-    // Ausnahme: Simulationen (KI vs. KI, kein echter Mensch zum Durchlesen da) schließen wie bisher
-    // direkt ab, sonst würde die Simulationsschleife (siehe SIMULATIONSMODUS) endlos auf eine nie
-    // eintreffende Nutzer-Bestätigung warten.
-    iv.status = iv.simulationStory ? 'abgeschlossen' : 'in_pruefung';
+    // ROHTEXT-ÜBERPRÜFUNG (v2.1.3, ab v2.2.0 auch für Simulationen): Der Status wartet jetzt IMMER
+    // erst auf eine Bestätigung ("in_pruefung"), bevor er auf "abgeschlossen" wechselt – auch bei
+    // einer Simulation. Diese Bestätigung übernimmt dort normalerweise automatisch der "▶ Weiter"-
+    // Knopf am Ende der Simulationsschleife (siehe runSimulation/finalizeSimulationReview), die
+    // ganz normalen Ja/Nein-Buttons hier im Chat bleiben aber auf Wunsch des Nutzers zusätzlich als
+    // OPTIONALE manuelle Eingriffsmöglichkeit nutzbar – genau wie bei einem echten Interview.
+    iv.status = 'in_pruefung';
   } else {
     iv.phase = 'interview';
   }
@@ -3093,8 +3130,21 @@ function showSteeringHintIfNeeded(iv) {
 function maybeShowReviewPrompt(iv) {
   const panel = el('review-prompt');
   if (!panel) return;
-  if (!iv || iv.status !== 'in_pruefung') {
+  if (!iv || (iv.status !== 'in_pruefung' && iv.status !== 'abgeschlossen')) {
     panel.style.display = 'none';
+    return;
+  }
+  if (iv.status === 'abgeschlossen') {
+    // ARCHIV-PDF-Angebot (siehe #review-done-block) statt der Ja/Nein-Buttons – bleibt auch beim
+    // späteren erneuten Öffnen eines bereits abgeschlossenen Interviews sichtbar, damit das
+    // Archiv-PDF nicht nur im exakten Moment des Absegnens erstellt werden kann.
+    panel.style.display = 'block';
+    el('review-prompt-text').textContent = '';
+    el('review-prompt-buttons').style.display = 'none';
+    el('review-correction-chat').style.display = 'none';
+    el('review-correction-messages').innerHTML = '';
+    el('review-done-block').style.display = 'block';
+    el('archiv-pdf-status').textContent = iv.archivTitle ? `Titel: „${iv.archivTitle}" – Klicke erneut, um das PDF wieder zu öffnen.` : '';
     return;
   }
   panel.style.display = 'block';
@@ -3102,6 +3152,7 @@ function maybeShowReviewPrompt(iv) {
   el('review-prompt-buttons').style.display = 'flex';
   el('review-correction-chat').style.display = 'none';
   el('review-correction-messages').innerHTML = '';
+  el('review-done-block').style.display = 'none';
 }
 
 async function startNewInterview() {
@@ -3153,6 +3204,14 @@ const SIMULATION_HARD_ROUND_LIMIT = 50; // Notaus – unabhängig vom Zustand wi
 
 let simulationRunning = false;
 let simulationAbortRequested = false;
+// PAUSE/MANUELLE STEUERUNG (v2.2.0, auf Wunsch des Nutzers: "nach jeder Frage eine Pause ... ich
+// kann aber auch selber eine Antwort geben"): simulationPaused/-PauseKind/-StepResolver/-PausedIv
+// bilden zusammen einen einzigen offenen "Warte auf die nächste Aktion"-Punkt in runSimulation ab –
+// siehe waitForSimulationStep()/resolveSimulationStep() weiter unten.
+let simulationPaused = false;
+let simulationPauseKind = null; // 'step' (vor der nächsten Proband-Antwort) oder 'review' (vor dem Abschluss)
+let simulationStepResolver = null; // resolve()-Funktion des aktuell offenen Pause-Promise
+let simulationPausedIv = null; // das Interview, für das die aktuelle Pause gilt
 
 function pickRandomSimulationGenre() {
   const keys = Object.keys(SIMULATION_GENRES);
@@ -3269,6 +3328,54 @@ function setSimulationStatus(text, running) {
   if (closeBtn) closeBtn.style.display = running ? 'none' : 'inline-block';
 }
 
+// Pausiert die Simulationsschleife (siehe runSimulation), bis entweder der "▶ Weiter"-Knopf
+// geklickt wird (resolveSimulationStep('auto')) oder die Person selbst manuell eingreift –
+// entweder über sendMessage() ('manual', beim normalen Frage/Antwort-Schritt) oder über die ganz
+// normalen Ja/Nein-Buttons der Abschluss-Überprüfung (finalizeReview/finalizeSimulationReview, beim
+// Abschluss-Schritt). "kind" unterscheidet diese beiden Pause-Arten für btn-sim-bar-continue.
+function waitForSimulationStep(kind, iv) {
+  simulationPaused = true;
+  simulationPauseKind = kind;
+  simulationPausedIv = iv;
+  showSimulationContinueButton();
+  return new Promise((resolve) => { simulationStepResolver = resolve; });
+}
+
+function resolveSimulationStep(outcome) {
+  if (!simulationStepResolver) return;
+  const resolver = simulationStepResolver;
+  simulationStepResolver = null;
+  simulationPaused = false;
+  simulationPauseKind = null;
+  simulationPausedIv = null;
+  hideSimulationContinueButton();
+  resolver(outcome);
+}
+
+function showSimulationContinueButton() {
+  const btn = el('btn-sim-bar-continue');
+  if (btn) btn.style.display = 'inline-block';
+}
+function hideSimulationContinueButton() {
+  const btn = el('btn-sim-bar-continue');
+  if (btn) btn.style.display = 'none';
+}
+
+// Bestätigt den Abschluss eines pausierten Simulations-Interviews von der STATUSLEISTE aus (Klick
+// auf "▶ Weiter" während einer Abschluss-Pause) – bewusst unabhängig vom gerade GEÖFFNETEN Interview
+// (anders als finalizeReview weiter unten, das für die normalen Buttons im Chat verwendet wird und
+// deshalb immer das aktuell offene Interview betrifft), weil die Statusleiste absichtlich auch
+// sichtbar/bedienbar bleibt, während die Person sich z. B. gerade ein anderes Interview ansieht.
+function finalizeSimulationReview(iv) {
+  if (!iv || iv.status !== 'in_pruefung') return;
+  iv.status = 'abgeschlossen';
+  saveDB();
+  if (interviewId === iv.id) {
+    maybeShowReviewPrompt(iv);
+    updateStatusLine(iv);
+  }
+}
+
 async function runSimulation(genreDescription) {
   simulationRunning = true;
   simulationAbortRequested = false;
@@ -3309,19 +3416,52 @@ async function runSimulation(genreDescription) {
 
     setSimulationStatus('🎭 Simulation läuft – Eröffnungsfrage wird generiert ...', true);
     await requestAndHandleReply(iv);
+    setBusy(false); // Eingabefeld für die gleich folgende erste Pause wieder freigeben
 
+    // Einmaliger grüner Hinweis direkt nach der Eröffnungsfrage (siehe buildSimulationHintBubble):
+    // erklärt, dass ab jetzt nach jeder Frage pausiert wird und wie man selbst eingreifen kann.
+    iv.simulationHintShown = true;
+    saveDB();
+    renderMessages(getHistory(iv.id), iv);
+
+    // PAUSE NACH JEDER FRAGE (v2.2.0, auf Wunsch des Nutzers): Statt sofort automatisch
+    // weiterzulaufen, wartet die Simulation hier bei jeder Runde auf "▶ Weiter" (automatische
+    // Proband-Antwort) ODER auf eine manuell eingegebene, per "Senden" abgeschickte eigene Antwort
+    // (siehe sendMessage) – rein optional, der Normalfall bleibt "Weiter" klicken.
     let round = 0;
-    while (!simulationAbortRequested && iv.status !== 'abgeschlossen' && round < SIMULATION_HARD_ROUND_LIMIT) {
+    while (!simulationAbortRequested && iv.status !== 'abgeschlossen' && iv.status !== 'in_pruefung' && round < SIMULATION_HARD_ROUND_LIMIT) {
       round++;
-      setSimulationStatus(`🎭 Simulation läuft – Runde ${round} von max. ${SIMULATION_HARD_ROUND_LIMIT} ...`, true);
-      const pastSoftLimit = round > SIMULATION_SOFT_ROUND_LIMIT;
-      const history = getHistory(iv.id);
-      const probandText = await getSimulationProbandReply(story, history, pastSoftLimit);
+      setSimulationStatus(`🎭 Pausiert vor Runde ${round} von max. ${SIMULATION_HARD_ROUND_LIMIT} – „▶ Weiter" klicken, oder selbst antworten und „Senden" drücken ...`, true);
+      const outcome = await waitForSimulationStep('step', iv);
       if (simulationAbortRequested) break;
-      addMessage(iv.id, 'nutzer', probandText);
-      renderMessages(getHistory(iv.id), iv);
+
+      if (outcome === 'auto') {
+        setBusy(true);
+        setSimulationStatus(`🎭 Simulation läuft – Runde ${round}: Proband antwortet ...`, true);
+        const pastSoftLimit = round > SIMULATION_SOFT_ROUND_LIMIT;
+        const history = getHistory(iv.id);
+        const probandText = await getSimulationProbandReply(story, history, pastSoftLimit);
+        if (simulationAbortRequested) break;
+        addMessage(iv.id, 'nutzer', probandText);
+        renderMessages(getHistory(iv.id), iv);
+      }
+      // outcome === 'manual': die Antwort wurde bereits von sendMessage() selbst hinzugefügt und
+      // gerendert – hier ist nichts weiter zu tun, außer wie im 'auto'-Fall die KI-Antwort zu holen.
+
+      setBusy(true);
       setSimulationStatus(`🎭 Simulation läuft – Runde ${round}: Interviewer antwortet ...`, true);
       await requestAndHandleReply(iv);
+      setBusy(false);
+    }
+
+    // ABSCHLUSS-PAUSE (Task 5, gekoppelt an Task 4): Ein Simulations-Interview erreicht jetzt genau
+    // wie ein echtes Interview den Status "in_pruefung" (siehe requestAndHandleReply) statt sofort
+    // "abgeschlossen" zu sein. "▶ Weiter" bestätigt das automatisch (entspricht "Nein, das passt
+    // so"); die ganz normalen Buttons der Rohtext-Überprüfung oben im Chat bleiben als manuelle
+    // Eingriffsmöglichkeit weiterhin nutzbar (siehe finalizeReview).
+    if (!simulationAbortRequested && iv.status === 'in_pruefung') {
+      setSimulationStatus('🎭 Pausiert zur Abschluss-Überprüfung – „▶ Weiter" bestätigt automatisch, oder nutze oben im Chat die Buttons, um selbst zu antworten/etwas zu ändern ...', true);
+      await waitForSimulationStep('review', iv);
     }
 
     if (simulationAbortRequested) {
@@ -3336,6 +3476,7 @@ async function runSimulation(genreDescription) {
     setSimulationStatus('🎭 Fehler: ' + err.message, false);
   } finally {
     simulationRunning = false;
+    if (simulationPaused) resolveSimulationStep('abort'); // falls der Fehlerfall mitten in einer Pause auftrat
     setBusy(false);
     el('btn-simulation').disabled = false;
   }
@@ -3351,12 +3492,22 @@ async function sendMessage() {
     alert('Dieses Interview ist bereits beendet und wartet auf deine Überprüfung des Rohtexts oben – bitte nutze dafür den Kasten oben, nicht dieses Antwortfeld.');
     return;
   }
+  // MANUELLE STEUERUNG EINER PAUSIERTEN SIMULATION (v2.2.0, auf Wunsch des Nutzers): Statt selbst
+  // die KI-Antwort zu holen, wird hier nur die pausierte Simulationsschleife "aufgeweckt" (siehe
+  // waitForSimulationStep/resolveSimulationStep in runSimulation) – sie ruft requestAndHandleReply()
+  // im Anschluss selbst auf, damit derselbe Interview-Turn nicht doppelt verarbeitet wird.
+  const isManualSimulationStep = simulationRunning && simulationPaused && simulationPauseKind === 'step' &&
+    simulationPausedIv && simulationPausedIv.id === iv.id;
   input.value = '';
   setBusy(true);
   try {
     addMessage(interviewId, 'nutzer', text);
     renderMessages(getHistory(interviewId), iv);
-    await requestAndHandleReply(iv);
+    if (isManualSimulationStep) {
+      resolveSimulationStep('manual');
+    } else {
+      await requestAndHandleReply(iv);
+    }
   } catch (err) {
     alert('Fehler: ' + err.message);
   } finally { setBusy(false); }
@@ -3423,6 +3574,137 @@ function finalizeReview() {
   saveDB();
   maybeShowReviewPrompt(iv);
   updateStatusLine(iv);
+  // MANUELLE STEUERUNG BEIM ABSCHLUSS (v2.2.0, auf Wunsch des Nutzers: "dasselbe gilt für den
+  // Abschluss ... kann ich das mit meinen Antworten auch tun"): Bestätigt die Person eine pausierte
+  // Simulation über diese ganz normalen Buttons ("Nein, das passt so", ggf. nach eigenen
+  // Korrekturen) statt über "▶ Weiter" in der Statusleiste, weckt das die pausierte
+  // Simulationsschleife trotzdem korrekt auf (siehe waitForSimulationStep in runSimulation).
+  if (simulationPaused && simulationPauseKind === 'review' && simulationPausedIv && simulationPausedIv.id === iv.id) {
+    resolveSimulationStep('manual');
+  }
+}
+
+// --- ARCHIV-PDF (v2.2.0) ------------------------------------------------------------------------
+// Auf Wunsch des Nutzers: "wenn ich das Interview abgesegnet habe kommt es ins Archiv. Als schön
+// gestaltetes PDF. bitte nimm hierzu den Originaltext. lass dir ein schickes Layout einfallen.
+// Bitte generiere auch einen Titel." Bewusst dependency-frei umgesetzt (kein PDF-JS von einem CDN
+// nötig): Es wird eine eigenständige, hübsch gestaltete HTML-Seite mit Druck-CSS erzeugt und in
+// einem neuen Tab geöffnet – von dort speichert man sie über den normalen Browser-Druckdialog
+// (Strg/Cmd+P -> "Als PDF speichern") ganz ohne zusätzliche Bibliothek als PDF. "Originaltext"
+// bedeutet hier ganz bewusst: der tatsächliche Frage/Antwort-Rohtext (siehe getHistory), NICHT die
+// von der KI umformulierte Zusammenfassung (siehe chapterHtml weiter unten).
+
+// Generiert per kurzem KI-Aufruf einen einmaligen, stimmungsvollen Titel aus dem Rohtranskript.
+// Wird am Interview-Datensatz zwischengespeichert (iv.archivTitle), damit ein erneutes Öffnen des
+// PDFs später nicht jedes Mal einen neuen Titel erzeugt.
+async function generateArchivTitle(iv) {
+  const history = getHistory(iv.id);
+  const transcript = history.map(m => (m.role === 'ki' ? 'Interviewer: ' : 'Erzählperson: ') + m.text).join('\n');
+  const system = `Du liest den Rohtext eines Interviews über eine persönliche Lebensgeschichte und erfindest dafür
+einen kurzen, würdevollen, stimmungsvollen Titel – wie eine Kapitelüberschrift in einem
+Erinnerungsbuch, nicht wie eine Nachrichten-Überschrift. Maximal 8 Wörter. Kein Klickbait, keine
+Anführungszeichen, kein Punkt am Ende, keine Emojis. Gib AUSSCHLIESSLICH den Titel selbst zurück,
+sonst nichts.`;
+  const raw = await callChat(system, [{ role: 'user', content: transcript.slice(0, 14000) }], 60);
+  return raw.trim().replace(/^["'„»]+|["'“«]+$/g, '').replace(/\.$/, '');
+}
+
+// Baut die eigenständige, druckoptimierte HTML-Seite (siehe oben). Serifenschrift für einen
+// warmen, buchartigen Charakter, arkaa-Farbakzent, ein Deckblatt-Bereich, dann Frage/Antwort im
+// Originalwortlaut. .no-print blendet den Drucken-Knopf beim tatsächlichen Drucken/PDF-Export aus.
+function buildArchivPdfHtml(iv, title, project) {
+  const dateStr = new Date(iv.created_at).toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const history = getHistory(iv.id);
+  let qaHtml = '';
+  for (const m of history) {
+    if (m.role === 'ki') {
+      qaHtml += `<div class="frage">${escapeHtml(m.text)}</div>`;
+    } else {
+      qaHtml += `<div class="antwort">${escapeHtml(m.text)}</div>`;
+    }
+  }
+  const projectName = project ? escapeHtml(project.name) : '';
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<title>${escapeHtml(title)} – arkaa Archiv</title>
+<style>
+  @page { size: A4; margin: 26mm 22mm; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: Georgia, "Times New Roman", serif; color: #2b2620; line-height: 1.6;
+    background: #faf7f2;
+  }
+  .no-print { position: sticky; top: 0; z-index: 10; background: #14b8a6; color: #fff; padding: 10px 18px;
+    display: flex; align-items: center; justify-content: space-between; font-family: -apple-system, sans-serif; }
+  .no-print button { background: #fff; color: #0f766e; border: none; border-radius: 999px; padding: 8px 16px;
+    font-weight: 700; cursor: pointer; font-size: 13.5px; }
+  .no-print span { font-size: 12.5px; opacity: 0.9; }
+  .sheet { max-width: 700px; margin: 0 auto; padding: 30px 10px 60px; }
+  .cover { text-align: center; padding: 40px 0 46px; border-bottom: 2px solid #14b8a6; margin-bottom: 40px; }
+  .cover .kicker { font-family: -apple-system, sans-serif; letter-spacing: 0.14em; text-transform: uppercase;
+    font-size: 11.5px; color: #0f766e; font-weight: 700; margin-bottom: 16px; }
+  .cover h1 { font-size: 30px; margin: 0 0 14px; line-height: 1.3; }
+  .cover .meta { font-family: -apple-system, sans-serif; font-size: 12.5px; color: #756e63; }
+  .qa-block { margin-bottom: 8px; }
+  .frage { font-family: -apple-system, sans-serif; font-size: 12px; letter-spacing: 0.03em; text-transform: uppercase;
+    color: #0f766e; font-weight: 700; margin: 26px 0 6px; page-break-after: avoid; }
+  .antwort { font-size: 15.5px; margin: 0 0 4px; page-break-inside: avoid; white-space: pre-wrap; }
+  footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid #e7e0d6; text-align: center;
+    font-family: -apple-system, sans-serif; font-size: 11px; color: #756e63; }
+  @media print {
+    .no-print { display: none; }
+    body { background: #fff; }
+    .sheet { max-width: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="no-print">
+    <span>Vorschau – bereit fürs Archiv</span>
+    <button onclick="window.print()">🖨️ Als PDF speichern</button>
+  </div>
+  <div class="sheet">
+    <div class="cover">
+      <div class="kicker">arkaa — Archiv der echten Geschichten</div>
+      <h1>${escapeHtml(title)}</h1>
+      <div class="meta">${projectName ? projectName + ' · ' : ''}Erzählt am ${dateStr}</div>
+    </div>
+    ${qaHtml}
+    <footer>arkaa — ein offenes, dauerhaftes Archiv für persönliche Erinnerungen.</footer>
+  </div>
+</body>
+</html>`;
+}
+
+// Wird über den Knopf im #review-done-block ausgelöst (siehe maybeShowReviewPrompt). Generiert bei
+// Bedarf einmalig den Titel, baut die Druckseite und öffnet sie in einem neuen Tab – von dort kann
+// die Person sie über den Browser-Druckdialog als PDF speichern.
+async function openArchivPdf() {
+  if (!interviewId) return;
+  const iv = getInterview(interviewId);
+  if (!iv || iv.status !== 'abgeschlossen') return;
+  const btn = el('btn-archiv-pdf');
+  const statusLine = el('archiv-pdf-status');
+  if (btn) btn.disabled = true;
+  if (statusLine) statusLine.textContent = 'Titel wird generiert …';
+  try {
+    if (!iv.archivTitle) {
+      iv.archivTitle = await generateArchivTitle(iv);
+      saveDB();
+    }
+    const project = getProject(iv.projectId);
+    const html = buildArchivPdfHtml(iv, iv.archivTitle, project);
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    if (statusLine) statusLine.textContent = `„${iv.archivTitle}“ wurde in einem neuen Tab geöffnet – dort über "🖨️ Als PDF speichern" (oder Strg/Cmd+P) als PDF sichern.`;
+  } catch (err) {
+    if (statusLine) statusLine.textContent = 'Fehler: ' + err.message;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // Baut den HTML-Block für EIN Kapitel (title/overview/qa/key_facts) – wird sowohl für die
@@ -4461,6 +4743,7 @@ on('input', 'keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preven
 on('btn-review-yes', 'click', openReviewCorrectionChat);
 on('btn-review-no', 'click', finalizeReview);
 on('btn-review-correction-send', 'click', sendReviewCorrection);
+on('btn-archiv-pdf', 'click', openArchivPdf);
 on('review-correction-input', 'keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReviewCorrection(); } });
 
 on('btn-edit-modal', 'click', openEditModal);
@@ -4514,8 +4797,21 @@ on('btn-sim-start', 'click', () => {
 });
 // Stopp-/Schließen-Knöpfe sitzen jetzt in der STICKY STATUSLEISTE oben (nicht mehr im Modal),
 // weil das Modal sich sofort nach dem Start schließt, damit der Chat sichtbar bleibt.
-on('btn-sim-bar-stop', 'click', () => { simulationAbortRequested = true; setSimulationStatus('🎭 Wird gestoppt ...', true); });
+on('btn-sim-bar-stop', 'click', () => {
+  simulationAbortRequested = true;
+  setSimulationStatus('🎭 Wird gestoppt ...', true);
+  // Falls die Simulation gerade pausiert (siehe waitForSimulationStep) auf ein Ergebnis wartet,
+  // würde sie sonst für immer hängen bleiben – das Promise muss auch beim Stoppen aufgelöst werden.
+  if (simulationPaused) resolveSimulationStep('abort');
+});
 on('btn-sim-bar-close', 'click', () => { el('simulation-status-bar').style.display = 'none'; });
+on('btn-sim-bar-continue', 'click', () => {
+  if (!simulationPaused || !simulationStepResolver) return;
+  if (simulationPauseKind === 'review') {
+    finalizeSimulationReview(simulationPausedIv);
+  }
+  resolveSimulationStep('auto');
+});
 
 function openSimulationModal() {
   el('sim-genre').value = 'zufall';
@@ -4549,12 +4845,14 @@ try {
   }
 } catch (err) { showFatalError('Fehler beim Start: ' + err.message); }
 
-// Service Worker registrieren – nur nötig, damit der Browser die Seite als installierbare
-// Desktop-/Handy-App anbietet (siehe service-worker.js). Schlägt die Registrierung fehl (z.B.
-// älterer Browser), läuft die App ganz normal weiter, nur ohne "Installieren"-Option.
+// Service Worker registrieren – ein gemeinsamer Worker für die ganze arkaa-Seite (siehe
+// /service-worker.js im Hauptordner), damit eine installierte App zwischen Startseite,
+// Interview und Archiv navigieren kann, ohne das Standalone-Fenster zu verlassen. Schlägt die
+// Registrierung fehl (z.B. älterer Browser), läuft die App ganz normal weiter, nur ohne
+// "Installieren"-Option.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    navigator.serviceWorker.register('../service-worker.js', { scope: '../' }).catch(() => {});
   });
 }
 </script>
