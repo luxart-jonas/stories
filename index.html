@@ -171,6 +171,26 @@
 <main>
   <section class="chat-col">
     <div id="messages"></div>
+
+    <!-- ROHTEXT-ÜBERPRÜFUNG NACH INTERVIEW-ENDE (v2.1.3, auf Wunsch des Nutzers): Sobald ein
+         Kapitel den Status "in_pruefung" erreicht (siehe requestAndHandleReply), zeigt
+         maybeShowReviewPrompt() diesen Block an. Der Rohtext selbst ist einfach der Chat oben, den
+         die Person jetzt noch einmal durchliest – es gibt bewusst keine separate Textansicht. -->
+    <div id="review-prompt" style="display:none; margin:10px 14px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--panel);">
+      <div id="review-prompt-text" style="margin-bottom:10px; font-size:13.5px;">Bitte lies dir das Interview oben noch einmal durch. Möchtest du noch etwas klarstellen oder ändern?</div>
+      <div id="review-prompt-buttons" style="display:flex; gap:8px;">
+        <button id="btn-review-yes" type="button">Ja, ich möchte etwas ändern</button>
+        <button id="btn-review-no" type="button" class="primary">Nein, das passt so</button>
+      </div>
+      <div id="review-correction-chat" style="display:none; margin-top:10px;">
+        <div id="review-correction-messages" style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;"></div>
+        <div class="input-row" style="padding:0; border-top:none;">
+          <textarea id="review-correction-input" placeholder="Was möchtest du ändern, ergänzen oder löschen? (z. B. „Bei der Frage zur Schwester war das eigentlich anders: …”)"></textarea>
+          <button id="btn-review-correction-send" class="primary">Senden</button>
+        </div>
+      </div>
+    </div>
+
     <div class="spinner" id="spinner" style="display:none;">Die KI denkt nach …</div>
     <div class="input-row">
       <textarea id="input" placeholder="Deine Antwort … (Enter zum Senden, Shift+Enter für neue Zeile)"></textarea>
@@ -384,8 +404,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.1.0';
-const APP_BUILD = '2026-08-10 07:02 UTC';
+const APP_VERSION = '2.1.4';
+const APP_BUILD = '2026-08-10 14:35 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
@@ -1012,18 +1032,26 @@ behandelt" – erst die Klärung des GENAUEN Hergangs zählt.
 Wichtig: Das ist weiterhin eine faktische Ursachen-Frage, keine Gefühlsfrage – frage nach dem
 genauen Ablauf des Moments, nicht danach, wie sich die Person dabei gefühlt hat.
 
-NACHWIRKUNGSFRAGEN SIND VOLLSTÄNDIG VERBOTEN (KEINE AUSNAHME): Frage NIEMALS aus eigenem Antrieb
-danach, was NACH dem Ereignis war – nicht danach, wie sich der Alltag seitdem verändert hat, wie
-die Verarbeitung/Trauer verlief, ob es Rituale oder eine Therapie gibt, wie sich eine Beziehung
-seit dem Ereignis entwickelt hat, oder wie die Person heute darüber denkt. Das gilt genauso strikt
-und ausnahmslos wie das Verbot von Gefühlsfragen oben – nicht "auf ein paar Fragen begrenzt",
-sondern vollständig tabu, solange DU die Frage stellst. Das Ereignis selbst – wer war beteiligt und
-in welcher Beziehung zueinander, wann genau, wo genau, was ist passiert, WARUM ist es passiert –
-ist dein alleiniger Gegenstand (siehe auch "AKTUELLER PFLICHTPUNKT" im internen Status: die App
-gibt dir ohnehin jeden Turn vor, worüber als Nächstes zu fragen ist – Nachwirkungs-Themen kommen
-darin strukturell nicht vor). Wichtige Ausnahme: Erzählt die Person VON SICH AUS und unaufgefordert
-von der Zeit danach, unterbrich sie nicht und dokumentiere das selbstverständlich – das Verbot gilt
-nur für Fragen, die DU aktiv stellst, nicht für das, was die Person freiwillig berichtet.
+NACHWIRKUNGSFRAGEN SIND VERBOTEN, AUSSER SIE SIND URSÄCHLICH TEIL DES EREIGNISSES SELBST (WICHTIG):
+Frage NIEMALS aus eigenem Antrieb danach, wie sich der Alltag seitdem verändert hat, wie die
+Verarbeitung/Trauer über Wochen oder Jahre verlief, ob es Rituale oder eine Therapie gibt, wie sich
+eine Beziehung seit dem Ereignis langfristig entwickelt hat, oder wie die Person HEUTE darüber
+denkt. Das gilt genauso strikt und ausnahmslos wie das Verbot von Gefühlsfragen oben – nicht "auf
+ein paar Fragen begrenzt", sondern vollständig tabu, solange DU die Frage stellst.
+Nicht darunter fällt aber unmittelbares Verhalten NACH der eigentlichen Handlung, das direkt zum
+Verständnis des Ereignisses selbst gehört – zum Beispiel ein Vertuschungs- oder Fluchtversuch, ein
+erst im Nachhinein erkennbares Motiv, oder die unmittelbare Reaktion einer zentral beteiligten
+Person (z. B. wie ein Ehepartner reagierte, als er/sie davon erfuhr). Das ist keine Nachwirkungs-
+frage, sondern Teil der Kategorien "ablauf"/"ursache" im Pflichtpunkt-System (siehe AKTUELLER
+PFLICHTPUNKT). Faustregel zur Unterscheidung: Geht es um WAS GESCHAH oder WARUM ES GESCHAH – auch
+wenn zeitlich nach der Kernhandlung – ist es erlaubt und wichtig. Geht es darum, WIE DIE PERSON
+DAMIT LEBT, ES VERARBEITET ODER WIE ES SICH LANGFRISTIG ENTWICKELT HAT, ist es verboten.
+Das Ereignis selbst – wer war beteiligt und in welcher Beziehung zueinander, wann genau, wo genau,
+was ist passiert, WARUM ist es passiert – ist dein alleiniger Gegenstand (siehe auch "AKTUELLER
+PFLICHTPUNKT" im internen Status: die App gibt dir ohnehin jeden Turn vor, worüber als Nächstes zu
+fragen ist). Wichtige Ausnahme: Erzählt die Person VON SICH AUS und unaufgefordert von der Zeit
+danach, unterbrich sie nicht und dokumentiere das selbstverständlich – das Verbot gilt nur für
+Fragen, die DU aktiv stellst, nicht für das, was die Person freiwillig berichtet.
 
 FRAGENWERT-PRÜFUNG (vor JEDER Frage verpflichtend): Bevor du eine Frage stellst, prüfe intern:
 "Was lernen wir durch diese Frage, das wir noch nicht wissen?" Lautet die ehrliche Antwort
@@ -1257,11 +1285,12 @@ Du erhältst das vollständige, chronologische Rohtranskript (Fragen der KI und 
 Deine Aufgabe: Redigiere dieses Interview wie ein Journalist ein Interview für den Druck bearbeitet.
 
 Regeln:
-- Kürze, wo es sinnvoll ist. Entferne Wiederholungen, Füllwörter und Passagen, die nichts zur eigentlichen Geschichte beitragen. Kürze so weit wie möglich, ohne Bedeutung zu verlieren.
+- Kürze, wo es sinnvoll ist. Entferne Füllwörter und Passagen, die nichts zur eigentlichen Geschichte beitragen. Kürze so weit wie möglich, ohne Bedeutung zu verlieren.
 - Wo du Text aus einer Antwort entfernst, markiere die Lücke im laufenden Antworttext deutlich mit "(...)". Erfinde niemals einen Übergang, der die Lücke verdeckt.
 - Formuliere die Fragen knapp und journalistisch nach (kurze, klare Frageform) – nicht zwingend wortwörtlich das Original. Die ANTWORTEN bleiben so nah wie möglich an den tatsächlichen Worten der Person: du darfst kürzen, aber nichts umformulieren, beschönigen, dramatisieren, hinzuerfinden oder interpretieren.
 - Ordne die Frage-Antwort-Paare in einer sinnvollen, nachvollziehbaren Reihenfolge an. Diese Reihenfolge MUSS NICHT der ursprünglichen Interview-Chronologie entsprechen – ordne thematisch/logisch um, wenn das die Geschichte klarer macht.
-- Entferne Frage-Antwort-Paare komplett, wenn sie nichts zur eigentlichen Geschichte beitragen (z. B. reine Verständnisrückfragen ohne inhaltlichen Wert, doppelt Gesagtes).
+- DOPPELUNGEN: Prüfe ALLE Frage-Antwort-Paare gegeneinander (nicht nur benachbarte, auch weit auseinanderliegende Stellen im Interview) auf inhaltliche Überschneidung – auch wenn zwei Antworten unterschiedlich formuliert sind, aber im Kern dasselbe sagen. Behalte dann nur das aussagekräftigste, vollständigste Paar; die anderen entfallen komplett, nicht nur gekürzt.
+- ABSCHWEIFUNG: Entferne Frage-Antwort-Paare komplett, wenn sie NICHT direkt vom eigentlichen Ereignis handeln, zum Beispiel: generelle Verarbeitung/Bewältigung (Therapie, wie sich Alltag oder eine Beziehung über Wochen/Jahre/bis heute entwickelt hat), Selbsthilfe/Ratschläge/Lebensweisheiten, reine Bewertung/Deutung statt einer Sachaussage, oder Personen/Themen ohne inhaltlichen Bezug zum Ereignis. Ebenso: reine Verständnisrückfragen ohne inhaltlichen Wert. AUSNAHME: Unmittelbares Verhalten NACH der Kernhandlung, das direkt zum Verständnis des Ereignisses beiträgt (ein Motiv, ein Vertuschungs-/Fluchtversuch, die unmittelbare Reaktion einer zentral beteiligten Person), zählt NICHT als Abschweifung und bleibt erhalten – Faustregel: WAS GESCHAH oder WARUM ES GESCHAH bleibt, WIE DIE PERSON DAMIT LEBT/ES VERARBEITET entfällt.
 - Verboten:
   - Spekulationen oder Vermutungen ("vermutlich", "wahrscheinlich", "es scheint als ob") über Dinge, die die Person nicht selbst gesagt hat.
   - Literarische, dramatisierende oder märchenhafte Sprache (z. B. "Die Geschichte handelt von einem Mann, der...").
@@ -1328,7 +1357,7 @@ function defaultDB() {
     seq: 1,
     projects: [], currentProjectId: null,
     interviews: [], messages: [], stories: {},
-    story_edits: [], edit_messages: [], transcript_addenda: [],
+    story_edits: [], edit_messages: [], transcript_addenda: [], correction_messages: [],
   };
 }
 function newProjectRecord(id, name) {
@@ -1353,13 +1382,14 @@ function newInterviewRecord(id, projectId) {
     id,
     projectId,
     created_at: new Date().toISOString(),
-    status: 'laufend',   // laufend | pausiert | abgeschlossen
+    status: 'laufend',   // laufend | pausiert | in_pruefung | abgeschlossen
     phase: 'interview',  // interview | closing | done
     closingQuestionsAsked: 0,
     currentSlotId: null, // id des Pflichtpunkts, zu dem die zuletzt gestellte Frage gehörte (siehe resolveFactSlot)
     pendingPersonClarification: null, // Bezeichnung einer Person, zu der gerade eine Klärungsfrage gestellt wurde (siehe checkForUnclarifiedPerson)
     simulationStory: null, // nur bei Testmodus-Simulationen gesetzt: die geheime, interne Story (siehe SIMULATIONSMODUS)
     redaction: null, // zwischengespeichertes Ergebnis der nachträglichen Redaktion (siehe REDAKTION / "redigierte Version"), null bis zum ersten Export
+    steeringHintShown: false, // wurde der einmalige Steuerungs-Hinweis nach der 5. Frage schon gezeigt? (siehe showSteeringHintIfNeeded)
   };
 }
 // --- PFLICHTPUNKT-MECHANIK (v2.0.0) -----------------------------------------
@@ -1377,8 +1407,8 @@ const MANDATORY_SLOT_CATEGORIES = [
   { category: 'personen', label: 'Wer war beim Ereignis anwesend oder direkt beteiligt, in welcher Beziehung stehen diese Personen zur erzählenden Person, und was ist aus jeder von ihnen geworden (unverletzt/verletzt/gestorben, heutiger Kontakt)?' },
   { category: 'zeit', label: 'Genaues Datum des Ereignisses (mindestens Monat und Jahr, wenn möglich der Tag) sowie die ungefähre Uhrzeit bzw. Tageszeit' },
   { category: 'ort', label: 'Der genaue Ort des Ereignisses (Land, Region, Stadt/Dorf oder eine andere sinnvolle Präzisierung)' },
-  { category: 'ablauf', label: 'Der chronologische Ablauf des Ereignisses von Anfang bis Ende, inklusive dessen, was unmittelbar davor und danach geschah' },
-  { category: 'ursache', label: 'Die tieferliegende Ursache des Ereignisses – nicht nur der erste genannte, unmittelbare Auslöser, sondern auch Gemütszustand/Umstände unmittelbar davor und mögliche technische/menschliche Vorgeschichte' },
+  { category: 'ablauf', label: 'Der chronologische Ablauf des Ereignisses von Anfang bis Ende, inklusive dessen, was unmittelbar davor und danach geschah – dazu zählt auch unmittelbares Verhalten NACH der eigentlichen Handlung, wenn es direkt zum Verständnis des Ereignisses beiträgt (z.B. ein Vertuschungs- oder Fluchtversuch, eine unmittelbare Reaktion einer zentral beteiligten Person)' },
+  { category: 'ursache', label: 'Die tieferliegende Ursache des Ereignisses – nicht nur der erste genannte, unmittelbare Auslöser, sondern auch Gemütszustand/Umstände unmittelbar davor, ein mögliches Motiv, und mögliche technische/menschliche Vorgeschichte' },
   { category: 'verantwortlichkeit', label: 'Wer trägt (Mit-)Verantwortung, war das Ereignis vermeidbar, und gab es eine Unterlassung (z.B. fällige Wartung, übersehenes Warnzeichen)?' },
 ];
 // Wird nur ergänzt, wenn der Themen-/Ereignistext auf einen möglichen Todesfall oder eine schwere
@@ -1447,6 +1477,7 @@ function resolveFactSlot(project, slotId, answerText) {
 function migrateDB(db) {
   if (!db.projects) db.projects = [];
   if (!db.transcript_addenda) db.transcript_addenda = [];
+  if (!db.correction_messages) db.correction_messages = [];
   const orphaned = db.interviews.filter(iv => !iv.projectId);
   if (orphaned.length > 0) {
     const legacyProject = newProjectRecord(db.seq++, 'Meine Lebensgeschichte');
@@ -1492,6 +1523,7 @@ function migrateDB(db) {
     if (iv.currentSlotId === undefined) iv.currentSlotId = null;
     if (iv.pendingPersonClarification === undefined) iv.pendingPersonClarification = null;
     if (iv.redaction === undefined) iv.redaction = null;
+    if (iv.steeringHintShown === undefined) iv.steeringHintShown = false;
   }
   if (!db.currentProjectId || !db.projects.find(p => p.id === db.currentProjectId)) {
     db.currentProjectId = db.projects.length ? db.projects[db.projects.length - 1].id : null;
@@ -1546,6 +1578,29 @@ function addTranscriptAddendum(interviewId, text) {
 }
 function getTranscriptAddenda(interviewId) {
   return DB.transcript_addenda.filter(a => a.interview_id === interviewId).sort((a,b)=>a.id-b.id);
+}
+// Chat-Verlauf der ROHTEXT-ÜBERPRÜFUNG (v2.1.3) – bewusst GETRENNT von DB.messages gehalten, damit
+// dieser Korrektur-Dialog selbst nicht Teil des exportierten Rohtranskripts wird (nur das Ergebnis
+// der Korrektur, angewendet über replaceHistory(), landet im eigentlichen Transkript).
+function addCorrectionMessage(interviewId, role, text) {
+  const m = { id: nextId(), interview_id: interviewId, role, text, created_at: new Date().toISOString() };
+  DB.correction_messages.push(m); saveDB(); return m;
+}
+function getCorrectionMessages(interviewId) {
+  return DB.correction_messages.filter(m => m.interview_id === interviewId).sort((a,b)=>a.id-b.id);
+}
+// Ersetzt die komplette Nachrichtenliste eines Interviews durch eine neue, mechanisch berechnete
+// Version (siehe applyCorrectionActions). Bewusst NICHT über einzelne Message-IDs editierend,
+// weil eine Löschung/Einfügung die Positionen der nachfolgenden Nachrichten verschieben würde –
+// stattdessen wird die komplette Liste einmal neu geschrieben, mit frischen, aufsteigenden IDs in
+// der neuen Reihenfolge, damit getHistory() (sortiert nach ID) danach wieder exakt diese
+// Reihenfolge liefert.
+function replaceHistory(interviewId, newMessages) {
+  DB.messages = DB.messages.filter(m => m.interview_id !== interviewId);
+  for (const m of newMessages) {
+    DB.messages.push({ id: nextId(), interview_id: interviewId, role: m.role, text: m.text, created_at: new Date().toISOString() });
+  }
+  saveDB();
 }
 
 // --- Projekt-Hilfsfunktionen ---------------------------------------------------
@@ -2587,6 +2642,81 @@ async function generateSummary(history) {
   }
 }
 
+// --- ZWEITER KORREKTURGANG DER ZUSAMMENFASSUNG (v2.1.1, auf Wunsch des Nutzers) ------------------
+// Nutzer-Feedback: "würde ich jetzt nur noch Doppelungen rausnehmen in der Zusammenfassung und wenn
+// es zu sehr abschweift. ich merke es fehlt doch so ein bisschen." Die reine Prompt-Anweisung im
+// ERSTEN Durchgang (siehe DEFAULT_PROMPTS.summary oben, "DOPPELUNGEN"/"ABSCHWEIFUNG") ist – wie an
+// jeder anderen Stelle in diesem Projekt – allein nicht zuverlässig genug: Während generateSummary
+// den ersten Entwurf noch Stück für Stück erstellt, sieht das Modell noch nicht das VOLLSTÄNDIGE
+// Ergebnis auf einen Blick, weit auseinanderliegende Dopplungen (z. B. dieselbe Tatsache am Anfang
+// und nochmal gegen Ende erwähnt) fallen dabei leicht durch. Genau dasselbe Prinzip wie bei der
+// Redaktion (siehe REDAKTION weiter unten) und dem inzwischen wieder entfernten "zweiten Blick" hat
+// sich hier bereits zweimal bewährt: Mit dem KOMPLETTEN, bereits fertigen Ergebnis vor Augen erkennt
+// dieselbe KI Überschneidungen und Abschweifungen zuverlässiger als während der Erstellung. Anders
+// als bei der Redaktion ist hier aber KEINE Wortlaut-Sperre nötig – die Zusammenfassung darf ja
+// ohnehin schon redigiert/gekürzt werden (siehe erster Durchgang); dieser zweite Durchgang trifft
+// deshalb bewusst NUR eine Auswahl-Entscheidung (Paare behalten/entfernen), OHNE die verbleibenden
+// Paare selbst nochmal umzuformulieren – sonst würde bei jedem Aufruf ein neues Umformulierungs-
+// Risiko hinzukommen, ohne einen echten Mehrwert gegenüber dem ersten Durchgang.
+const SUMMARY_POLISH_SYSTEM_PROMPT = `Du bist derselbe Redakteur, der die folgende Zusammenfassung eines Interviews ` +
+  `gerade erstellt hat (journalistisch aufbereitetes Frage-Antwort-Format). Jetzt liest du sie noch einmal komplett ` +
+  `durch, wie ein zweiter Korrekturgang vor dem Druck – mit dem kompletten Ergebnis vor Augen erkennst du ` +
+  `Überschneidungen und Abschweifungen zuverlässiger als während des ersten Entwurfs.\n\n` +
+  `Prüfe ALLE Frage-Antwort-Paare GEGENEINANDER (nicht nur benachbarte, auch weit auseinanderliegende) auf zwei ` +
+  `Dinge:\n\n` +
+  `1. INHALTLICHE DOPPELUNG: Sagen zwei oder mehr Paare im Kern dasselbe – auch wenn unterschiedlich formuliert ` +
+  `oder an verschiedenen Stellen platziert? Behalte dann nur das aussagekräftigste, vollständigste Paar; die ` +
+  `anderen entfallen komplett, nicht nur gekürzt.\n\n` +
+  `2. ABSCHWEIFUNG VOM EREIGNIS: Behandelt ein Paar NICHT direkt das eigentliche Ereignis, sondern zum Beispiel:\n` +
+  `   - Generelle Verarbeitung/Bewältigung (Therapie, wie sich Alltag oder eine Beziehung über Wochen/Jahre/bis ` +
+  `heute entwickelt hat)\n` +
+  `   - Selbsthilfe, Ratschläge oder Lebensweisheiten\n` +
+  `   - Reine Bewertung/Deutung/Einordnung statt einer Sachaussage\n` +
+  `   - Personen oder Themen ohne inhaltlichen Bezug zum eigentlichen Ereignis\n` +
+  `Entferne solche Paare ebenfalls komplett. AUSNAHME: Unmittelbares Verhalten NACH der Kernhandlung, das ` +
+  `direkt zum Verständnis des Ereignisses beiträgt (ein Motiv, ein Vertuschungs-/Fluchtversuch, die ` +
+  `unmittelbare Reaktion einer zentral beteiligten Person), zählt NICHT als Abschweifung – Faustregel: WAS ` +
+  `GESCHAH oder WARUM ES GESCHAH bleibt, WIE DIE PERSON DAMIT LEBT/ES VERARBEITET entfällt.\n\n` +
+  `WICHTIG: Verändere an den verbleibenden Paaren selbst NICHTS – weder Frage- noch Antworttext. Du triffst ` +
+  `ausschließlich eine Auswahl-Entscheidung (behalten oder entfernen), keine erneute Umformulierung. title, ` +
+  `overview, key_facts und suggested_project_title bleiben ebenfalls unverändert, außer sie verweisen ` +
+  `ausschließlich auf jetzt entfernte Paare.\n\n` +
+  `Gib deine Antwort AUSSCHLIESSLICH als valides JSON-Objekt zurück, ohne Markdown-Codeblock, mit derselben ` +
+  `Struktur wie die Eingabe:\n\n` +
+  `{\n  "title": "...",\n  "overview": "...",\n  "qa": [ { "question": "...", "answer": "..." } ],\n  ` +
+  `"key_facts": [ "..." ],\n  "suggested_project_title": "..." oder null\n}`;
+
+// Ruft die KI EIN weiteres Mal mit der KOMPLETTEN, bereits erstellten Zusammenfassung auf und liefert
+// die bereinigte, mechanisch abgesicherte Fassung zurück. Vertraut NICHT blind auf das Ergebnis
+// (dieselbe Lektion wie überall sonst in diesem Projekt): Liefert der zweite Durchgang nichts
+// Brauchbares (kaputtes JSON, leere Paar-Liste), bleibt die unveränderte erste Fassung bestehen,
+// statt eine leere oder kaputte Zusammenfassung zu riskieren.
+async function polishSummary(story) {
+  const userContent = `Hier ist die von dir gerade erstellte Zusammenfassung als JSON:\n\n${JSON.stringify(story)}`;
+  const raw = await callChat(SUMMARY_POLISH_SYSTEM_PROMPT, [{ role: 'user', content: userContent }], 3000);
+  let parsed;
+  try { parsed = parseJsonResponse(raw); }
+  catch (err) { parsed = robustParseJson(raw, {}); }
+  return sanitizeSummaryPolishResult(story, parsed);
+}
+
+// Mechanische Absicherung, getrennt von polishSummary gehalten, damit sie ohne echten API-Aufruf
+// testbar ist (siehe test_summary_polish_v211.js).
+function sanitizeSummaryPolishResult(originalStory, parsed) {
+  if (!parsed || !Array.isArray(parsed.qa)) return originalStory;
+  const qa = parsed.qa.filter(p => p && p.question && p.answer);
+  // Sicherheitsnetz: liefert der zweite Durchgang eine leere oder komplett kaputte Paar-Liste,
+  // lieber die unveränderte erste Fassung behalten als eine leere Zusammenfassung anzuzeigen.
+  if (qa.length === 0) return originalStory;
+  return {
+    title: parsed.title || originalStory.title,
+    overview: parsed.overview || originalStory.overview,
+    qa,
+    key_facts: Array.isArray(parsed.key_facts) ? parsed.key_facts : originalStory.key_facts,
+    suggested_project_title: parsed.suggested_project_title !== undefined ? parsed.suggested_project_title : originalStory.suggested_project_title,
+  };
+}
+
 // Wird einmalig ausgelöst, nachdem die Person in der ALLERERSTEN Sitzung eines neuen Projekts
 // Kennenlern- und Themen-Frage beantwortet hat. Erzeugt die event-spezifische Pflichtpunkt-Liste
 // (siehe PFLICHTPUNKT-MECHANIK) per KI-Planungsschritt und liefert zusätzlich die kurze
@@ -2694,8 +2824,28 @@ const storyColEl = el('story-col');
 const spinnerEl = el('spinner');
 const statusEl = el('interview-status');
 
-function renderMessages(messages) {
+// Baut die Steuerungs-Hinweis-Sprechblase (v2.1.4, auf Wunsch des Nutzers: "bitte lasse das im
+// chat auftauchen. auch so grün hinterlegt" – ursprünglich in v2.1.3 als eigene, feste
+// Statusleiste ganz oben gezeigt, jetzt stattdessen als ganz normale Nachricht MITTEN im Chat,
+// direkt nach der 5. Frage, an der Stelle, an der sie chronologisch "gesagt" wurde).
+function buildSteeringHintBubble() {
+  const div = document.createElement('div');
+  div.className = 'bubble hint';
+  div.style.alignSelf = 'center';
+  div.style.background = '#3a6b3a';
+  div.style.color = '#fff';
+  div.style.maxWidth = '90%';
+  div.style.textAlign = 'center';
+  div.textContent = '💡 Du kannst mir jederzeit sagen, wenn du das Gefühl hast, dass das Interview in eine falsche Richtung geht, oder worüber du lieber sprechen möchtest – zum Beispiel „Bitte frag mehr nach meiner Schwester." Ich richte mich danach.';
+  return div;
+}
+
+// `iv` ist optional (z.B. beim Leeren der Ansicht nach dem Löschen eines Interviews): nur wenn es
+// übergeben wird UND iv.steeringHintShown bereits true ist, wird die Hinweis-Sprechblase direkt
+// nach der 5. KI-Frage mitgerendert (siehe showSteeringHintIfNeeded).
+function renderMessages(messages, iv) {
   messagesEl.innerHTML = '';
+  let kiCount = 0;
   for (const m of messages) {
     const div = document.createElement('div');
     div.className = 'bubble ' + m.role;
@@ -2707,6 +2857,12 @@ function renderMessages(messages) {
     text.textContent = m.text;
     div.appendChild(text);
     messagesEl.appendChild(div);
+    if (m.role === 'ki') {
+      kiCount++;
+      if (kiCount === 5 && iv && iv.steeringHintShown) {
+        messagesEl.appendChild(buildSteeringHintBubble());
+      }
+    }
   }
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
@@ -2737,7 +2893,7 @@ async function requestAndHandleReply(iv) {
     addMessage(iv.id, 'ki', INTRO_QUESTION_TEXT);
     project.introAsked = true;
     saveDB();
-    renderMessages(getHistory(iv.id));
+    renderMessages(getHistory(iv.id), iv);
     updateStatusLine(iv);
     return;
   }
@@ -2755,7 +2911,7 @@ async function requestAndHandleReply(iv) {
       if (gapCheck && Array.isArray(gapCheck.missing) && gapCheck.missing.length > 0 && gapCheck.followUpMessage) {
         addMessage(iv.id, 'ki', gapCheck.followUpMessage);
         saveDB();
-        renderMessages(getHistory(iv.id));
+        renderMessages(getHistory(iv.id), iv);
         updateStatusLine(iv);
         return;
       }
@@ -2773,7 +2929,7 @@ async function requestAndHandleReply(iv) {
     addMessage(iv.id, 'ki', TOPIC_QUESTION_TEXT);
     project.topicAsked = true;
     saveDB();
-    renderMessages(getHistory(iv.id));
+    renderMessages(getHistory(iv.id), iv);
     updateStatusLine(iv);
     return;
   }
@@ -2791,7 +2947,7 @@ async function requestAndHandleReply(iv) {
       addMessage(iv.id, 'ki', planResult.message ||
         'Danke, das gibt mir einen guten Ausgangspunkt. Du kannst jederzeit pausieren, alles wird automatisch gespeichert. Lass uns direkt einsteigen.');
       saveDB();
-      renderMessages(getHistory(iv.id));
+      renderMessages(getHistory(iv.id), iv);
       updateStatusLine(iv);
       return;
     } catch (err) {
@@ -2892,7 +3048,12 @@ async function requestAndHandleReply(iv) {
     iv.closingQuestionsAsked += 1;
   } else if (phase === 'done') {
     iv.phase = 'done';
-    iv.status = 'abgeschlossen';
+    // ROHTEXT-ÜBERPRÜFUNG (v2.1.3): Bei einem echten Interview wartet der Status jetzt erst auf die
+    // Bestätigung der Person (siehe maybeShowReviewPrompt), statt sofort "abgeschlossen" zu sein.
+    // Ausnahme: Simulationen (KI vs. KI, kein echter Mensch zum Durchlesen da) schließen wie bisher
+    // direkt ab, sonst würde die Simulationsschleife (siehe SIMULATIONSMODUS) endlos auf eine nie
+    // eintreffende Nutzer-Bestätigung warten.
+    iv.status = iv.simulationStory ? 'abgeschlossen' : 'in_pruefung';
   } else {
     iv.phase = 'interview';
   }
@@ -2909,8 +3070,10 @@ async function requestAndHandleReply(iv) {
   }
   iv.pendingPersonClarification = resolvedPersonDescriptor;
   saveDB();
-  renderMessages(getHistory(iv.id));
+  showSteeringHintIfNeeded(iv); // muss vor dem Rendern laufen, siehe Kommentar dort
+  renderMessages(getHistory(iv.id), iv);
   updateStatusLine(iv);
+  maybeShowReviewPrompt(iv);
 
   // Die automatische Zusammenfassung direkt nach Sitzungsende wurde auf Wunsch entfernt (kostet
   // unnötig KI-Kapazität/API-Aufrufe bei jeder abgeschlossenen Sitzung, auch wenn man die
@@ -2918,9 +3081,45 @@ async function requestAndHandleReply(iv) {
   // "Bearbeiten" → "Zusammenfassen"-Dialog möglich (siehe summarizeProject/summarizeChapter).
 }
 
+const INTERVIEW_STATUS_LABELS = { laufend: 'läuft', pausiert: 'pausiert', in_pruefung: 'wartet auf deine Überprüfung', abgeschlossen: 'abgeschlossen' };
+function statusLabel(status) { return INTERVIEW_STATUS_LABELS[status] || status; }
 function updateStatusLine(iv) {
-  const labels = { laufend: 'läuft', pausiert: 'pausiert', abgeschlossen: 'abgeschlossen' };
-  statusEl.textContent = `Interview #${iv.id} · ${labels[iv.status] || iv.status}`;
+  statusEl.textContent = `Interview #${iv.id} · ${statusLabel(iv.status)}`;
+}
+
+// Markiert den einmaligen Steuerungs-Hinweis als "fällig", sobald die 5. KI-Frage dieses
+// Interviews gestellt wurde – rein mechanisch anhand der Nachrichtenzahl, kein API-Aufruf nötig.
+// Bewusst NICHT Teil des Prompts/der KI-Antwort: eine reine Prompt-Anweisung "erkläre der Person
+// nach der 5. Frage die Steuerungsmöglichkeit" wäre in diesem Projekt erfahrungsgemäß nicht
+// zuverlässig genug (siehe die vielen anderen mechanischen Sicherheitsnetze hier). MUSS vor dem
+// nächsten renderMessages(..., iv)-Aufruf laufen, damit die Sprechblase (siehe
+// buildSteeringHintBubble) direkt im selben Render-Durchlauf inline im Chat erscheint (v2.1.4, auf
+// Wunsch des Nutzers: "bitte lasse das im chat auftauchen", statt der ursprünglichen v2.1.3-
+// Statusleiste ganz oben).
+function showSteeringHintIfNeeded(iv) {
+  if (iv.steeringHintShown) return;
+  const fragenBisher = getHistory(iv.id).filter(m => m.role === 'ki').length;
+  if (fragenBisher < 5) return;
+  iv.steeringHintShown = true;
+  saveDB();
+}
+
+// Zeigt bzw. versteckt den Rohtext-Überprüfungs-Block (siehe #review-prompt) passend zum aktuellen
+// Status des gerade geöffneten Interviews. Wird sowohl nach jeder neuen KI-Antwort aufgerufen
+// (requestAndHandleReply) als auch beim (erneuten) Öffnen eines Interviews (openInterview), damit
+// eine noch offene Überprüfung auch nach einem Neuladen der Seite wieder korrekt angezeigt wird.
+function maybeShowReviewPrompt(iv) {
+  const panel = el('review-prompt');
+  if (!panel) return;
+  if (!iv || iv.status !== 'in_pruefung') {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+  el('review-prompt-text').textContent = 'Bitte lies dir das Interview oben noch einmal durch. Möchtest du noch etwas klarstellen oder ändern?';
+  el('review-prompt-buttons').style.display = 'flex';
+  el('review-correction-chat').style.display = 'none';
+  el('review-correction-messages').innerHTML = '';
 }
 
 async function startNewInterview() {
@@ -2937,6 +3136,7 @@ async function startNewInterview() {
     DB.interviews.push(iv); saveDB();
     interviewId = iv.id;
     hasStory = false;
+    el('review-prompt').style.display = 'none'; // Überprüfungs-Block eines evtl. vorher offenen Interviews ausblenden
 
     await requestAndHandleReply(iv);
   } catch (err) {
@@ -3121,8 +3321,9 @@ async function runSimulation(genreDescription) {
     hasStory = false;
     // Macht das neu angelegte Simulations-Interview sofort im Chat sichtbar (leer, bis die erste
     // Frage eintrifft) – dieselbe Ansicht wie bei einem normal per Hand gestarteten Interview.
-    renderMessages(getHistory(iv.id));
+    renderMessages(getHistory(iv.id), iv);
     updateStatusLine(iv);
+    el('review-prompt').style.display = 'none'; // Überprüfungs-Block eines evtl. vorher offenen Interviews ausblenden
 
     setSimulationStatus('🎭 Simulation läuft – Eröffnungsfrage wird generiert ...', true);
     await requestAndHandleReply(iv);
@@ -3136,7 +3337,7 @@ async function runSimulation(genreDescription) {
       const probandText = await getSimulationProbandReply(story, history, pastSoftLimit);
       if (simulationAbortRequested) break;
       addMessage(iv.id, 'nutzer', probandText);
-      renderMessages(getHistory(iv.id));
+      renderMessages(getHistory(iv.id), iv);
       setSimulationStatus(`🎭 Simulation läuft – Runde ${round}: Interviewer antwortet ...`, true);
       await requestAndHandleReply(iv);
     }
@@ -3164,15 +3365,82 @@ async function sendMessage() {
   if (!text || !interviewId) return;
   const iv = getInterview(interviewId);
   if (!iv) return;
+  if (iv.status === 'in_pruefung') {
+    alert('Dieses Interview ist bereits beendet und wartet auf deine Überprüfung des Rohtexts oben – bitte nutze dafür den Kasten oben, nicht dieses Antwortfeld.');
+    return;
+  }
   input.value = '';
   setBusy(true);
   try {
     addMessage(interviewId, 'nutzer', text);
-    renderMessages(getHistory(interviewId));
+    renderMessages(getHistory(interviewId), iv);
     await requestAndHandleReply(iv);
   } catch (err) {
     alert('Fehler: ' + err.message);
   } finally { setBusy(false); }
+}
+
+// --- UI für die ROHTEXT-ÜBERPRÜFUNG (v2.1.3) --------------------------------------------------
+
+function renderCorrectionMessages(interviewId) {
+  const box = el('review-correction-messages');
+  box.innerHTML = '';
+  for (const m of getCorrectionMessages(interviewId)) {
+    const div = document.createElement('div');
+    div.className = 'bubble ' + m.role;
+    const label = document.createElement('span');
+    label.className = 'role-label';
+    label.textContent = m.role === 'ki' ? 'Interviewer' : 'Du';
+    div.appendChild(label);
+    const text = document.createElement('div');
+    text.textContent = m.text;
+    div.appendChild(text);
+    box.appendChild(div);
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+function openReviewCorrectionChat() {
+  el('review-prompt-buttons').style.display = 'none';
+  el('review-correction-chat').style.display = 'block';
+  renderCorrectionMessages(interviewId);
+  const input = el('review-correction-input');
+  input.value = '';
+  input.focus();
+}
+
+async function sendReviewCorrection() {
+  const input = el('review-correction-input');
+  const text = input.value.trim();
+  if (!text || !interviewId) return;
+  const iv = getInterview(interviewId);
+  if (!iv || iv.status !== 'in_pruefung') return;
+  input.value = '';
+  setBusy(true);
+  try {
+    renderCorrectionMessages(interviewId); // zeigt die soeben gesendete Nutzer-Nachricht sofort an
+    const result = await processCorrectionMessage(iv, text);
+    renderCorrectionMessages(interviewId);
+    if (result.typ === 'anwenden') {
+      // Der Rohtext wurde mechanisch geändert (siehe applyCorrectionActions) – Chat oben neu
+      // rendern und wieder zur Ja/Nein-Frage zurückkehren, damit die Person die Änderung erneut
+      // lesen und entweder weiter korrigieren oder abschließen kann ("erneut lesen" im Flowchart).
+      renderMessages(getHistory(iv.id), iv);
+      maybeShowReviewPrompt(iv);
+    }
+  } catch (err) {
+    alert('Fehler bei der Korrektur: ' + err.message);
+  } finally { setBusy(false); }
+}
+
+function finalizeReview() {
+  if (!interviewId) return;
+  const iv = getInterview(interviewId);
+  if (!iv || iv.status !== 'in_pruefung') return;
+  iv.status = 'abgeschlossen';
+  saveDB();
+  maybeShowReviewPrompt(iv);
+  updateStatusLine(iv);
 }
 
 // Baut den HTML-Block für EIN Kapitel (title/overview/qa/key_facts) – wird sowohl für die
@@ -3215,7 +3483,13 @@ function escapeHtml(s) {
 // laufendes Interview nicht fälschlich als abgeschlossen markiert.
 async function summarizeChapter(iv) {
   const history = getHistory(iv.id);
-  const story = await generateSummary(history);
+  let story = await generateSummary(history);
+  try {
+    // Zweiter Korrekturgang mit dem kompletten Ergebnis vor Augen (siehe ZWEITER KORREKTURGANG DER
+    // ZUSAMMENFASSUNG oben) – bei einem Fehler bleibt einfach die erste Fassung bestehen, statt die
+    // ganze Zusammenfassung scheitern zu lassen.
+    story = await polishSummary(story);
+  } catch (err) { /* nicht blockieren – erste Fassung bleibt bestehen */ }
   const storyJson = JSON.stringify(story);
   const now = new Date().toISOString();
   const existing = DB.stories[iv.id];
@@ -3388,15 +3662,21 @@ function setBusy(busy) {
   el('btn-new').disabled = busy;
 }
 
-// --- REDAKTION / "REDIGIERTE VERSION" (v2.1.0, auf Wunsch des Nutzers) ---------------------------
+// --- REDAKTION / "REDIGIERTE VERSION" (v2.1.0, erweitert in v2.1.2 auf Wunsch des Nutzers) -------
 // Dritte Export-Variante neben Rohtranskript und Zusammenfassung. Anders als die Zusammenfassung
 // wird hier KEIN einziges Wort verändert, gekürzt umformuliert oder neu erzeugt – weder bei Fragen
 // noch bei Antworten. Die KI trifft NACH Abschluss des Kapitels, mit Blick auf das komplette,
-// bereits fertige Gespräch (statt Turn-für-Turn wie beim Live-Interview), nur zwei mechanische
-// Arten von Entscheidungen: (1) ganze Frage-Antwort-Paare behalten oder verwerfen, wenn sie gegen
-// dieselben inhaltlichen Regeln verstoßen, die auch im Live-Interview gelten (Nachwirkung,
-// Selbsthilfe/Lebensweisheit, reine Interpretation/Bewertung) – nie nur Frage oder nur Antwort
-// einzeln; (2) behaltene Paare als ganze, unveränderte Einheit an eine andere Stelle verschieben,
+// bereits fertige Gespräch (statt Turn-für-Turn wie beim Live-Interview), drei mechanische Arten
+// von Entscheidungen: (1) ganze Frage-Antwort-Paare behalten oder verwerfen, wenn sie gegen
+// dieselben inhaltlichen Regeln verstoßen, die auch im Live-Interview gelten (generelle
+// Verarbeitung/Nachwirkung, Selbsthilfe/Lebensweisheit, reine Interpretation/Bewertung) – nie nur
+// Frage oder nur Antwort einzeln, und mit einer expliziten Ausnahme für unmittelbares, ursächlich
+// zum Ereignis gehörendes Verhalten danach (Motiv, Vertuschung, unmittelbare Reaktion einer zentral
+// beteiligten Person); (2) unter den behaltenen Paaren die "Nachwirkungs-Paare" markieren und nach
+// Wichtigkeit sortieren, damit die App mechanisch den GESAMTEN Nachwirkungsteil hart auf die Länge
+// der Kernhandlung deckeln kann (Nutzer-Feedback: "es darf mathematisch nicht länger sein als der
+// Tathergang" – siehe LÄNGEN-SICHERHEITSNETZ in sanitizeRedactionResult, strikt/hart gekappt, keine
+// Ausnahme); (3) behaltene Paare als ganze, unveränderte Einheit an eine andere Stelle verschieben,
 // aber NUR, wenn die Frage im vorliegenden Wortlaut auch an der neuen Stelle ohne jede Umformulierung
 // für sich verständlich bleibt. Hintergrund: Die Testinterviews #1145, #1198 und #1251 zeigten
 // wiederholt, dass Nachwirkungs-/Verarbeitungsfragen live durch die Regex-Sicherheitsnetze
@@ -3439,20 +3719,30 @@ const REDACTION_SYSTEM_PROMPT = `Du bist ein sorgfältiger Redakteur, der ein be
   `fertiges Interview vor der Veröffentlichung redigiert.\n\n` +
   `ABSOLUTE REGEL: Du darfst KEIN einziges Wort in irgendeiner Frage oder Antwort verändern, hinzufügen, kürzen ` +
   `oder umformulieren. Der genaue Wortlaut bleibt in jedem behaltenen Paar exakt wie im Original. Du triffst ` +
-  `ausschließlich zwei Arten von Entscheidungen:\n\n` +
+  `ausschließlich drei Arten von Entscheidungen:\n\n` +
   `1. BEHALTEN ODER VERWERFEN, IMMER ALS GANZES PAAR (Frage + Antwort zusammen, NIE nur eines von beiden ` +
   `einzeln): Verwirf ein Paar, wenn es NICHT direkt vom eigentlichen Ereignis handelt, sondern zum Beispiel von:\n` +
-  `   - Was NACH dem Ereignis war (Verarbeitung, Therapie/Gespräche mit Psycholog*innen, wie sich der Alltag ` +
-  `oder eine Beziehung seitdem/heute verändert hat, spätere Lebensentscheidungen als Bewältigungsstrategie)\n` +
+  `   - Genereller Verarbeitung/Bewältigung (Therapie, Gespräche mit Psycholog*innen, wie sich der Alltag oder ` +
+  `eine Beziehung über Wochen/Jahre/bis heute entwickelt hat, spätere Lebensentscheidungen als ` +
+  `Bewältigungsstrategie)\n` +
   `   - Selbsthilfe, Ratschlägen oder Lebensweisheiten – auch wenn sie als Zitat einer dritten Person ` +
   `(z. B. einer Therapeutin) wiedergegeben werden\n` +
   `   - Reiner Bewertung/Deutung/Einordnung durch den Interviewer statt einer Sachfrage\n` +
   `   - Personen oder Themen, die mit dem eigentlichen Ereignis inhaltlich nichts zu tun haben\n` +
-  `Behalte alle Paare, die konkret zum Ereignis selbst gehören: wer beteiligt war, wann und wo es war, wie es ` +
-  `genau abgelaufen ist, warum es dazu kam, und die UNMITTELBAREN Folgen direkt danach (z. B. Rettung/` +
-  `Erstversorgung, was in den ersten Stunden geschah). Das Kennenlern-Paar am Anfang (Name/Alter/Beruf/Herkunft), ` +
-  `falls vorhanden, bleibt ebenfalls immer erhalten.\n\n` +
-  `2. REIHENFOLGE: Ein behaltenes Paar darf an eine andere, sinnvollere Stelle verschoben werden (z. B. weil ` +
+  `Behalte dagegen alle Paare, die konkret zum Ereignis selbst gehören – dazu zählt AUSDRÜCKLICH auch ` +
+  `unmittelbares Verhalten NACH der Kernhandlung, wenn es direkt zum Verständnis des Ereignisses beiträgt: ein ` +
+  `Motiv, ein Vertuschungs- oder Fluchtversuch, die unmittelbare Reaktion einer zentral beteiligten Person ` +
+  `(z. B. wie ein Ehepartner reagierte, als er/sie davon erfuhr), oder Rettung/Erstversorgung. Faustregel: Geht ` +
+  `es um WAS GESCHAH oder WARUM ES GESCHAH (auch wenn zeitlich nach der Kernhandlung) → behalten. Geht es ` +
+  `darum, WIE DIE PERSON DAMIT LEBT/ES VERARBEITET → verwerfen. Das Kennenlern-Paar am Anfang (Name/Alter/` +
+  `Beruf/Herkunft), falls vorhanden, bleibt ebenfalls immer erhalten.\n\n` +
+  `2. KLASSIFIZIERUNG DER BEHALTENEN PAARE: Markiere unter den behaltenen Paaren zusätzlich, welche davon ` +
+  `"Nachwirkungs-Paare" im obigen Sinn sind (Motiv/Vertuschung/unmittelbare Reaktion NACH der Kernhandlung, ` +
+  `siehe oben) statt direkt zur Kernhandlung selbst zu gehören, und sortiere GENAU DIESE Nachwirkungs-Paare ` +
+  `nach WICHTIGKEIT (wichtigstes zuerst). Die App kürzt automatisch die unwichtigsten davon, falls der ` +
+  `Nachwirkungsteil zusammengenommen länger würde als die Paare zur Kernhandlung selbst – die Reihenfolge, ` +
+  `die du hier lieferst, entscheidet, welche zuerst wegfallen.\n\n` +
+  `3. REIHENFOLGE: Ein behaltenes Paar darf an eine andere, sinnvollere Stelle verschoben werden (z. B. weil ` +
   `eine Detailfrage zum Tathergang chronologisch besser weiter vorne passen würde), aber NUR wenn die Frage ` +
   `GENAU IN IHREM VORLIEGENDEN WORTLAUT auch an der neuen Stelle für sich allein verständlich bleibt. Bezieht ` +
   `sich die Frage erkennbar auf "das", "diesen Moment", "wie du gerade gesagt hast" o. Ä. aus der unmittelbar ` +
@@ -3478,7 +3768,11 @@ async function analyzeRedaction(interviewId) {
   ).join('\n');
   const userContent = `Hier ist das vollständige Kapitel als nummerierte Frage-Antwort-Paare:\n\n${promptBody}\n\n` +
     `Antworte AUSSCHLIESSLICH mit JSON in diesem Format, ohne zusätzlichen Text:\n` +
-    `{"behaltene_paare_in_reihenfolge": [<id>, <id>, ...], "entfernte_paare": [{"id": <id>, "grund": "kurze Begründung"}]}`;
+    `{"behaltene_paare_in_reihenfolge": [<id>, <id>, ...], "nachwirkungs_paare_nach_wichtigkeit": [<id>, <id>, ...], ` +
+    `"entfernte_paare": [{"id": <id>, "grund": "kurze Begründung"}]}\n\n` +
+    `"nachwirkungs_paare_nach_wichtigkeit" enthält NUR die IDs der behaltenen Nachwirkungs-Paare (siehe Punkt 2 ` +
+    `des System-Prompts), sortiert vom wichtigsten zum unwichtigsten. Paare zur Kernhandlung selbst gehören ` +
+    `NICHT in diese Liste. Ist kein Paar ein Nachwirkungs-Paar, liefere ein leeres Array.`;
 
   const raw = await callChat(REDACTION_SYSTEM_PROMPT, [{ role: 'user', content: userContent }], 3000);
   let parsed;
@@ -3488,11 +3782,22 @@ async function analyzeRedaction(interviewId) {
   return sanitizeRedactionResult(pairs, parsed, history.length);
 }
 
+// Zählt Wörter grob über Whitespace-Split – bewusst simpel, da es nur um das ungefähre
+// Längenverhältnis zwischen Kernhandlung und Nachwirkung geht (siehe LÄNGEN-SICHERHEITSNETZ unten),
+// nicht um exakte Sprachverarbeitung.
+function countWords(text) {
+  return (text || '').toString().trim().split(/\s+/).filter(Boolean).length;
+}
+function pairWordCount(pair) {
+  return countWords(pair && pair.question) + countWords(pair && pair.answer);
+}
+
 // Mechanische Validierung/Absicherung der vom Modell gelieferten ID-Liste, getrennt von
 // analyzeRedaction gehalten, damit sie ohne echten API-Aufruf testbar ist (siehe
-// test_redaction_v210.js).
+// test_redaction_v210.js, test_redaction_lengthcap_v212.js).
 function sanitizeRedactionResult(pairs, parsed, historyLength) {
   const validIds = new Set(pairs.map(p => p.id));
+  const pairsById = new Map(pairs.map(p => [p.id, p]));
   let keptIds = Array.isArray(parsed && parsed.behaltene_paare_in_reihenfolge)
     ? parsed.behaltene_paare_in_reihenfolge.filter(id => validIds.has(id))
     : [];
@@ -3502,17 +3807,51 @@ function sanitizeRedactionResult(pairs, parsed, historyLength) {
   // reihenfolge aller Paare zurückgeben als eine leere/kaputte redigierte Version.
   if (keptIds.length === 0) keptIds = pairs.map(p => p.id);
 
+  const removedInfo = Array.isArray(parsed && parsed.entfernte_paare)
+    ? parsed.entfernte_paare.filter(r => r && validIds.has(r.id) && !keptIds.includes(r.id))
+    : [];
+
+  // LÄNGEN-SICHERHEITSNETZ (v2.1.2, auf Wunsch des Nutzers: "es darf mathematisch nicht länger sein
+  // als der Tathergang" – strikt/hart gekappt, keine Ausnahme): Der Nachwirkungsteil (Motiv/
+  // Vertuschung/unmittelbare Reaktionen, siehe REDACTION_SYSTEM_PROMPT Punkt 2) darf zusammen NICHT
+  // mehr Wörter umfassen als die Paare zur Kernhandlung selbst. Vertraut NICHT darauf, dass das
+  // Modell sich selbst kurz fasst (dieselbe Lektion wie überall sonst in diesem Projekt) – die App
+  // zählt die Wörter nach und kürzt notfalls mechanisch die laut Modell unwichtigsten Nachwirkungs-
+  // Paare zuerst, bis das Verhältnis stimmt. Das Abschieds-Paar (answer=null, letztes Paar) zählt zu
+  // keiner der beiden Seiten, weil es eine reine Formalie ist, keine inhaltliche Nachwirkung.
+  const lastPair = pairs[pairs.length - 1];
+  const farewellId = (lastPair && lastPair.answer === null) ? lastPair.id : null;
+
+  let nachwirkungIds = Array.isArray(parsed && parsed.nachwirkungs_paare_nach_wichtigkeit)
+    ? parsed.nachwirkungs_paare_nach_wichtigkeit.filter(id => validIds.has(id) && keptIds.includes(id) && id !== farewellId)
+    : [];
+  nachwirkungIds = [...new Set(nachwirkungIds)];
+
+  const nachwirkungSet = new Set(nachwirkungIds);
+  const ereignisWordCount = keptIds
+    .filter(id => id !== farewellId && !nachwirkungSet.has(id))
+    .reduce((sum, id) => sum + pairWordCount(pairsById.get(id)), 0);
+  let nachwirkungWordCount = nachwirkungIds.reduce((sum, id) => sum + pairWordCount(pairsById.get(id)), 0);
+
+  // Von hinten (laut Modell-Sortierung die unwichtigsten zuerst) kürzen, bis das Verhältnis stimmt.
+  // Jede Iteration entfernt genau ein Element aus einer garantiert schrumpfenden Liste – kann sich
+  // also nie in einer Endlosschleife festfahren (dieselbe Lektion wie beim früheren
+  // Datum-Sicherheitsnetz-Bug in einer älteren Version dieses Projekts).
+  while (nachwirkungWordCount > ereignisWordCount && nachwirkungIds.length > 0) {
+    const droppedId = nachwirkungIds.pop();
+    nachwirkungWordCount -= pairWordCount(pairsById.get(droppedId));
+    keptIds = keptIds.filter(id => id !== droppedId);
+    if (!removedInfo.some(r => r.id === droppedId)) {
+      removedInfo.push({ id: droppedId, grund: 'automatisch gekürzt: Nachwirkungsteil wäre länger als die Kernhandlung gewesen' });
+    }
+  }
+
   // Sicherheitsnetz: eine abschließende KI-Nachricht ohne Antwort (typischerweise die Abschieds-
   // Formel) steht danach immer am Ende, unabhängig davon, ob/wo das Modell sie einsortiert hatte.
-  const lastPair = pairs[pairs.length - 1];
   if (lastPair && lastPair.answer === null) {
     keptIds = keptIds.filter(id => id !== lastPair.id);
     keptIds.push(lastPair.id);
   }
-
-  const removedInfo = Array.isArray(parsed && parsed.entfernte_paare)
-    ? parsed.entfernte_paare.filter(r => r && validIds.has(r.id) && !keptIds.includes(r.id))
-    : [];
 
   return { keptIds, removedInfo, basedOnMessageCount: historyLength };
 }
@@ -3530,6 +3869,179 @@ async function getOrGenerateRedaction(iv) {
   iv.redaction = { ...result, generatedAt: new Date().toISOString() };
   saveDB();
   return iv.redaction;
+}
+
+// --- ROHTEXT-ÜBERPRÜFUNG NACH INTERVIEW-ENDE (v2.1.3, auf Wunsch des Nutzers) --------------------
+// Nutzer-Flowchart: Nach Ende der ersten Interviewrunde ("Ende der ersten Interviewrunde") soll die
+// Person aufgefordert werden, den Rohtext zu lesen, danach die Frage "Möchtest du noch etwas
+// klarstellen oder ändern?" – bei "Ja" folgt eine Korrektur/Löschung/Ergänzung/neues Thema, die den
+// Rohtext direkt aktualisiert, danach erneutes Lesen, bis "Jetzt ist alles richtig." Auf Nachfrage
+// bestätigt: (1) der Rohtext wird dabei DIREKT bearbeitet/gelöscht, nicht nur um eine Ergänzung
+// verlängert; (2) die Interaktion läuft als Chat, in dem die KI bei Bedarf Rückfragen stellt, statt
+// über ein separates Bearbeiten-Formular. Die KI selbst schreibt dabei nie eigenmächtig am
+// bestehenden Text herum – sie entscheidet nur STRUKTURIERT, welche Aktion auf welches Paar
+// angewendet wird (siehe applyCorrectionActions); die eigentliche Textänderung kommt ausschließlich
+// aus dem, was die Person im Korrektur-Chat tatsächlich sagt.
+// Sitzungsstatus dafür: "in_pruefung" (siehe requestAndHandleReply) – zwischen Interviewende
+// (phase="done") und "abgeschlossen". Export/Redaktion bleiben bis zur Bestätigung gesperrt (siehe
+// canRedact-Prüfung), damit nie eine noch nicht bestätigte Fassung exportiert wird.
+
+// Wie buildRedactionPairs, aber zusätzlich mit der Position jeder Nachricht in `history` (Index),
+// damit eine Korrektur-Aktion mechanisch auf das richtige history-Element angewendet werden kann.
+// Bewusst getrennt von buildRedactionPairs gehalten, das diese Positionsinfo nicht braucht.
+function buildCorrectionPairs(history) {
+  const pairs = [];
+  let i = 0;
+  let pairId = 1;
+  while (i < history.length) {
+    const m = history[i];
+    if (m.role === 'ki') {
+      const next = history[i + 1];
+      if (next && next.role === 'nutzer') {
+        pairs.push({ id: pairId++, question: m.text, answer: next.text, kiIndex: i, nutzerIndex: i + 1 });
+        i += 2;
+      } else {
+        pairs.push({ id: pairId++, question: m.text, answer: null, kiIndex: i, nutzerIndex: null });
+        i += 1;
+      }
+    } else {
+      pairs.push({ id: pairId++, question: null, answer: m.text, kiIndex: null, nutzerIndex: i });
+      i += 1;
+    }
+  }
+  return pairs;
+}
+
+const CORRECTION_SYSTEM_PROMPT = `Du hilfst einer Person dabei, den Rohtext ihres gerade beendeten Interviews zu ` +
+  `korrigieren, bevor er endgültig abgeschlossen wird. Du bekommst das komplette Interview als nummerierte ` +
+  `Frage-Antwort-Paare, den bisherigen Korrektur-Chat-Verlauf (falls vorhanden) und den neuesten Wunsch der ` +
+  `Person.\n\n` +
+  `Die Person kann vier Dinge wollen:\n` +
+  `1. KORREKTUR einer Antwort (etwas war falsch/ungenau erzählt) → antwort_ersetzen\n` +
+  `2. LÖSCHUNG eines ganzen Frage-Antwort-Paares (soll gar nicht im Interview stehen) → paar_loeschen\n` +
+  `3. ERGÄNZUNG zu einem bestehenden Thema (etwas fehlt noch) → paar_hinzufuegen\n` +
+  `4. NEUES THEMA, das bisher gar nicht vorkam → paar_hinzufuegen\n\n` +
+  `Ist der Wunsch eindeutig genug, um sofort zu handeln, antworte mit dem "anwenden"-Format unten. Ist er zu ` +
+  `vage, um zu wissen, WELCHES Paar gemeint ist oder WAS genau der neue Text sein soll, stelle STATTDESSEN genau ` +
+  `EINE knappe, konkrete Rückfrage – wie ein aufmerksamer Redakteur, nicht wie ein Formular.\n\n` +
+  `WICHTIG: Bei antwort_ersetzen und paar_hinzufuegen verwendest du NUR Formulierungen/Fakten, die die Person ` +
+  `tatsächlich selbst genannt hat (im Korrektur-Chat oder in ihrer letzten Nachricht) – du erfindest, ` +
+  `beschönigst oder interpretierst nichts hinzu, genau wie im eigentlichen Interview.\n\n` +
+  `Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt, ohne Markdown-Codeblock, in GENAU einem von zwei ` +
+  `Formaten:\n\n` +
+  `RÜCKFRAGE: {"typ": "rueckfrage", "frage": "..."}\n\n` +
+  `ANWENDEN: {"typ": "anwenden", "bestaetigung": "Kurzer Satz in Ich-Form an die Person, was geändert wurde", ` +
+  `"aenderungen": [\n` +
+  `  {"aktion": "antwort_ersetzen", "id": <Paar-ID>, "neuer_text": "..."},\n` +
+  `  {"aktion": "paar_loeschen", "id": <Paar-ID>},\n` +
+  `  {"aktion": "paar_hinzufuegen", "frage": "...", "antwort": "..."}\n` +
+  `]}`;
+
+// Wendet die vom Korrektur-Chat gelieferten Aktionen mechanisch auf die Nachrichtenliste an.
+// Vertraut NICHT blind auf die vom Modell gelieferten IDs/Texte (dieselbe Lektion wie überall sonst
+// in diesem Projekt): ungültige IDs werden ignoriert, leere Texte werden ignoriert, und das
+// abschließende Abschieds-Paar (letztes Paar, answer=null) kann nicht gelöscht werden. Getrennt von
+// processCorrectionMessage gehalten, damit sie ohne echten API-Aufruf testbar ist (siehe
+// test_correction_v213.js).
+function applyCorrectionActions(history, pairs, aenderungen) {
+  const pairsById = new Map(pairs.map(p => [p.id, p]));
+  const lastPair = pairs[pairs.length - 1];
+  const farewellId = (lastPair && lastPair.answer === null) ? lastPair.id : null;
+
+  const applied = [];
+  const skipped = [];
+  let working = history.map(m => ({ role: m.role, text: m.text })); // Kopie, Original bleibt unangetastet
+  const deleteIndexes = new Set();
+
+  const actions = Array.isArray(aenderungen) ? aenderungen.slice(0, 20) : []; // grobe Obergrenze pro Runde
+
+  // 1. Ersetzungen zuerst anwenden (ändert die Array-Länge nicht).
+  for (const a of actions) {
+    if (!a || a.aktion !== 'antwort_ersetzen') continue; // andere Aktionstypen werden in ihrer eigenen Schleife unten behandelt
+    const pair = pairsById.get(a.id);
+    const neuerText = (typeof a.neuer_text === 'string') ? a.neuer_text.trim() : '';
+    if (!pair || pair.nutzerIndex === null || !neuerText) { skipped.push(a); continue; }
+    working[pair.nutzerIndex] = { role: 'nutzer', text: neuerText };
+    applied.push(a);
+  }
+
+  // 2. Löschungen sammeln (das Abschieds-Paar ist mechanisch geschützt und kann nie gelöscht werden).
+  for (const a of actions) {
+    if (!a || a.aktion !== 'paar_loeschen') continue;
+    const pair = pairsById.get(a.id);
+    if (!pair || pair.id === farewellId) { skipped.push(a); continue; }
+    if (pair.kiIndex !== null) deleteIndexes.add(pair.kiIndex);
+    if (pair.nutzerIndex !== null) deleteIndexes.add(pair.nutzerIndex);
+    applied.push(a);
+  }
+  working = working.filter((_, i) => !deleteIndexes.has(i));
+
+  // 3. Neue Paare hinzufügen – VOR einem eventuell vorhandenen Abschieds-Paar, damit die
+  // Abschiedsformel weiterhin das Ende des Interviews bildet. Da das Abschieds-Paar nie gelöscht
+  // wird (siehe oben) und ursprünglich das letzte Element war, ist es – falls vorhanden – nach den
+  // Löschungen immer noch das letzte Element von `working`.
+  const additions = [];
+  for (const a of actions) {
+    if (!a || a.aktion !== 'paar_hinzufuegen') continue;
+    const frage = (typeof a.frage === 'string') ? a.frage.trim() : '';
+    const antwort = (typeof a.antwort === 'string') ? a.antwort.trim() : '';
+    if (!frage || !antwort) { skipped.push(a); continue; }
+    additions.push({ role: 'ki', text: frage }, { role: 'nutzer', text: antwort });
+    applied.push(a);
+  }
+  if (additions.length) {
+    if (farewellId !== null && working.length > 0) {
+      working = [...working.slice(0, working.length - 1), ...additions, working[working.length - 1]];
+    } else {
+      working = [...working, ...additions];
+    }
+  }
+
+  return { history: working, applied, skipped };
+}
+
+// Ruft die KI EINMAL mit dem aktuellen Rohtext, dem bisherigen Korrektur-Chat und dem neuesten
+// Wunsch der Person auf, wendet ein "anwenden"-Ergebnis sofort mechanisch an (siehe
+// applyCorrectionActions) und protokolliert die Konversation in DB.correction_messages (getrennt
+// vom eigentlichen Transkript, siehe addCorrectionMessage).
+async function processCorrectionMessage(iv, userText) {
+  const history = getHistory(iv.id);
+  const pairs = buildCorrectionPairs(history);
+  const chatHistory = getCorrectionMessages(iv.id);
+  addCorrectionMessage(iv.id, 'nutzer', userText);
+
+  const pairsText = pairs.map(p =>
+    `PAAR ${p.id}:\n` + (p.question ? `FRAGE: ${p.question}\n` : '') + (p.answer ? `ANTWORT: ${p.answer}\n` : '')
+  ).join('\n');
+  const chatText = chatHistory.map(m => `${m.role === 'ki' ? 'KI' : 'Person'}: ${m.text}`).join('\n\n');
+  const userContent = `Aktueller Rohtext als nummerierte Paare:\n\n${pairsText}\n\n` +
+    (chatText ? `Bisheriger Korrektur-Chat:\n${chatText}\n\n` : '') +
+    `Neuester Wunsch der Person:\n${userText}`;
+
+  async function attempt(extra) {
+    return callChat(CORRECTION_SYSTEM_PROMPT + (extra || ''), [{ role: 'user', content: userContent }], 2000);
+  }
+  let parsed;
+  try { parsed = parseJsonResponse(await attempt()); }
+  catch (err) {
+    parsed = robustParseJson(await attempt('\n\nWICHTIG: Gib AUSSCHLIESSLICH valides JSON zurück, ohne Markdown-Codeblock.'), {});
+  }
+
+  if (parsed && parsed.typ === 'anwenden' && Array.isArray(parsed.aenderungen)) {
+    const applyResult = applyCorrectionActions(history, pairs, parsed.aenderungen);
+    replaceHistory(iv.id, applyResult.history);
+    const bestaetigung = (typeof parsed.bestaetigung === 'string' && parsed.bestaetigung.trim())
+      ? parsed.bestaetigung.trim()
+      : 'Ich habe die Änderung übernommen.';
+    addCorrectionMessage(iv.id, 'ki', bestaetigung);
+    return { typ: 'anwenden', text: bestaetigung, applied: applyResult.applied };
+  }
+
+  const frage = (parsed && typeof parsed.frage === 'string' && parsed.frage.trim())
+    ? parsed.frage.trim()
+    : 'Kannst du das etwas genauer beschreiben – worauf genau bezieht sich das?';
+  addCorrectionMessage(iv.id, 'ki', frage);
+  return { typ: 'rueckfrage', text: frage };
 }
 
 // Baut die redigierte Version als Textdatei-Inhalt – ausschließlich aus wortgleichen Original-
@@ -3767,12 +4279,14 @@ function openInterview(id) {
   }
   if (iv) updateStatusLine(iv);
 
-  // Beim Wiedereinstieg in ein noch nicht abgeschlossenes Interview eine kurze,
-  // lokale Willkommens-zurück-Frage einfügen (kein API-Aufruf nötig), die möglichst
-  // konkret an die zuletzt gestellte, unbeantwortete Frage anknüpft statt künstlich neu
-  // zu starten.
+  // Beim Wiedereinstieg in ein noch laufendes oder pausiertes Interview eine kurze, lokale
+  // Willkommens-zurück-Frage einfügen (kein API-Aufruf nötig), die möglichst konkret an die zuletzt
+  // gestellte, unbeantwortete Frage anknüpft statt künstlich neu zu starten. Ausdrücklich NICHT bei
+  // "in_pruefung": Das Interview ist inhaltlich fertig, es fehlt nur noch die Bestätigung/Korrektur
+  // im Überprüfungs-Block unten (siehe maybeShowReviewPrompt) – eine "wo warst du stehengeblieben"-
+  // Nachricht wäre hier irreführend.
   const history = getHistory(id);
-  if (iv && iv.status !== 'abgeschlossen' && history.length > 0) {
+  if (iv && (iv.status === 'laufend' || iv.status === 'pausiert') && history.length > 0) {
     const last = history[history.length - 1];
     const alreadyResumed = last.role === 'ki' &&
       (last.text === RESUME_MESSAGE_GENERIC || /^Du warst hier stehengeblieben/.test(last.text || ''));
@@ -3783,7 +4297,8 @@ function openInterview(id) {
     saveDB();
   }
 
-  renderMessages(getHistory(id));
+  renderMessages(getHistory(id), iv);
+  maybeShowReviewPrompt(iv);
   refreshStoryView();
   el('list-modal').classList.remove('open');
 }
@@ -3792,7 +4307,10 @@ function pauseInterview() {
   if (!interviewId) { alert('Es läuft gerade kein Interview.'); return; }
   const iv = getInterview(interviewId);
   if (!iv) return;
-  if (iv.status === 'abgeschlossen') { alert('Dieses Interview ist bereits abgeschlossen.'); return; }
+  if (iv.status === 'abgeschlossen' || iv.status === 'in_pruefung') {
+    alert('Dieses Interview ist bereits abgeschlossen oder wartet gerade auf deine Überprüfung des Rohtexts.');
+    return;
+  }
 
   iv.status = 'pausiert';
   saveDB();
@@ -3816,7 +4334,7 @@ function renderInterviewList() {
     btn.className = 'select-btn';
     const firstMsg = getHistory(iv.id)[0];
     const preview = firstMsg ? (firstMsg.text.slice(0, 60) + (firstMsg.text.length > 60 ? '…' : '')) : '';
-    btn.innerHTML = `<strong>#${iv.id}</strong> · ${iv.status} · <span style="color:var(--muted)">${new Date(iv.created_at).toLocaleString('de-DE')}</span><br><span style="color:var(--muted); font-size:12px;">${escapeHtml(preview)}</span>`;
+    btn.innerHTML = `<strong>#${iv.id}</strong> · ${escapeHtml(statusLabel(iv.status))} · <span style="color:var(--muted)">${new Date(iv.created_at).toLocaleString('de-DE')}</span><br><span style="color:var(--muted); font-size:12px;">${escapeHtml(preview)}</span>`;
     btn.addEventListener('click', () => openInterview(iv.id));
 
     const delBtn = document.createElement('button');
@@ -3839,12 +4357,14 @@ function deleteInterview(id) {
   DB.edit_messages = DB.edit_messages.filter(m => m.interview_id !== id);
   DB.story_edits = DB.story_edits.filter(e => e.interview_id !== id);
   DB.transcript_addenda = DB.transcript_addenda.filter(a => a.interview_id !== id);
+  DB.correction_messages = DB.correction_messages.filter(m => m.interview_id !== id);
   delete DB.stories[id];
   saveDB();
   if (interviewId === id) {
     interviewId = null;
     renderMessages([]);
     statusEl.textContent = 'Kein Interview ausgewählt';
+    el('review-prompt').style.display = 'none';
   }
   refreshStoryView();
   renderInterviewList();
@@ -3915,13 +4435,18 @@ function deleteProject(id) {
   DB.edit_messages = DB.edit_messages.filter(m => !ivIds.includes(m.interview_id));
   DB.story_edits = DB.story_edits.filter(e => !ivIds.includes(e.interview_id));
   DB.transcript_addenda = DB.transcript_addenda.filter(a => !ivIds.includes(a.interview_id));
+  DB.correction_messages = DB.correction_messages.filter(m => !ivIds.includes(m.interview_id));
   for (const ivId of ivIds) delete DB.stories[ivId];
   DB.projects = DB.projects.filter(p => p.id !== id);
   if (DB.currentProjectId === id) {
     DB.currentProjectId = DB.projects.length ? DB.projects[DB.projects.length - 1].id : null;
   }
   saveDB();
-  if (ivIds.includes(interviewId)) { interviewId = null; renderMessages([]); }
+  if (ivIds.includes(interviewId)) {
+    interviewId = null;
+    renderMessages([]);
+    el('review-prompt').style.display = 'none';
+  }
   updateProjectDisplay();
   refreshStoryView();
   renderProjectsList();
@@ -4027,6 +4552,11 @@ on('btn-new', 'click', startNewInterview);
 on('btn-pause', 'click', pauseInterview);
 on('btn-send', 'click', sendMessage);
 on('input', 'keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+
+on('btn-review-yes', 'click', openReviewCorrectionChat);
+on('btn-review-no', 'click', finalizeReview);
+on('btn-review-correction-send', 'click', sendReviewCorrection);
+on('review-correction-input', 'keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReviewCorrection(); } });
 
 on('btn-edit-modal', 'click', openEditModal);
 on('btn-edit-modal-close', 'click', () => el('edit-modal').classList.remove('open'));
