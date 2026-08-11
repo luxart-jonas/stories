@@ -4,6 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>KI-Interviewmaschine – Prototyp</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#8a5a44" />
+<link rel="icon" href="icon-512.png" />
+<link rel="apple-touch-icon" href="icon-512.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Stories" />
+<meta name="mobile-web-app-capable" content="yes" />
 <style>
   :root {
     --bg: #faf7f2;
@@ -95,12 +102,6 @@
 
   .edit-panel { margin-top: 22px; border-top: 2px dashed var(--border); padding-top: 14px; }
   .edit-panel h3 { font-size: 13.5px; margin-bottom: 10px; }
-  .edit-messages { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; max-height: 200px; overflow-y: auto; }
-  .edit-bubble { font-size: 12.5px; padding: 8px 10px; border-radius: 8px; }
-  .edit-bubble.ki { background: var(--ki-bubble); }
-  .edit-bubble.nutzer { background: var(--user-bubble); }
-  .edit-input-row { display: flex; gap: 8px; }
-  .edit-input-row textarea { flex: 1; font-family: inherit; font-size: 12.5px; padding: 8px; border-radius: 8px; border: 1px solid var(--border); resize: none; min-height: 40px; }
 
   .spinner { font-size: 12.5px; color: var(--muted); padding: 4px 16px; }
   .badge { display: inline-block; font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: var(--accent-light); color: var(--accent); margin-left: 6px; }
@@ -128,10 +129,6 @@
   .book-chapter:last-child { border-bottom: none; }
   .book-chapter-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
   .book-chapter h3 { font-size: 16px; margin: 0 0 6px; }
-
-  .edit-tabs { display:flex; gap:6px; margin-bottom:14px; }
-  .edit-section { display:none; }
-  .edit-section.active { display:block; }
 </style>
 </head>
 <body>
@@ -160,7 +157,7 @@
   <div class="controls">
     <button id="btn-new">Neues Interview</button>
     <button id="btn-simulation" title="Lässt die App automatisch ein komplettes Testinterview mit sich selbst führen (KI vs. KI), ohne dass du selbst antworten musst">🎭 Simulation</button>
-    <button id="btn-edit-modal">Bearbeiten</button>
+    <button id="btn-edit-modal">Zusammenfassen</button>
     <button id="btn-list">Meine Interviews</button>
     <button id="btn-pause">⏸ Pause</button>
     <button id="btn-export">⬇️ Exportieren</button>
@@ -199,7 +196,7 @@
   </section>
 
   <section class="story-col" id="story-col">
-    <div class="placeholder">Noch keine Zusammenfassung vorhanden. Führe zuerst ein Interview, dann klicke oben auf „Bearbeiten“ → „Zusammenfassen“.</div>
+    <div class="placeholder">Noch keine Zusammenfassung vorhanden. Führe zuerst ein Interview, dann klicke oben auf „Zusammenfassen“.</div>
   </section>
 </main>
 
@@ -277,30 +274,16 @@
   </div>
 </div>
 
-<!-- Bearbeiten-Modal -->
+<!-- Zusammenfassen-Modal (vormals "Bearbeiten" mit zusätzlichem, inzwischen durch den
+     Korrektur-Chat im Hauptbildschirm ersetzten Tab "Geschichte bearbeiten") -->
 <div class="modal-backdrop" id="edit-modal">
   <div class="modal">
-    <h2>Bearbeiten</h2>
-    <div class="edit-tabs">
-      <button id="btn-edit-tab-summary" type="button">Zusammenfassen</button>
-      <button id="btn-edit-tab-story" type="button">Geschichte bearbeiten</button>
+    <h2>Zusammenfassen</h2>
+    <div class="hint" style="margin-top:0;">Fasst neue, noch nicht zusammengefasste Kapitel zusammen und hängt sie an die bestehende Zusammenfassung an. Bereits zusammengefasste Kapitel werden dabei nicht erneut generiert.</div>
+    <div class="row" style="justify-content:flex-start;">
+      <button id="btn-do-summarize" type="button" class="primary">Zusammenfassen</button>
     </div>
-
-    <div class="edit-section active" id="edit-section-summary">
-      <div class="hint" style="margin-top:0;">Fasst neue, noch nicht zusammengefasste Kapitel zusammen und hängt sie an die bestehende Zusammenfassung an. Bereits zusammengefasste Kapitel werden dabei nicht erneut generiert.</div>
-      <div class="row" style="justify-content:flex-start;">
-        <button id="btn-do-summarize" type="button" class="primary">Zusammenfassen</button>
-      </div>
-      <div class="hint" id="summarize-status"></div>
-    </div>
-
-    <div class="edit-section" id="edit-section-story">
-      <div class="edit-messages" id="story-edit-messages"></div>
-      <div class="edit-input-row">
-        <textarea id="story-edit-input" placeholder="Was möchtest du klarstellen oder ergänzen?"></textarea>
-        <button id="btn-story-edit-send" class="primary">Senden</button>
-      </div>
-    </div>
+    <div class="hint" id="summarize-status"></div>
 
     <div class="row">
       <button id="btn-edit-modal-close">Schließen</button>
@@ -2816,7 +2799,6 @@ async function applyEdit(currentStory, editHistory, requestText) {
 
 let interviewId = null;
 let hasStory = false;
-let editModalTab = 'summary'; // 'summary' | 'story'
 
 const el = (id) => document.getElementById(id);
 const messagesEl = el('messages');
@@ -3078,7 +3060,7 @@ async function requestAndHandleReply(iv) {
   // Die automatische Zusammenfassung direkt nach Sitzungsende wurde auf Wunsch entfernt (kostet
   // unnötig KI-Kapazität/API-Aufrufe bei jeder abgeschlossenen Sitzung, auch wenn man die
   // Zusammenfassung gerade gar nicht braucht). Zusammenfassen bleibt weiterhin manuell über den
-  // "Bearbeiten" → "Zusammenfassen"-Dialog möglich (siehe summarizeProject/summarizeChapter).
+  // "Zusammenfassen"-Dialog möglich (siehe summarizeProject/summarizeChapter).
 }
 
 const INTERVIEW_STATUS_LABELS = { laufend: 'läuft', pausiert: 'pausiert', in_pruefung: 'wartet auf deine Überprüfung', abgeschlossen: 'abgeschlossen' };
@@ -3565,95 +3547,18 @@ function refreshStoryView() {
   if (combined) { renderCombinedStory(combined); }
   else {
     hasStory = false;
-    storyColEl.innerHTML = '<div class="placeholder">Noch keine Zusammenfassung vorhanden. Führe zuerst ein Interview, dann klicke oben auf „Bearbeiten“ → „Zusammenfassen“.</div>';
+    storyColEl.innerHTML = '<div class="placeholder">Noch keine Zusammenfassung vorhanden. Führe zuerst ein Interview, dann klicke oben auf „Zusammenfassen“.</div>';
   }
 }
 
-// --- "Bearbeiten"-Modal: Zusammenfassen + Geschichte bearbeiten ----------------
-
-const STORY_EDIT_PROMPT = 'Was möchtest du klarstellen oder ergänzen?';
+// --- "Zusammenfassen"-Modal ----------------
+// (Der frühere zweite Tab "Geschichte bearbeiten" inkl. eigenem Korrektur-Chat wurde entfernt –
+// diese Funktion übernimmt jetzt der Korrektur-Chat direkt im Hauptbildschirm nach Kapitelende,
+// siehe #review-prompt / openReviewCorrectionChat / sendReviewCorrection weiter unten.)
 
 function openEditModal() {
   el('summarize-status').textContent = '';
-  switchEditTab('summary');
   el('edit-modal').classList.add('open');
-}
-
-function switchEditTab(tab) {
-  editModalTab = tab;
-  el('btn-edit-tab-summary').classList.toggle('primary', tab === 'summary');
-  el('btn-edit-tab-story').classList.toggle('primary', tab === 'story');
-  el('edit-section-summary').classList.toggle('active', tab === 'summary');
-  el('edit-section-story').classList.toggle('active', tab === 'story');
-  if (tab === 'story') renderStoryEditMessages();
-}
-
-// Zeigt den Bearbeitungs-Chat. Die allererste Nachricht ist eine feste, lokale Frage (kein
-// API-Aufruf nötig) – erst die Antwort der Person löst einen KI-Aufruf aus.
-function renderStoryEditMessages() {
-  const c = el('story-edit-messages');
-  if (!c) return;
-  c.innerHTML = '';
-  const msgs = interviewId ? getEditHistory(interviewId) : [];
-  const toShow = msgs.length > 0 ? msgs : [{ role: 'ki', text: STORY_EDIT_PROMPT }];
-  for (const m of toShow) {
-    const div = document.createElement('div');
-    div.className = 'edit-bubble ' + m.role;
-    div.textContent = (m.role === 'ki' ? 'KI: ' : 'Du: ') + m.text;
-    c.appendChild(div);
-  }
-  c.scrollTop = c.scrollHeight;
-}
-
-// Sendet einen Klarstellungs-/Ergänzungswunsch. Die KI bestimmt selbst, welches Kapitel des
-// aktuellen Projekts betroffen ist, aktualisiert dessen Zusammenfassung UND fügt eine
-// nachträgliche Ergänzung zum Rohtranskript dieses Kapitels hinzu.
-async function sendStoryEdit() {
-  const input = el('story-edit-input');
-  const text = input.value.trim();
-  const projectId = DB.currentProjectId;
-  if (!text || !projectId) return;
-  const chapters = getProjectInterviews(projectId).filter(iv => DB.stories[iv.id]);
-  if (chapters.length === 0) {
-    alert('Es gibt noch keine Zusammenfassung, die bearbeitet werden könnte. Bitte zuerst „Zusammenfassen“ nutzen.');
-    return;
-  }
-  const anchorInterviewId = interviewId || chapters[chapters.length - 1].id;
-  input.value = '';
-  setBusy(true);
-  try {
-    addEditMessage(anchorInterviewId, 'nutzer', text);
-    renderStoryEditMessages();
-
-    const chapterList = chapters.map(iv => ({
-      interview_id: iv.id,
-      ...JSON.parse(DB.stories[iv.id].current_summary),
-    }));
-    const editHistory = getEditHistory(anchorInterviewId).slice(0, -1);
-
-    const result = await applyEdit(chapterList, editHistory, text);
-    const targetId = result.target_interview_id || anchorInterviewId;
-    const storyRow = DB.stories[targetId];
-    if (!storyRow) throw new Error('Zielkapitel konnte nicht gefunden werden.');
-
-    const newStoryJson = JSON.stringify(result.chapter);
-    const now = new Date().toISOString();
-    DB.story_edits.push({
-      id: nextId(), interview_id: targetId, request_text: text,
-      change_summary: result.change_summary || '', previous_summary: storyRow.current_summary,
-      new_summary: newStoryJson, created_at: now,
-    });
-    storyRow.current_summary = newStoryJson;
-    storyRow.last_modified = now;
-    if (result.transcript_addendum) addTranscriptAddendum(targetId, result.transcript_addendum);
-    saveDB();
-
-    addEditMessage(anchorInterviewId, 'ki', result.confirmation || 'Änderung übernommen.');
-    renderStoryEditMessages();
-    refreshStoryView();
-  } catch (err) {
-    alert('Fehler bei der Bearbeitung: ' + err.message);
-  } finally { setBusy(false); }
 }
 
 function setBusy(busy) {
@@ -4560,11 +4465,7 @@ on('review-correction-input', 'keydown', (e) => { if (e.key === 'Enter' && !e.sh
 
 on('btn-edit-modal', 'click', openEditModal);
 on('btn-edit-modal-close', 'click', () => el('edit-modal').classList.remove('open'));
-on('btn-edit-tab-summary', 'click', () => switchEditTab('summary'));
-on('btn-edit-tab-story', 'click', () => switchEditTab('story'));
 on('btn-do-summarize', 'click', summarizeProject);
-on('btn-story-edit-send', 'click', sendStoryEdit);
-on('story-edit-input', 'keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendStoryEdit(); } });
 
 on('project-name-display', 'click', () => { renderProjectsList(); el('projects-modal').classList.add('open'); });
 on('btn-new-project', 'click', createNewProjectFlow);
@@ -4647,6 +4548,15 @@ try {
     statusEl.textContent = 'Kein Interview gestartet – klicke „Neues Interview“';
   }
 } catch (err) { showFatalError('Fehler beim Start: ' + err.message); }
+
+// Service Worker registrieren – nur nötig, damit der Browser die Seite als installierbare
+// Desktop-/Handy-App anbietet (siehe service-worker.js). Schlägt die Registrierung fehl (z.B.
+// älterer Browser), läuft die App ganz normal weiter, nur ohne "Installieren"-Option.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
