@@ -405,8 +405,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.1.4';
-const APP_BUILD = '2026-08-10 14:35 UTC';
+const APP_VERSION = '2.3.1';
+const APP_BUILD = '2026-08-11 20:15 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
@@ -1270,6 +1270,9 @@ Regeln für das Feld "phase":
   allererste dieser Nachrichten wird ohnehin von der App selbst überschrieben). Verwende "closing"
   so lange, bis entweder abschlussfragen_gestellt bereits 5 erreicht hat oder die Person erkennbar
   fertig ist (siehe abschlussfragen_gestellt im internen Status) – erst dann "done", siehe unten.
+  WICHTIG: Steht phase im internen Status bereits als "closing" da, bist du bereits in der
+  Abschlussphase – melde für JEDE weitere Antwort in dieser Sitzung ebenfalls "closing" (niemals
+  wieder "interview"), bis der Deckel (5) erreicht ist oder die Person erkennbar fertig ist.
 - "done": Du hast bereits FÜNF Abschlussfragen gestellt (abschlussfragen_gestellt ist bereits 5
   oder mehr), oder die Person hat eindeutig signalisiert, dass sie fertig ist (siehe KEINE
   FRAGEN-SCHLEIFE oben), und "message" enthält die freundliche Abschiedsnachricht wie in
@@ -1933,7 +1936,15 @@ function looksLikeAftermathQuestion(text) {
   // vorkommende, etwas längere Formulierungen ("Wie hat sich die Beziehung zu deinem Vater durch
   // dieses Erlebnis im Nebelwald verändert?", Abstand ca. 52 Zeichen) – beide Lücken sind jetzt
   // geschlossen (Synonym ergänzt, Fenster auf 90 Zeichen erweitert).
-  return /nach (dem|diesem) (unfall|ereignis|sturm|vorfall|erlebnis)|zwischen dem (unfall|ereignis|sturm|vorfall|erlebnis|geschehen)|in den (darauffolgenden )?(tagen|wochen|monaten|jahren)( danach)?|\bin dieser zeit\b|im laufe der zeit|jahre später|jahrestag|gedenktag|\bseitdem\b|\balltag\b|\bheute\b|\btherapie\b|therapeutin|therapeuten\b|wie (hast du|habt ihr|haben sie) (gelernt|es geschafft)\b.{0,40}umzugehen|wie (bist du|seid ihr|sind sie) damit umgegangen|mit (diesem|dem) verlust|deine? routine|\britual\b|was hat (dich|dir|sie|ihn|euch) (getragen|gehalten|geholfen)|abgesehen von .{0,30}(therapie|verarbeitung)|sonst noch geholfen|\b(beziehung|verhältnis)\b.{0,90}(verändert|entwickelt)|\bdas schwerste daran\b|\bauf diese wahrheit\b|\bnachdem\b.{0,60}(überwunden|verarbeitet|vorbei|geschafft)/i.test(text || '');
+  // v2.3.1 (echter Nutzer-Testlauf, PDF "Die Stille nach dem Sturz"): DREI reale, klar verbotene
+  // Nachwirkungsfragen rutschten durch ("Wie hat sich dein Unfall auf deine Beziehung zu Klettern
+  // ... ausgewirkt?", "Wie hat sich dein Sturz auf die Freundschaft zu Martin ausgewirkt?",
+  // "Inwiefern hat sich dein Sturz auf deine Beziehung zu Lukas ausgewirkt?"). Zwei Lücken konkret:
+  // (1) "Freundschaft" fehlte komplett im Beziehungswort-Muster, nur "Beziehung"/"Verhältnis" waren
+  // erfasst; (2) das Verb-Muster erfasste nur "verändert"/"entwickelt", nicht das ebenso gängige
+  // "ausgewirkt" (bzw. "auswirkt"/"Auswirkung") – genau das Verb, das in allen drei realen Fällen
+  // benutzt wurde. Beide Lücken sind jetzt geschlossen.
+  return /nach (dem|diesem) (unfall|ereignis|sturm|vorfall|erlebnis)|zwischen dem (unfall|ereignis|sturm|vorfall|erlebnis|geschehen)|in den (darauffolgenden )?(tagen|wochen|monaten|jahren)( danach)?|\bin dieser zeit\b|im laufe der zeit|jahre später|jahrestag|gedenktag|\bseitdem\b|\balltag\b|\bheute\b|\btherapie\b|therapeutin|therapeuten\b|wie (hast du|habt ihr|haben sie) (gelernt|es geschafft)\b.{0,40}umzugehen|wie (bist du|seid ihr|sind sie) damit umgegangen|mit (diesem|dem) verlust|deine? routine|\britual\b|was hat (dich|dir|sie|ihn|euch) (getragen|gehalten|geholfen)|abgesehen von .{0,30}(therapie|verarbeitung)|sonst noch geholfen|\b(beziehung|verhältnis|freundschaft)\b.{0,90}(verändert|entwickelt|ausgewirkt|auswirkt|beeinflusst)|\bauswirkung\b.{0,90}\b(beziehung|verhältnis|freundschaft)\b|\bdas schwerste daran\b|\bauf diese wahrheit\b|\bnachdem\b.{0,60}(überwunden|verarbeitet|vorbei|geschafft)/i.test(text || '');
 }
 
 // Erkennt Selbsthilfe-/Lebensweisheits-Fragen (siehe "KEINE SELBSTHILFE-/LEBENSWEISHEITS-FRAGEN" im
@@ -2169,8 +2180,12 @@ async function getInterviewReply(history, phase, closingQuestionsAsked, priorCha
       : '') +
     (slot.allSlotsResolved
       ? `\n\nALLE PFLICHTPUNKTE SIND BEREITS GEKLÄRT ODER ÜBERSPRUNGEN: Stelle KEINE weitere inhaltliche Frage mehr ` +
-        `zum Ereignis selbst. Wechsle jetzt gemäß ABSCHLUSSPHASE in phase="closing" mit der EINEN Abschlussfrage ` +
-        `(oder direkt phase="done", falls abschlussfragen_gestellt bereits 1 oder höher ist).`
+        `zum Ereignis selbst. Wechsle jetzt gemäß ABSCHLUSSPHASE in phase="closing" (bis zu FÜNF persönliche ` +
+        `Abschlussfragen sind erlaubt, siehe abschlussfragen_gestellt oben) – oder direkt phase="done", falls ` +
+        `abschlussfragen_gestellt bereits 5 oder höher ist. WICHTIG: Ist phase oben bereits als "closing" ` +
+        `angegeben, bist du bereits in der Abschlussphase – melde für JEDE weitere Antwort in dieser Phase ` +
+        `weiterhin phase="closing" (niemals wieder zurück zu "interview"), bis du entweder den Deckel erreichst ` +
+        `oder die Person klar signalisiert, dass sie nichts mehr ergänzen möchte (dann phase="done").`
       : '') +
     (priorChaptersContext
       ? `\n\nNUR ZUR INTERNEN ORIENTIERUNG (niemals wörtlich wiedergeben oder erwähnen): Übersicht bereits ` +
@@ -2330,6 +2345,43 @@ async function getInterviewReply(history, phase, closingQuestionsAsked, priorCha
     result.phase = 'closing';
   }
 
+  // MECHANISCHER VORRANG DES FAKTEN-CHECKS (v2.3.0, auf Wunsch des Nutzers: "der Faktencheck muss
+  // eindeutig überwiegen ... minimum 20 Fakten-Fragen"): Solange laut Pflichtpunkt-Mechanik noch
+  // offene Pflichtpunkte bestehen (pflichtpunkte_offen > 0, siehe slot.offenCount), wird ein vom
+  // Modell selbst gewähltes "closing"/"done" HART zurück auf "interview" gezwungen – unabhängig
+  // davon, was das Modell zurückgegeben hat oder wie sehr die zuletzt gelieferte Nachricht schon
+  // wie eine Abschlussfrage klingt (siehe looksLikeClosingStyleQuestion-Erkennung oben, die genau
+  // das auslösen kann). Nutzersteuerung (explizites Beenden, zwei Ablehnungen in Folge) hat
+  // weiterhin Vorrang vor diesem Sicherheitsnetz, genau wie bei den anderen Mechanismen hier – ein
+  // wirklicher Abbruchwunsch der Person darf nicht an fehlenden Pflichtpunkten scheitern.
+  // WICHTIG (v2.3.1, echter Nutzer-Testlauf mit der "Die Stille nach dem Sturz"-PDF): Dieser Block
+  // und der direkt folgende (GEGENSTÜCK, s.u.) laufen jetzt BEWUSST VOR dem Nachwirkungs-/
+  // Selbsthilfe-Filter weiter unten, nicht mehr danach. Vorher konnte die KI den Filter komplett
+  // umgehen, indem sie eine klar verbotene Nachwirkungsfrage (z. B. "Wie hat sich dein Sturz auf die
+  // Freundschaft zu Martin ausgewirkt?") mit phase="closing" statt phase="interview" auslieferte –
+  // der Filter prüft nur bei phase==="interview", griff also nie, und erst DANACH wurde die Phase
+  // hier wieder auf "interview" zurückgezwungen, ohne dass die längst angezeigte Nachricht noch
+  // einmal geprüft wurde. Jetzt steht die Phasen-Korrektur VOR dem Filter, sodass dieser die
+  // tatsächliche, korrigierte Phase sieht.
+  if ((result.phase === 'closing' || result.phase === 'done') && (slot.offenCount || 0) > 0 && !forceDoneNow && !explicitEndRequested) {
+    result.phase = 'interview';
+  }
+
+  // GEGENSTÜCK ZUM FAKTEN-VORRANG: Ist die Sitzung bereits erkennbar in der Abschlussphase
+  // angekommen (der als Parameter übergebene, von requestAndHandleReply mitgegebene Sitzungsstatus
+  // "phase" ist bereits "closing", d.h. die feste Zäsur-Nachricht wurde in einem früheren Turn schon
+  // gezeigt) und sind alle Pflichtpunkte geklärt (slot.offenCount === 0), darf das Modell NICHT
+  // einfach wieder phase="interview" melden, um dem 5-Fragen-Deckel (MAX_CLOSING_QUESTIONS, siehe
+  // unten) zu entgehen. GENAU DAS geschah im realen Testlauf "Die Stille nach dem Sturz": Nach der
+  // Zäsur meldete das Modell für die folgenden persönlichen Fragen wiederholt phase="interview"
+  // statt "closing" – der closingQuestionsAsked-Zähler blieb dadurch bei 1 stehen und der Deckel griff
+  // nie, es kamen NEUN statt der erlaubten maximal fünf Fragen nach der Zäsur. Die App, nicht das
+  // Modell, muss hier verbindlich entscheiden: Einmal in der Abschlussphase angekommen, bleibt jede
+  // weitere Frage bis zum Deckel eine Abschlussfrage – unabhängig davon, was "phase" im JSON sagt.
+  if (result.phase === 'interview' && phase === 'closing' && (slot.offenCount || 0) === 0 && !forceDoneNow && !explicitEndRequested) {
+    result.phase = 'closing';
+  }
+
   // NACHWIRKUNGS-/SELBSTHILFEFRAGEN (v2.0.0): Seit Einführung der Pflichtpunkt-Mechanik entsteht
   // Abdriften in die Nachwirkung strukturell kaum noch, weil die App der KI jeden Turn selbst
   // vorgibt, worüber sie fragen soll (siehe AKTUELLER PFLICHTPUNKT oben) – die Pflichtpunkt-Liste
@@ -2372,18 +2424,8 @@ async function getInterviewReply(history, phase, closingQuestionsAsked, priorCha
     }
   }
 
-  // MECHANISCHER VORRANG DES FAKTEN-CHECKS (v2.3.0, auf Wunsch des Nutzers: "der Faktencheck muss
-  // eindeutig überwiegen ... minimum 20 Fakten-Fragen"): Solange laut Pflichtpunkt-Mechanik noch
-  // offene Pflichtpunkte bestehen (pflichtpunkte_offen > 0, siehe slot.offenCount), wird ein vom
-  // Modell selbst gewähltes "closing"/"done" HART zurück auf "interview" gezwungen – unabhängig
-  // davon, was das Modell zurückgegeben hat oder wie sehr die zuletzt gelieferte Nachricht schon
-  // wie eine Abschlussfrage klingt (siehe looksLikeClosingStyleQuestion-Erkennung oben, die genau
-  // das auslösen kann). Nutzersteuerung (explizites Beenden, zwei Ablehnungen in Folge) hat
-  // weiterhin Vorrang vor diesem Sicherheitsnetz, genau wie bei den anderen Mechanismen hier – ein
-  // wirklicher Abbruchwunsch der Person darf nicht an fehlenden Pflichtpunkten scheitern.
-  if ((result.phase === 'closing' || result.phase === 'done') && (slot.offenCount || 0) > 0 && !forceDoneNow && !explicitEndRequested) {
-    result.phase = 'interview';
-  }
+  // (Der mechanische Fakten-Vorrang-Deckel sowie sein Gegenstück für bereits erreichte
+  // Abschlussphasen laufen jetzt weiter oben, VOR diesem Filter – siehe v2.3.1-Kommentar dort.)
 
   // HARTES SICHERHEITSNETZ GEGEN AUSUFERNDE SITZUNGEN: Die weiche Prompt-Anweisung (siehe
   // "KEIN ABDRIFTEN" oben) hält das Modell nicht immer zuverlässig ein. Ein echtes Testinterview
