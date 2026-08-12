@@ -405,8 +405,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.3.2';
-const APP_BUILD = '2026-08-11 21:00 UTC';
+const APP_VERSION = '2.4.0';
+const APP_BUILD = '2026-08-12 00:00 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
@@ -758,6 +758,13 @@ zum aktuellen Pflichtpunkt zurückkehrst. Sobald die App im Status "ALLE PFLICHT
 GEKLÄRT ODER ÜBERSPRUNGEN" meldet, ist das Ereignis aus Sicht der App vollständig erfasst – wechsle
 dann gemäß ABSCHLUSSPHASE in den Abschluss, ohne selbst noch weitere inhaltliche Fragen zu
 erfinden.
+
+HARTER DECKEL (fakten_fragen_gestellt im internen Status): Es dürfen INSGESAMT höchstens 20
+Fakten-Fragen in dieser Sitzung gestellt werden – auch wenn danach noch Pflichtpunkte offen
+bleiben. Die App erzwingt das ohnehin mechanisch, unabhängig davon, was du meldest; plane deine
+Fragen aber selbst schon so, dass die wichtigsten Punkte (wer, was, wann, wo, warum – WAS und
+WARUM mit Vorrang) zuerst geklärt werden, damit bei Erreichen des Deckels möglichst wenig
+Wesentliches offenbleibt.
 
 ---
 WIEDEREINSTIEG NACH EINER PAUSE INNERHALB DERSELBEN SITZUNG
@@ -1290,6 +1297,8 @@ Einige Grundkategorien (u. a. Personen/Beziehungen/Schicksal, genaues Datum und 
 
 WICHTIG (der Faktencheck muss eindeutig überwiegen): Erzeuge zwischen 14 und 22 event-spezifische Punkte – sei dabei so kleinteilig/granular wie möglich, lieber mehr konkrete Einzelpunkte als wenige breite. Denke an ALLE Fakten, Umstände und Rahmenbedingungen, die zu diesem Ereignis gehören könnten, nicht nur an den Kern-Hergang: bei einem Unfall z. B. Wetter/Licht/Sichtverhältnisse, genaues Gelände/Untergrund, verwendete Ausrüstung und ob sie ausreichte, Erfahrungsstand der Beteiligten, konkrete Warnzeichen im Vorfeld, wer wie schnell Hilfe geholt hat, wie die Rettungskette genau ablief, unmittelbare körperliche/materielle Folgen, ob es eine behördliche/versicherungstechnische Untersuchung und eine Schuld-/Haftungsfrage gab, sowie jede weitere für DIESES Ereignis typische Detailfrage. Bei anderen Ereignistypen (z. B. Belästigung am Arbeitsplatz, eine Diagnose, ein Firmenkonkurs) gilt dasselbe Prinzip übertragen: möglichst viele konkrete, überprüfbare Einzelfakten statt weniger großer Themenblöcke. Jeder Punkt hat eine kurze interne Kategorie-Kennung ("category", ein Wort ohne Leerzeichen, z. B. "wetterlage", "ausruestung", "vorgeschichte") und ein "label" (ein knapper Satz, der beschreibt, WAS noch geklärt werden soll – eine Sachinformation, kein fertiger Fragesatz).
 
+GEWICHTUNG (wichtig, da insgesamt nur 20 Fragen tatsächlich gestellt werden, siehe unten): WAS genau geschah (der Hergang Schritt für Schritt) und WARUM es geschah (Ursache, Motiv, Vorgeschichte, Verantwortlichkeit) sind die beiden wichtigsten Kategorien und sollen den größten Anteil deiner Punkte ausmachen – mindestens 40% (also mindestens 6-9 der 14-22 Punkte) sollten direkt den genauen Ablauf oder die Ursache/Verantwortlichkeit betreffen. Rand-Umstände (Wetter, Ausrüstung, behördliche Nachbearbeitung u. Ä.) sind wichtig, sollen aber in der Minderheit bleiben, da sie sonst wertvolle Fragen zum eigentlichen Kerngeschehen verdrängen, bevor der Fragen-Deckel erreicht ist.
+
 VERBOTEN: Erzeuge KEINEN Punkt zur Zeit NACH dem Ereignis (Verarbeitung, Therapie, wie sich der Alltag/eine Beziehung seitdem verändert hat, was der Person sonst geholfen hat, heutiges Befinden) und KEINEN Punkt zu Selbsthilfe/Lebensweisheiten (was die Person anderen mitteilen möchte, welchen Rat sie ihrem früheren Ich geben würde). Diese Themen sind für dieses Interview vollständig tabu, unabhängig davon, wie naheliegend sie beim beschriebenen Ereignis erscheinen – die App verwirft solche Punkte ohnehin automatisch, aber erzeuge sie erst gar nicht.
 
 Formuliere außerdem eine kurze (2-3 Sätze), warme, aber sachliche Übergangsnachricht an die Person: bestätigt knapp, was sie erzählen möchte (in ihren eigenen Worten, nicht ausgeschmückt), erwähnt, dass jederzeit pausiert werden kann und alles automatisch gespeichert wird, und leitet direkt zur ersten inhaltlichen Frage über (ohne diese Frage selbst schon zu stellen). Erfinde keine Fakten, keine Sitzungsanzahl, keine Fragenliste ankündigen.
@@ -1410,6 +1419,14 @@ function newInterviewRecord(id, projectId) {
     status: 'laufend',   // laufend | pausiert | in_pruefung | abgeschlossen
     phase: 'interview',  // interview | closing | done
     closingQuestionsAsked: 0,
+    factQuestionsAsked: 0, // Anzahl TATSÄCHLICH GESTELLTER Fakten-Fragen in dieser Sitzung (siehe
+    // HARD_FACT_QUESTION_CAP) – zählt JEDE Frage, die die Person als phase="interview" zu sehen
+    // bekommt, egal ob sie aus der regulären Pflichtpunkt-Warteschlange oder aus der separaten
+    // Personen-Klärung (siehe checkForUnclarifiedPerson) stammt. Bewusst ein eigener, einfacher
+    // Zähler statt aus factSlots abgeleitet: die Personen-Klärung "verbraucht keinen regulären
+    // Punkt" (siehe dort) und wäre in der Slot-Liste allein unsichtbar – genau das führte zu Fragen,
+    // die intern nicht gegen keine Obergrenze zählten (echter Nutzer-Testlauf: 39 Fakten-Fragen vor
+    // der Zäsur statt der vereinbarten 20, siehe HARD_FACT_QUESTION_CAP).
     currentSlotId: null, // id des Pflichtpunkts, zu dem die zuletzt gestellte Frage gehörte (siehe resolveFactSlot)
     pendingPersonClarification: null, // Bezeichnung einer Person, zu der gerade eine Klärungsfrage gestellt wurde (siehe checkForUnclarifiedPerson)
     simulationStory: null, // nur bei Testmodus-Simulationen gesetzt: die geheime, interne Story (siehe SIMULATIONSMODUS)
@@ -1447,6 +1464,18 @@ const FATAL_OUTCOME_SLOT = { category: 'folgenschwerster_moment', label: 'Der ge
 // auf, falls die KI-Planung (siehe planEventFactSlots) weniger event-spezifische Punkte liefert.
 const MIN_FACT_SLOTS = 20;
 const MAX_FACT_SLOTS = 28;
+// HARTER DECKEL FÜR TATSÄCHLICH GESTELLTE FAKTEN-FRAGEN (v2.4.0, auf Wunsch des Nutzers nach einem
+// echten Testlauf: "nach 20 Fragen ist Schluss, ein klarer Stopp"). WICHTIG: Das ist NICHT dasselbe
+// wie MAX_FACT_SLOTS oben – MAX_FACT_SLOTS begrenzt nur, wie lang die INTERNE Pflichtpunkt-Liste
+// werden darf, nicht wie viele Fragen der Person davon tatsächlich gezeigt werden. Ein echter
+// Testlauf ("Der Tag, an dem das Bein brach") zeigte 39 tatsächlich gestellte Fakten-Fragen vor der
+// Zäsur, obwohl die Liste selbst nie länger als MAX_FACT_SLOTS (28) war – die separate Personen-
+// Klärung (siehe checkForUnclarifiedPerson) lief als eigene, ungedeckelte Frage-Quelle nebenher.
+// HARD_FACT_QUESTION_CAP zählt deshalb über iv.factQuestionsAsked ALLE tatsächlich gezeigten
+// Fakten-Fragen (Pflichtpunkt-Warteschlange UND Personen-Klärung zusammen) und erzwingt spätestens
+// bei Erreichen des Deckels den Wechsel in die Abschlussphase, unabhängig davon, wie viele
+// Pflichtpunkte intern noch offen sind (siehe getInterviewReply).
+const HARD_FACT_QUESTION_CAP = 20;
 // Generischer Reservepool an weiteren, überwiegend ereignisunabhängigen SACH-Kategorien – bewusst
 // KEINE Nachwirkungs-/Gefühlsfragen (siehe looksLikeAftermathQuestion), sondern Umstände/Hergang/
 // Verantwortlichkeit, wie sie z.B. bei einem Bergunfall zusätzlich zu klären wären (Wetter, Licht,
@@ -1598,6 +1627,10 @@ function migrateDB(db) {
     if (iv.steeringHintShown === undefined) iv.steeringHintShown = false;
     if (iv.simulationHintShown === undefined) iv.simulationHintShown = false;
     if (iv.archivTitle === undefined) iv.archivTitle = null;
+    // v2.4.0: harter Fakten-Fragen-Deckel (siehe HARD_FACT_QUESTION_CAP) – bei älteren, geladenen
+    // Sitzungen ohne dieses Feld wird defensiv von 0 ausgegangen (kann höchstens dazu führen, dass
+    // der Deckel für den Rest dieser einen Alt-Sitzung etwas später greift, nie zu früh).
+    if (iv.factQuestionsAsked === undefined) iv.factQuestionsAsked = 0;
   }
   if (!db.currentProjectId || !db.projects.find(p => p.id === db.currentProjectId)) {
     db.currentProjectId = db.projects.length ? db.projects[db.projects.length - 1].id : null;
@@ -1970,7 +2003,18 @@ function looksLikeAftermathQuestion(text) {
   // Signalwörter. Dafür ein neues, gezielt auf "stellt sich ... persönlich ... dar" begrenztes
   // Muster (bewusst NICHT allein an "zurückblickst" aufgehängt, weil rückblickende KAUSALITÄTS-
   // Fragen wie "Gab es Warnzeichen, wenn du zurückblickst?" ausdrücklich erwünscht bleiben sollen).
-  return /nach (dem|diesem) (unfall|ereignis|sturm|vorfall|erlebnis|verfahren|prozess)|zwischen dem (unfall|ereignis|sturm|vorfall|erlebnis|geschehen|verfahren)|in den (darauffolgenden )?(tagen|wochen|monaten|jahren)( danach)?|\bin dieser zeit\b|im laufe der zeit|jahre später|jahrestag|gedenktag|\bseitdem\b|\balltag\b|\bheute\b|\btherapie\b|therapeutin|therapeuten\b|wie (hast du|habt ihr|haben sie) (gelernt|es geschafft)\b.{0,40}umzugehen|wie (bist du|seid ihr|sind sie) damit umgegangen|mit (diesem|dem) verlust|deine? routine|\britual\b|was hat (dich|dir|sie|ihn|euch) (getragen|gehalten|geholfen)|abgesehen von .{0,30}(therapie|verarbeitung)|sonst noch geholfen|\b(beziehung|verhältnis|freundschaft|kontakt)\b.{0,90}(verändert|entwickelt|ausgewirkt|auswirkt|beeinflusst)|\bauswirkung\b.{0,90}\b(beziehung|verhältnis|freundschaft|kontakt)\b|\bdas schwerste daran\b|\bauf diese wahrheit\b|\bnachdem\b.{0,60}(überwunden|verarbeitet|vorbei|geschafft)|stellt sich (für dich|für sie)\b.{0,60}\bdar\b/i.test(text || '');
+  //
+  // v2.4.0 (echter Nutzer-Testlauf "Der Tag, an dem das Bein brach", Reitunfall): DREI weitere reale
+  // Nachwirkungsfragen rutschten durch, alle vor der Zäsur. (1) "Wie seid ihr in den FOLGETAGEN nach
+  // dem Unfall in Kontakt geblieben ...?" – "Folgetagen" ist EIN zusammengesetztes Wort ohne
+  // Leerzeichen, das bisherige Muster "in den (...) (tagen|wochen|...)" verlangte aber ein
+  // eigenständiges Wort "tagen" und griff deshalb nicht. (2) "Wie ist eure Freundschaft in der
+  // langen Zeit der GENESUNG weitergegangen ...?" – "Genesung"/"Genesungszeit" fehlte komplett im
+  // Vokabular. (3) "Wie genau sah diese schwierige Phase aus, in der du Clara ÜBELGENOMMEN hast
+  // ...?" – eine Beziehungs-/Groll-Frage ganz ohne die bisherigen Signalwörter. Ergänzt außerdem
+  // "auseinandergelebt"/"zusammengeschweißt" (Beziehungsentwicklung seit dem Ereignis), da dieselbe
+  // Lücke (zusammengesetzte Verben statt "Beziehung ... verändert") sich hier absehbar wiederholen würde.
+  return /nach (dem|diesem) (unfall|ereignis|sturm|vorfall|erlebnis|verfahren|prozess)|zwischen dem (unfall|ereignis|sturm|vorfall|erlebnis|geschehen|verfahren)|in den (darauffolgenden )?(tagen|wochen|monaten|jahren)( danach)?|\bfolgetag(en)?\b|\bfolgewoche(n)?\b|\bfolgemonate?n?\b|\bin dieser zeit\b|im laufe der zeit|jahre später|jahrestag|gedenktag|\bseitdem\b|\balltag\b|\bheute\b|\btherapie\b|therapeutin|therapeuten\b|\bgenesung(szeit)?\b|zeit der genesung|wie (hast du|habt ihr|haben sie) (gelernt|es geschafft)\b.{0,40}umzugehen|wie (bist du|seid ihr|sind sie) damit umgegangen|mit (diesem|dem) verlust|deine? routine|\britual\b|was hat (dich|dir|sie|ihn|euch) (getragen|gehalten|geholfen)|abgesehen von .{0,30}(therapie|verarbeitung)|sonst noch geholfen|\b(beziehung|verhältnis|freundschaft|kontakt)\b.{0,90}(verändert|entwickelt|ausgewirkt|auswirkt|beeinflusst)|\bauswirkung\b.{0,90}\b(beziehung|verhältnis|freundschaft|kontakt)\b|übel\s?genommen|\bauseinandergelebt\b|\bzusammengeschweißt\b|\bdas schwerste daran\b|\bauf diese wahrheit\b|\bnachdem\b.{0,60}(überwunden|verarbeitet|vorbei|geschafft)|stellt sich (für dich|für sie)\b.{0,60}\bdar\b/i.test(text || '');
 }
 
 // Erkennt Selbsthilfe-/Lebensweisheits-Fragen (siehe "KEINE SELBSTHILFE-/LEBENSWEISHEITS-FRAGEN" im
@@ -2187,12 +2231,14 @@ function maxSimilarityToRecent(text, recentKiMessages) {
 // konkret fragen soll: Die App wählt den nächsten offenen Pflichtpunkt selbst aus (mechanisch,
 // nicht vom Modell entschieden) und teilt ihn hier mit; sind alle Punkte bereits geklärt oder
 // übersprungen, wird stattdessen der Wechsel in die Abschlussphase angewiesen.
-async function getInterviewReply(history, phase, closingQuestionsAsked, priorChaptersContext, sessionInfo, slotInfo) {
+async function getInterviewReply(history, phase, closingQuestionsAsked, priorChaptersContext, sessionInfo, slotInfo, factQuestionsAsked) {
+  factQuestionsAsked = factQuestionsAsked || 0;
   const prompts = loadPrompts();
   const info = sessionInfo || {};
   const slot = slotInfo || {};
   const fragenBisher = history.filter(m => m.role === 'ki').length;
   const statusNote = `\n\nINTERNER STATUS: phase=${phase}, abschlussfragen_gestellt=${closingQuestionsAsked}, ` +
+    `fakten_fragen_gestellt=${factQuestionsAsked} von maximal ${HARD_FACT_QUESTION_CAP} (harter Deckel), ` +
     `fragen_in_dieser_sitzung_bisher=${fragenBisher}, ` +
     `sitzung_nummer_in_diesem_projekt=${info.sessionNumber || 1}, ` +
     `pflichtpunkte_offen=${slot.offenCount || 0} von ${slot.totalCount || 0}` +
@@ -2389,8 +2435,20 @@ async function getInterviewReply(history, phase, closingQuestionsAsked, priorCha
   // hier wieder auf "interview" zurückgezwungen, ohne dass die längst angezeigte Nachricht noch
   // einmal geprüft wurde. Jetzt steht die Phasen-Korrektur VOR dem Filter, sodass dieser die
   // tatsächliche, korrigierte Phase sieht.
-  if ((result.phase === 'closing' || result.phase === 'done') && (slot.offenCount || 0) > 0 && !forceDoneNow && !explicitEndRequested) {
+  if ((result.phase === 'closing' || result.phase === 'done') && (slot.offenCount || 0) > 0 &&
+      factQuestionsAsked < HARD_FACT_QUESTION_CAP && !forceDoneNow && !explicitEndRequested) {
     result.phase = 'interview';
+  }
+
+  // HARTER FAKTEN-FRAGEN-DECKEL (v2.4.0, siehe HARD_FACT_QUESTION_CAP oben): Sind bereits
+  // HARD_FACT_QUESTION_CAP (20) Fakten-Fragen tatsächlich gestellt worden, wird JETZT in die
+  // Abschlussphase gezwungen – unabhängig davon, ob laut Pflichtpunkt-Mechanik noch offene Punkte
+  // bestehen (der Faktencheck-Vorrang oben greift ab hier bewusst NICHT mehr, siehe die dortige
+  // Zusatzbedingung "factQuestionsAsked < HARD_FACT_QUESTION_CAP") und unabhängig davon, was das
+  // Modell selbst als phase gemeldet hat. Nutzersteuerung (zwei Ablehnungen in Folge) hat weiterhin
+  // Vorrang, genau wie bei den anderen Deckeln hier.
+  if (result.phase === 'interview' && factQuestionsAsked >= HARD_FACT_QUESTION_CAP && !forceDoneNow) {
+    result.phase = 'closing';
   }
 
   // GEGENSTÜCK ZUM FAKTEN-VORRANG: Ist die Sitzung bereits erkennbar in der Abschlussphase
@@ -2488,7 +2546,15 @@ async function getInterviewReply(history, phase, closingQuestionsAsked, priorCha
   // statt direkt in den Abschluss zu wechseln. Greift NICHT bei einem expliziten Beenden-Wunsch
   // oder nach zwei Ablehnungen in Folge – die Nutzersteuerung hat weiterhin Vorrang vor diesem
   // Sicherheitsnetz, genau wie bei den anderen Mechanismen oben.
-  if (result.phase === 'closing' && closingQuestionsAsked === 0 && !explicitEndRequested && !forceDoneNow) {
+  // WICHTIG (v2.4.0): Greift NICHT mehr, sobald HARD_FACT_QUESTION_CAP bereits erreicht ist – anders
+  // als beim alten, großzügigen 50-Fragen-Netz (siehe hardCapForcedClosing) ist der 20er-Deckel ein
+  // vom Nutzer ausdrücklich gewünschter, verbindlicher Stopp ("nach 20 Fragen ist Schluss, ein
+  // klarer Stopp"). Ohne diese Zusatzbedingung würde genau dieser Korrekturversuch den erzwungenen
+  // Wechsel nach "closing" wieder zurück auf "interview" drehen und den Deckel damit faktisch
+  // wirkungslos machen, sobald irgendwann im Gespräch nie ein exaktes Datum genannt wurde – lieber
+  // ein sauberer Abschluss ohne exaktes Datum als ein Deckel, der sich selbst aushebeln lässt.
+  if (result.phase === 'closing' && closingQuestionsAsked === 0 && !explicitEndRequested && !forceDoneNow &&
+      factQuestionsAsked < HARD_FACT_QUESTION_CAP) {
     const historyTextForDate = history.map(m => m.text).join(' ');
     if (!mentionsSpecificDate(historyTextForDate)) {
       const correction = `\n\nWICHTIGER HINWEIS ZU DEINER LETZTEN ANTWORT: Du wolltest in die Abschlussphase wechseln, ` +
@@ -3196,7 +3262,8 @@ async function requestAndHandleReply(iv) {
   // Pflichtpunkt-Warteschlange, verbraucht aber KEINEN regulären Punkt – der reguläre "personen"-
   // Pflichtpunkt bzw. der nächste offene Punkt bleibt für den übernächsten Turn unverändert stehen.
   let personDescriptor = null;
-  if (project && project.factSlotsGenerated && iv.phase === 'interview' && lastUserMsg && !isExplicitEndRequest(lastUserMsg)) {
+  if (project && project.factSlotsGenerated && iv.phase === 'interview' &&
+      (iv.factQuestionsAsked || 0) < HARD_FACT_QUESTION_CAP && lastUserMsg && !isExplicitEndRequest(lastUserMsg)) {
     try {
       const personCheck = await checkForUnclarifiedPerson(lastUserMsg, project.clarifiedPersons || []);
       if (personCheck && personCheck.personMentioned && personCheck.descriptor) {
@@ -3224,7 +3291,7 @@ async function requestAndHandleReply(iv) {
       currentSlot: { category: 'personen', label: `Wer ist ${personDescriptor}, und in welcher Beziehung steht diese Person zur erzählenden Person?` },
       offenCount, totalCount, allSlotsResolved: false,
     };
-    const result = await getInterviewReply(history, iv.phase, iv.closingQuestionsAsked, priorChaptersContext, sessionInfo, slotInfo);
+    const result = await getInterviewReply(history, iv.phase, iv.closingQuestionsAsked, priorChaptersContext, sessionInfo, slotInfo, iv.factQuestionsAsked);
     message = result.message; phase = result.phase;
     if (phase === 'interview') resolvedPersonDescriptor = personDescriptor;
   } else if (project && project.factSlotsGenerated) {
@@ -3247,7 +3314,7 @@ async function requestAndHandleReply(iv) {
         currentSlot: candidateSlot, offenCount, totalCount,
         allSlotsResolved: !candidateSlot && totalCount > 0,
       };
-      const result = await getInterviewReply(history, iv.phase, iv.closingQuestionsAsked, priorChaptersContext, sessionInfo, slotInfo);
+      const result = await getInterviewReply(history, iv.phase, iv.closingQuestionsAsked, priorChaptersContext, sessionInfo, slotInfo, iv.factQuestionsAsked);
       if (candidateSlot && result.phase === 'interview' && result.forbiddenTopicAfterRetry && attempts < MAX_SLOT_ATTEMPTS) {
         candidateSlot.status = 'uebersprungen';
         candidateSlot = project.factSlots.find(s => s.status === 'offen') || null;
@@ -3259,7 +3326,7 @@ async function requestAndHandleReply(iv) {
     }
   } else {
     const slotInfo = { currentSlot: null, offenCount: 0, totalCount: 0, allSlotsResolved: false };
-    const result = await getInterviewReply(history, iv.phase, iv.closingQuestionsAsked, priorChaptersContext, sessionInfo, slotInfo);
+    const result = await getInterviewReply(history, iv.phase, iv.closingQuestionsAsked, priorChaptersContext, sessionInfo, slotInfo, iv.factQuestionsAsked);
     message = result.message; phase = result.phase;
   }
 
@@ -3279,6 +3346,10 @@ async function requestAndHandleReply(iv) {
     iv.status = 'in_pruefung';
   } else {
     iv.phase = 'interview';
+    // Zählt JEDE tatsächlich gezeigte Fakten-Frage gegen HARD_FACT_QUESTION_CAP – unabhängig davon,
+    // ob sie aus der regulären Pflichtpunkt-Warteschlange oder der Personen-Klärung stammt (siehe
+    // factQuestionsAsked oben in newInterviewRecord).
+    iv.factQuestionsAsked = (iv.factQuestionsAsked || 0) + 1;
   }
   // Nur wenn die Antwort tatsächlich als Interview-Frage zum aktuellen Pflichtpunkt bzw. zur
   // aktuellen Personen-Klärung ausgegeben wurde, merken wir uns das für die mechanische Auflösung
@@ -3307,7 +3378,16 @@ async function requestAndHandleReply(iv) {
 const INTERVIEW_STATUS_LABELS = { laufend: 'läuft', pausiert: 'pausiert', in_pruefung: 'wartet auf deine Überprüfung', abgeschlossen: 'abgeschlossen' };
 function statusLabel(status) { return INTERVIEW_STATUS_LABELS[status] || status; }
 function updateStatusLine(iv) {
-  statusEl.textContent = `Interview #${iv.id} · ${statusLabel(iv.status)}`;
+  // v2.4.0, auf Wunsch des Nutzers ("ich hätte gerne das du das interview durchnummerierst"):
+  // macht den mechanischen Fakten-/Abschlussfragen-Deckel im laufenden Gespräch sichtbar, statt nur
+  // intern zu wirken – so fallen Abweichungen sofort auf, statt erst im fertigen Archiv-PDF.
+  let counterText = '';
+  if (iv.phase === 'interview') {
+    counterText = ` · Frage ${Math.min((iv.factQuestionsAsked || 0) + 1, HARD_FACT_QUESTION_CAP)} von ${HARD_FACT_QUESTION_CAP}`;
+  } else if (iv.phase === 'closing') {
+    counterText = ` · Abschlussfrage ${Math.min(iv.closingQuestionsAsked, MAX_CLOSING_QUESTIONS)} von ${MAX_CLOSING_QUESTIONS}`;
+  }
+  statusEl.textContent = `Interview #${iv.id} · ${statusLabel(iv.status)}${counterText}`;
 }
 
 // Markiert den einmaligen Steuerungs-Hinweis als "fällig", sobald die 5. KI-Frage dieses
