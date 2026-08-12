@@ -423,8 +423,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.4.1';
-const APP_BUILD = '2026-08-12 09:30 UTC';
+const APP_VERSION = '2.4.2';
+const APP_BUILD = '2026-08-12 11:00 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
@@ -3567,6 +3567,16 @@ function acceptReorder() {
   iv.qaOrder = iv.reorderProposal.order;
   saveDB();
   maybeShowReviewPrompt(iv);
+  // v2.4.2, auf Wunsch des Nutzers ("ich möchte aber manuell ändern und sage ob ich zufrieden mit
+  // der neuen anordnung bin"): Bestätigt die Person diesen Vorschlag über die ganz normalen Knöpfe
+  // hier im Chat, während eine manuelle Simulation gerade auf genau diesen Schritt pausiert ist
+  // (siehe waitForSimulationStep('reorder', ...) in runSimulation), weckt das die pausierte
+  // Simulationsschleife auf – bewusst OHNE Automatik-Shortcut in der Statusleiste (anders als beim
+  // review-Schritt), damit dieser Schritt wirklich nur durch eine bewusste Entscheidung der Person
+  // weitergeht.
+  if (simulationPaused && simulationPauseKind === 'reorder' && simulationPausedIv && simulationPausedIv.id === iv.id) {
+    resolveSimulationStep('manual');
+  }
 }
 
 function declineReorder() {
@@ -3577,6 +3587,11 @@ function declineReorder() {
   iv.qaOrder = null;
   saveDB();
   maybeShowReviewPrompt(iv);
+  // v2.4.2: siehe Kommentar in acceptReorder() oben – gilt hier identisch für "Ursprüngliche
+  // Reihenfolge behalten" bzw. "Weiter" (falls die KI keine Änderung vorgeschlagen hat).
+  if (simulationPaused && simulationPauseKind === 'reorder' && simulationPausedIv && simulationPausedIv.id === iv.id) {
+    resolveSimulationStep('manual');
+  }
 }
 
 async function startNewInterview() {
@@ -3634,7 +3649,8 @@ let simulationAbortRequested = false;
 // bilden zusammen einen einzigen offenen "Warte auf die nächste Aktion"-Punkt in runSimulation ab –
 // siehe waitForSimulationStep()/resolveSimulationStep() weiter unten.
 let simulationPaused = false;
-let simulationPauseKind = null; // 'step' (vor der nächsten Proband-Antwort) oder 'review' (vor dem Abschluss)
+let simulationPauseKind = null; // 'step' (vor der nächsten Proband-Antwort), 'reorder' (v2.4.2, vor
+// dem Reihenfolge-Vorschlag – ohne "▶ Weiter"-Shortcut) oder 'review' (vor dem Abschluss)
 let simulationStepResolver = null; // resolve()-Funktion des aktuell offenen Pause-Promise
 let simulationPausedIv = null; // das Interview, für das die aktuelle Pause gilt
 
@@ -3762,7 +3778,13 @@ function waitForSimulationStep(kind, iv) {
   simulationPaused = true;
   simulationPauseKind = kind;
   simulationPausedIv = iv;
-  showSimulationContinueButton();
+  // v2.4.2, auf Wunsch des Nutzers ("ich möchte aber manuell ändern und sage ob ich zufrieden mit
+  // der neuen anordnung bin"): Für den Reihenfolge-Schritt gibt es BEWUSST keinen "▶ Weiter"-
+  // Automatik-Shortcut in der Statusleiste (anders als bei 'step'/'review') – die Person muss den
+  // Vorschlag oben im Chat wirklich selbst annehmen oder ablehnen (siehe acceptReorder/
+  // declineReorder), statt ihn versehentlich mit demselben Knopf zu überspringen, mit dem man sonst
+  // einfach nur weiterklickt.
+  if (kind !== 'reorder') showSimulationContinueButton();
   return new Promise((resolve) => { simulationStepResolver = resolve; });
 }
 
@@ -3905,14 +3927,28 @@ async function runSimulation(genreDescription, mode) {
 
     // ABSCHLUSS (Task 5, gekoppelt an Task 4): Ein Simulations-Interview erreicht jetzt genau wie
     // ein echtes Interview den Status "in_pruefung" (siehe requestAndHandleReply) statt sofort
-    // "abgeschlossen" zu sein. Im manuellen Modus pausiert die Simulation hier ein letztes Mal
-    // ("▶ Weiter" bestätigt automatisch, entspricht "Nein, das passt so"; die ganz normalen Buttons
-    // der Rohtext-Überprüfung oben im Chat bleiben zusätzlich als manuelle Eingriffsmöglichkeit
-    // nutzbar, siehe finalizeReview). Im automatischen Modus wird sofort bestätigt, wie vor v2.2.0.
+    // "abgeschlossen" zu sein. Im manuellen Modus pausiert die Simulation hier zweimal nacheinander:
+    // ZUERST für den Reihenfolge-Vorschlag (v2.4.2, auf Wunsch des Nutzers: "ich möchte aber
+    // manuell ändern und sage ob ich zufrieden mit der neuen anordnung bin" – siehe
+    // waitForSimulationStep('reorder', ...), acceptReorder(), declineReorder(); bewusst OHNE
+    // "▶ Weiter"-Automatik-Shortcut, damit dieser Schritt wirklich nur durch eine bewusste
+    // Entscheidung weitergeht), DANACH wie gehabt für die Abschluss-Überprüfung ("▶ Weiter"
+    // bestätigt automatisch, entspricht "Nein, das passt so"; die ganz normalen Buttons der
+    // Rohtext-Überprüfung oben im Chat bleiben zusätzlich als manuelle Eingriffsmöglichkeit nutzbar,
+    // siehe finalizeReview). Im automatischen Modus wird sofort bestätigt, wie vor v2.2.0 – dort
+    // bleibt der Reihenfolge-Vorschlag unbeantwortet (reorderDecision===null), das Archiv-PDF fällt
+    // dann sicher auf die ursprüngliche chronologische Reihenfolge zurück (siehe
+    // resolveArchivPairOrder).
     if (!simulationAbortRequested && iv.status === 'in_pruefung') {
       if (isManualMode) {
-        setSimulationStatus('🎭 Pausiert zur Abschluss-Überprüfung – „▶ Weiter" bestätigt automatisch, oder nutze oben im Chat die Buttons, um selbst zu antworten/etwas zu ändern ...', true);
-        await waitForSimulationStep('review', iv);
+        if (iv.reorderDecision === null) {
+          setSimulationStatus('🎭 Pausiert: Bitte nutze oben im Chat den Reihenfolge-Vorschlag – „Neue Reihenfolge übernehmen" oder „Ursprüngliche Reihenfolge behalten" ...', true);
+          await waitForSimulationStep('reorder', iv);
+        }
+        if (!simulationAbortRequested && iv.status === 'in_pruefung') {
+          setSimulationStatus('🎭 Pausiert zur Abschluss-Überprüfung – „▶ Weiter" bestätigt automatisch, oder nutze oben im Chat die Buttons, um selbst zu antworten/etwas zu ändern ...', true);
+          await waitForSimulationStep('review', iv);
+        }
       } else {
         finalizeSimulationReview(iv);
       }
@@ -5418,6 +5454,11 @@ on('btn-sim-bar-stop', 'click', () => {
 on('btn-sim-bar-close', 'click', () => { el('simulation-status-bar').style.display = 'none'; });
 on('btn-sim-bar-continue', 'click', () => {
   if (!simulationPaused || !simulationStepResolver) return;
+  // v2.4.2: kein Automatik-Shortcut für den Reihenfolge-Schritt – der Knopf ist während dieser
+  // Pause zwar bereits per waitForSimulationStep() ausgeblendet, dieser zusätzliche Schutz greift
+  // aber z. B., falls er kurzzeitig noch sichtbar war. Siehe acceptReorder()/declineReorder() für
+  // den einzig gültigen Weg, diese Pause aufzulösen.
+  if (simulationPauseKind === 'reorder') return;
   if (simulationPauseKind === 'review') {
     finalizeSimulationReview(simulationPausedIv);
   }
