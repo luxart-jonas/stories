@@ -423,8 +423,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.4.2';
-const APP_BUILD = '2026-08-12 11:00 UTC';
+const APP_VERSION = '2.4.3';
+const APP_BUILD = '2026-08-12 14:30 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
@@ -3481,7 +3481,14 @@ function maybeShowReviewPrompt(iv) {
     if (reorderPanel) reorderPanel.style.display = 'none';
     return;
   }
-  if (iv.status === 'in_pruefung' && iv.reorderDecision === null) {
+  // v2.4.3, auf Wunsch des Nutzers ("wo ist das mit dem umsortieren? wo kann ich noch ändern"):
+  // Für Interviews, die den Reihenfolge-Vorschlag NIE gesehen haben (z. B. bereits abgeschlossene
+  // Interviews aus der Zeit vor v2.4.1, oder Simulationen im automatischen Modus, die den Schritt
+  // bewusst überspringen), bleibt reorderDecision dauerhaft null. Statt den Vorschlag dann für
+  // immer zu verpassen, wird er beim Öffnen eines solchen Interviews auch NACH dem Abschluss noch
+  // einmal angeboten – bevor das Archiv-PDF-Angebot erscheint. Ein bereits GETROFFENE Entscheidung
+  // (accepted/declined) wird dagegen nie erneut abgefragt.
+  if (iv.reorderDecision === null) {
     panel.style.display = 'none';
     showReorderPrompt(iv);
     return;
@@ -3562,7 +3569,9 @@ async function showReorderPrompt(iv) {
 function acceptReorder() {
   if (!interviewId) return;
   const iv = getInterview(interviewId);
-  if (!iv || iv.status !== 'in_pruefung' || !iv.reorderProposal) return;
+  // v2.4.3: darf auch für ein bereits "abgeschlossenes" Interview greifen (siehe Kommentar in
+  // maybeShowReviewPrompt oben) – nicht nur für "in_pruefung".
+  if (!iv || (iv.status !== 'in_pruefung' && iv.status !== 'abgeschlossen') || !iv.reorderProposal) return;
   iv.reorderDecision = 'accepted';
   iv.qaOrder = iv.reorderProposal.order;
   saveDB();
@@ -3582,7 +3591,9 @@ function acceptReorder() {
 function declineReorder() {
   if (!interviewId) return;
   const iv = getInterview(interviewId);
-  if (!iv || iv.status !== 'in_pruefung') return;
+  // v2.4.3: siehe Kommentar in acceptReorder() oben – darf auch für ein bereits "abgeschlossenes"
+  // Interview greifen.
+  if (!iv || (iv.status !== 'in_pruefung' && iv.status !== 'abgeschlossen')) return;
   iv.reorderDecision = 'declined';
   iv.qaOrder = null;
   saveDB();
