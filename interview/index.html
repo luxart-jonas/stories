@@ -219,6 +219,25 @@
       </div>
     </div>
 
+    <!-- TITEL-BESTÄTIGUNG VOR DEM ARCHIV-PDF (v2.4.5, auf Wunsch des Nutzers: "ich würde fragen ob
+         der Titel so passt"): Erscheint anstelle von #review-done-block, sobald "Archiv-PDF
+         erstellen" geklickt wird, aber der Titel noch nicht bestätigt ist (iv.archivTitleConfirmed
+         === false, siehe showTitleConfirmPrompt/openArchivPdf weiter unten) – funktioniert
+         identisch in der normalen Nutzung UND in der Simulation, da beide denselben Knopf/dieselbe
+         Funktion nutzen. Das eigentliche PDF wird erst NACH der Bestätigung erzeugt, der Titel kann
+         dabei auch direkt von Hand angepasst werden statt nur pauschal zugestimmt/abgelehnt. -->
+    <div id="title-confirm-prompt" style="display:none; margin:10px 14px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--panel);">
+      <div id="title-confirm-loading" style="font-size:13.5px;">Ich überlege mir einen Titel fürs Archiv …</div>
+      <div id="title-confirm-body" style="display:none;">
+        <div style="margin-bottom:8px; font-size:13.5px;">Passt dieser Titel fürs Archiv? Du kannst ihn hier auch direkt anpassen.</div>
+        <input type="text" id="title-confirm-input" style="width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; margin-bottom:10px;" />
+        <div style="display:flex; gap:8px;">
+          <button id="btn-title-regenerate" type="button">Neuen Vorschlag</button>
+          <button id="btn-title-confirm" type="button" class="primary">Titel übernehmen &amp; PDF erstellen</button>
+        </div>
+      </div>
+    </div>
+
     <div class="spinner" id="spinner" style="display:none;">Die KI denkt nach …</div>
     <div class="input-row">
       <textarea id="input" placeholder="Deine Antwort … (Enter zum Senden, Shift+Enter für neue Zeile)"></textarea>
@@ -423,8 +442,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.4.4';
-const APP_BUILD = '2026-08-12 17:00 UTC';
+const APP_VERSION = '2.4.5';
+const APP_BUILD = '2026-08-12 19:30 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
@@ -1454,6 +1473,11 @@ function newInterviewRecord(id, projectId) {
     steeringHintShown: false, // wurde der einmalige Steuerungs-Hinweis nach der 5. Frage schon gezeigt? (siehe showSteeringHintIfNeeded)
     simulationHintShown: false, // wurde der einmalige Simulations-Hinweis nach der Eröffnungsfrage schon gezeigt? (siehe SIMULATIONSMODUS)
     archivTitle: null, // automatisch generierter Titel fürs Archiv-PDF (siehe generateArchivTitle), erst nach Abschluss gesetzt
+    // v2.4.5, auf Wunsch des Nutzers ("ich würde fragen ob der Titel so passt"): Der generierte
+    // Titel wird VOR dem ersten PDF-Export explizit bestätigt (oder direkt von Hand angepasst,
+    // siehe #title-confirm-prompt/showTitleConfirmPrompt weiter unten) – erst danach gilt er als
+    // endgültig und wird bei weiteren PDF-Öffnungen nicht mehr erneut abgefragt.
+    archivTitleConfirmed: false,
     // v2.4.1: REIHENFOLGE-VORSCHLAG MIT ZUSTIMMUNG (siehe getOrGenerateReorderProposal weiter unten).
     reorderProposal: null, // zwischengespeicherter KI-Vorschlag { order, reasoning, basedOnMessageCount }
     reorderDecision: null, // null (noch nicht gefragt) | 'accepted' | 'declined'
@@ -1666,6 +1690,11 @@ function migrateDB(db) {
     if (iv.reorderDecision === undefined) iv.reorderDecision = null;
     if (iv.qaOrder === undefined) iv.qaOrder = null;
     if (iv.closingPlan === undefined) iv.closingPlan = null;
+    // v2.4.5: Für Interviews von VOR diesem Update, die bereits einen (nie bestätigten) Titel
+    // hatten, gilt dieser als bereits bestätigt – sonst würde jedes ältere Archiv beim nächsten
+    // Öffnen unerwartet erneut nach dem Titel fragen, obwohl das PDF schon einmal genau so erzeugt
+    // wurde.
+    if (iv.archivTitleConfirmed === undefined) iv.archivTitleConfirmed = !!iv.archivTitle;
   }
   if (!db.currentProjectId || !db.projects.find(p => p.id === db.currentProjectId)) {
     db.currentProjectId = db.projects.length ? db.projects[db.projects.length - 1].id : null;
@@ -3783,6 +3812,7 @@ async function startNewInterview() {
     hasStory = false;
     el('review-prompt').style.display = 'none'; // Überprüfungs-Block eines evtl. vorher offenen Interviews ausblenden
     if (el('reorder-prompt')) el('reorder-prompt').style.display = 'none';
+    if (el('title-confirm-prompt')) el('title-confirm-prompt').style.display = 'none';
 
     await requestAndHandleReply(iv);
   } catch (err) {
@@ -4040,6 +4070,7 @@ async function runSimulation(genreDescription, mode) {
     updateStatusLine(iv);
     el('review-prompt').style.display = 'none'; // Überprüfungs-Block eines evtl. vorher offenen Interviews ausblenden
     if (el('reorder-prompt')) el('reorder-prompt').style.display = 'none';
+    if (el('title-confirm-prompt')) el('title-confirm-prompt').style.display = 'none';
 
     setSimulationStatus('🎭 Simulation läuft – Eröffnungsfrage wird generiert ...', true);
     await requestAndHandleReply(iv);
@@ -4268,17 +4299,31 @@ function finalizeReview() {
 // bedeutet hier ganz bewusst: der tatsächliche Frage/Antwort-Rohtext (siehe getHistory), NICHT die
 // von der KI umformulierte Zusammenfassung (siehe chapterHtml weiter unten).
 
-// Generiert per kurzem KI-Aufruf einen einmaligen, stimmungsvollen Titel aus dem Rohtranskript.
-// Wird am Interview-Datensatz zwischengespeichert (iv.archivTitle), damit ein erneutes Öffnen des
-// PDFs später nicht jedes Mal einen neuen Titel erzeugt.
+// Generiert per kurzem KI-Aufruf einen einmaligen Titel aus dem Rohtranskript. Wird am
+// Interview-Datensatz zwischengespeichert (iv.archivTitle), damit ein erneutes Öffnen des PDFs
+// später nicht jedes Mal einen neuen Titel erzeugt (und wird VOR dem ersten Export außerdem
+// explizit bestätigt, siehe showTitleConfirmPrompt weiter unten).
+//
+// v2.4.5, auf Wunsch des Nutzers, nachdem mehrere echte Archiv-Titel ("Der Tag, als die Stille
+// begann", "Eine Narbe, die nach Vergangenheit klingt") als zu poetisch/verschleiernd empfunden
+// wurden ("nicht poetisch und verschleiert, ich will wissen was passiert ist"): Der Titel muss
+// jetzt SACHLICH und KONKRET benennen, was tatsächlich passiert ist (das zentrale Ereignis), statt
+// es hinter einem Bild oder einer Stimmung zu verstecken.
 async function generateArchivTitle(iv) {
   const history = getHistory(iv.id);
   const transcript = history.map(m => (m.role === 'ki' ? 'Interviewer: ' : 'Erzählperson: ') + m.text).join('\n');
   const system = `Du liest den Rohtext eines Interviews über eine persönliche Lebensgeschichte und erfindest dafür
-einen kurzen, würdevollen, stimmungsvollen Titel – wie eine Kapitelüberschrift in einem
-Erinnerungsbuch, nicht wie eine Nachrichten-Überschrift. Maximal 8 Wörter. Kein Klickbait, keine
-Anführungszeichen, kein Punkt am Ende, keine Emojis. Gib AUSSCHLIESSLICH den Titel selbst zurück,
-sonst nichts.`;
+einen kurzen, klaren, WÜRDEVOLLEN Titel – aber vor allem einen KONKRETEN und INFORMATIVEN: Wer den
+Titel liest, muss sofort verstehen, worum es inhaltlich geht (das zentrale Ereignis), nicht nur eine
+Stimmung erahnen.
+
+WICHTIG: KEINE poetische, rätselhafte oder verschleiernde Formulierung, KEINE Metapher, die das
+eigentliche Ereignis verschweigt oder umschreibt (also NICHT "Der Tag, als die Stille begann" oder
+"Eine Narbe, die nach Vergangenheit klingt", SONDERN z. B. "Der Tod meines Sohnes an Heiligabend"
+oder "Ein Spinnenbiss im Weinkeller"). Benenne das Ereignis selbst beim Namen (was ist passiert),
+ergänzt um so viel Kontext wie in der Kürze möglich (wer/wann/wo, falls es natürlich reinpasst).
+Maximal 10 Wörter. Kein Klickbait, keine Anführungszeichen, kein Punkt am Ende, keine Emojis. Gib
+AUSSCHLIESSLICH den Titel selbst zurück, sonst nichts.`;
   const raw = await callChat(system, [{ role: 'user', content: transcript.slice(0, 14000) }], 60);
   return raw.trim().replace(/^["'„»]+|["'“«]+$/g, '').replace(/\.$/, '');
 }
@@ -4380,22 +4425,97 @@ function buildArchivPdfHtml(iv, title, project) {
 </html>`;
 }
 
-// Wird über den Knopf im #review-done-block ausgelöst (siehe maybeShowReviewPrompt). Generiert bei
-// Bedarf einmalig den Titel, baut die Druckseite und öffnet sie in einem neuen Tab – von dort kann
-// die Person sie über den Browser-Druckdialog als PDF speichern.
+// Wird über den Knopf im #review-done-block ausgelöst (siehe maybeShowReviewPrompt). Ist der Titel
+// noch nicht bestätigt (iv.archivTitleConfirmed === false – z. B. beim allerersten Klick), wird
+// zuerst die Titel-Bestätigung angezeigt (siehe showTitleConfirmPrompt/#title-confirm-prompt) statt
+// direkt das PDF zu bauen; das eigentliche PDF entsteht erst danach in buildAndOpenArchivPdf. Ist
+// der Titel bereits bestätigt (z. B. beim erneuten Öffnen), wird sofort gebaut, ohne erneut zu
+// fragen. Funktioniert unverändert sowohl im normalen Ablauf als auch in der Simulation, da beide
+// denselben Knopf/dieselbe Funktion nutzen.
 async function openArchivPdf() {
   if (!interviewId) return;
   const iv = getInterview(interviewId);
   if (!iv || iv.status !== 'abgeschlossen') return;
-  const btn = el('btn-archiv-pdf');
-  const statusLine = el('archiv-pdf-status');
-  if (btn) btn.disabled = true;
-  if (statusLine) statusLine.textContent = 'Titel wird generiert …';
+  if (!iv.archivTitleConfirmed) {
+    await showTitleConfirmPrompt(iv);
+    return;
+  }
+  await buildAndOpenArchivPdf(iv);
+}
+
+// v2.4.5, auf Wunsch des Nutzers ("ich würde fragen ob der Titel so passt ... auch in der
+// Simulation"): Generiert bei Bedarf einmalig einen Titel-Vorschlag (gecacht in iv.archivTitle) und
+// zeigt ihn in einem editierbaren Textfeld an, statt ihn ungefragt zu verwenden – die Person kann
+// ihn direkt anpassen oder per "Neuen Vorschlag" neu generieren lassen, bevor sie ihn über
+// confirmArchivTitle endgültig bestätigt.
+async function showTitleConfirmPrompt(iv) {
+  const donePanel = el('review-done-block');
+  const panel = el('title-confirm-prompt');
+  if (!panel) return;
+  if (donePanel) donePanel.style.display = 'none';
+  panel.style.display = 'block';
+  el('title-confirm-loading').style.display = 'block';
+  el('title-confirm-body').style.display = 'none';
   try {
     if (!iv.archivTitle) {
       iv.archivTitle = await generateArchivTitle(iv);
       saveDB();
     }
+    if (!interviewId || interviewId !== iv.id) return; // Person hat inzwischen das Interview gewechselt
+    el('title-confirm-loading').style.display = 'none';
+    el('title-confirm-body').style.display = 'block';
+    el('title-confirm-input').value = iv.archivTitle;
+  } catch (err) {
+    el('title-confirm-loading').style.display = 'none';
+    el('title-confirm-body').style.display = 'block';
+    el('title-confirm-input').value = iv.archivTitle || '';
+    el('title-confirm-input').placeholder = 'Titel konnte nicht automatisch erzeugt werden (' + err.message + ') – bitte selbst eingeben.';
+  }
+}
+
+// Lässt EINEN neuen Titel-Vorschlag generieren (ersetzt den bisherigen in iv.archivTitle), ohne den
+// Bestätigungs-Schritt selbst zu verlassen – schlägt der Aufruf fehl, bleibt der bisherige Titel im
+// Textfeld einfach stehen, statt die Person mit einem leeren Feld zurückzulassen.
+async function regenerateArchivTitle() {
+  if (!interviewId) return;
+  const iv = getInterview(interviewId);
+  if (!iv) return;
+  el('title-confirm-loading').style.display = 'block';
+  el('title-confirm-body').style.display = 'none';
+  try {
+    iv.archivTitle = await generateArchivTitle(iv);
+    saveDB();
+  } catch (err) { /* alter Titel bleibt erhalten */ }
+  el('title-confirm-loading').style.display = 'none';
+  el('title-confirm-body').style.display = 'block';
+  el('title-confirm-input').value = iv.archivTitle || '';
+}
+
+// Übernimmt den (ggf. von Hand angepassten) Titel aus dem Textfeld als endgültig und baut danach
+// direkt das PDF – erst ab hier gilt iv.archivTitleConfirmed als true, spätere PDF-Öffnungen fragen
+// dann nicht mehr erneut.
+async function confirmArchivTitleAndBuildPdf() {
+  if (!interviewId) return;
+  const iv = getInterview(interviewId);
+  if (!iv) return;
+  const input = el('title-confirm-input');
+  const finalTitle = (input.value || '').trim();
+  if (!finalTitle) { alert('Bitte gib einen Titel ein.'); return; }
+  iv.archivTitle = finalTitle;
+  iv.archivTitleConfirmed = true;
+  saveDB();
+  el('title-confirm-prompt').style.display = 'none';
+  await buildAndOpenArchivPdf(iv);
+  maybeShowReviewPrompt(iv); // zeigt #review-done-block mit dem jetzt bestätigten Titel wieder an
+}
+
+// Baut die Druckseite aus dem (bereits bestätigten) Titel und öffnet sie in einem neuen Tab – von
+// dort kann die Person sie über den Browser-Druckdialog als PDF speichern.
+async function buildAndOpenArchivPdf(iv) {
+  const btn = el('btn-archiv-pdf');
+  const statusLine = el('archiv-pdf-status');
+  if (btn) btn.disabled = true;
+  try {
     const project = getProject(iv.projectId);
     const html = buildArchivPdfHtml(iv, iv.archivTitle, project);
     const blob = new Blob([html], { type: 'text/html' });
@@ -4787,8 +4907,18 @@ const REORDER_SYSTEM_PROMPT = `Du bist ein sorgfältiger Redakteur, der die Reih
   `IN IHREM VORLIEGENDEN WORTLAUT auch an der neuen Stelle für sich allein verständlich bleibt. Bezieht sich ` +
   `die Frage erkennbar auf "das", "diesen Moment", "wie du gerade gesagt hast" o. Ä. aus der unmittelbar ` +
   `vorausgehenden Antwort, und wäre sie an der neuen Stelle dadurch unverständlich, MUSS sie an ihrer ` +
-  `ursprünglichen Position bleiben. Im Zweifel: nicht verschieben. Ein abschließendes Paar ohne Antwort ` +
-  `(typischerweise die Abschieds-Formel) bleibt immer das letzte Paar.\n\n` +
+  `ursprünglichen Position bleiben.\n\n` +
+  `PRÜFE AKTIV AUF DIESES MUSTER: Eine allgemeine biografische Frage oder Beziehungsfrage (z. B. "Wie habt ` +
+  `ihr euch kennengelernt?", "Wie war eure Familiensituation damals?", "Was hast du beruflich gemacht?"), ` +
+  `die NICHT von der unmittelbar vorausgehenden Antwort abhängt, aber mitten in eine zusammenhängende, ` +
+  `chronologische Schilderung EINES bestimmten Tages/Ereignisses hineingeschnitten wurde (also links und ` +
+  `rechts davon Fragen stehen, die denselben Tag/dasselbe Ereignis chronologisch weitererzählen), unterbricht ` +
+  `fast immer den Lesefluss unnötig. Prüfe in so einem Fall konkret, ob sie an einer anderen Stelle – meist ` +
+  `deutlich früher, als Hintergrund VOR Beginn der eigentlichen Ereignis-Chronologie – besser stehen würde, ` +
+  `und schlage die Verschiebung vor, wenn der Wortlaut dort verständlich bleibt. Sei hier nicht übervorsichtig: ` +
+  `eine spürbare Verbesserung der Lesbarkeit reicht als Grund, du musst nicht zu 100% sicher sein. Nur bei ` +
+  `echten Zweifeln an der Verständlichkeit am neuen Ort (siehe oben) lässt du die Reihenfolge unverändert. Ein ` +
+  `abschließendes Paar ohne Antwort (typischerweise die Abschieds-Formel) bleibt immer das letzte Paar.\n\n` +
   `Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt, ohne Markdown-Codeblock, in genau diesem Format:\n` +
   `{"vorgeschlagene_reihenfolge": [<Paar-ID>, <Paar-ID>, ...], "begruendung": "1-2 kurze, konkrete Sätze in ` +
   `Ich-Form an die erzählende Person, WAS du umsortiert hast und warum – oder falls keine Änderung nötig ist: ` +
@@ -5365,6 +5495,7 @@ function deleteInterview(id) {
     statusEl.textContent = 'Kein Interview ausgewählt';
     el('review-prompt').style.display = 'none';
     if (el('reorder-prompt')) el('reorder-prompt').style.display = 'none';
+    if (el('title-confirm-prompt')) el('title-confirm-prompt').style.display = 'none';
   }
   refreshStoryView();
   renderInterviewList();
@@ -5447,6 +5578,7 @@ function deleteProject(id) {
     renderMessages([]);
     el('review-prompt').style.display = 'none';
     if (el('reorder-prompt')) el('reorder-prompt').style.display = 'none';
+    if (el('title-confirm-prompt')) el('title-confirm-prompt').style.display = 'none';
   }
   updateProjectDisplay();
   refreshStoryView();
@@ -5560,6 +5692,8 @@ on('btn-reorder-accept', 'click', acceptReorder);
 on('btn-reorder-decline', 'click', declineReorder);
 on('btn-review-correction-send', 'click', sendReviewCorrection);
 on('btn-archiv-pdf', 'click', openArchivPdf);
+on('btn-title-confirm', 'click', confirmArchivTitleAndBuildPdf);
+on('btn-title-regenerate', 'click', regenerateArchivTitle);
 on('review-correction-input', 'keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReviewCorrection(); } });
 
 on('btn-edit-modal', 'click', openEditModal);
