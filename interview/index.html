@@ -214,8 +214,14 @@
            auch beim späteren erneuten Öffnen eines bereits abgeschlossenen Interviews. -->
       <div id="review-done-block" style="display:none;">
         <div style="margin-bottom:10px; font-size:13.5px;">🎉 Danke, diese Geschichte ist jetzt abgeschlossen. Du kannst sie dir als schön gestaltetes PDF fürs Archiv erstellen lassen – auf Basis des Originaltexts, mit automatisch generiertem Titel.</div>
-        <button id="btn-archiv-pdf" type="button" class="primary">📄 Archiv-PDF erstellen</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="btn-archiv-pdf" type="button" class="primary">📄 Archiv-PDF erstellen</button>
+          <!-- v2.5.0: getrennt vom privaten PDF-Export - schickt die Geschichte NUR nach explizitem
+               Klick + Kategorie/Hashtag-Bestätigung ins öffentliche Web-Archiv (siehe openPublishFlow). -->
+          <button id="btn-publish-story" type="button">🌐 Im Archiv veröffentlichen</button>
+        </div>
         <div class="hint" id="archiv-pdf-status" style="margin-top:8px;"></div>
+        <div class="hint" id="publish-already-status" style="margin-top:4px;"></div>
       </div>
     </div>
 
@@ -233,8 +239,40 @@
         <input type="text" id="title-confirm-input" style="width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; margin-bottom:10px;" />
         <div style="display:flex; gap:8px;">
           <button id="btn-title-regenerate" type="button">Neuen Vorschlag</button>
-          <button id="btn-title-confirm" type="button" class="primary">Titel übernehmen &amp; PDF erstellen</button>
+          <button id="btn-title-confirm" type="button" class="primary">Titel übernehmen &amp; weiter</button>
         </div>
+      </div>
+    </div>
+
+    <!-- KATEGORIE + HASHTAGS VOR DER ARCHIV-VERÖFFENTLICHUNG (v2.5.0, auf Wunsch des Nutzers: "wir
+         sollten an der hashtag lösung arbeiten am schlusse des Interviews ... 5 Vorschläge + manuelle
+         Eingabe ... du solltest dir Kategorien überlegen"). Erscheint nach der Titel-Bestätigung,
+         wenn "Im Archiv veröffentlichen" geklickt wurde (siehe openPublishFlow/showPublishConfirmPrompt
+         weiter unten) - komplett getrennt vom privaten PDF-Export. -->
+    <div id="publish-confirm-prompt" style="display:none; margin:10px 14px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--panel);">
+      <div id="publish-confirm-loading" style="font-size:13.5px;">Ich schlage eine Kategorie und passende Hashtags vor …</div>
+      <div id="publish-confirm-body" style="display:none;">
+        <div style="margin-bottom:8px; font-size:13.5px;">Passt diese Einordnung fürs öffentliche Archiv? Du kannst alles anpassen, bevor es veröffentlicht wird.</div>
+        <label style="display:block; font-size:12.5px; margin-bottom:4px; color:var(--muted);">Kategorie</label>
+        <select id="publish-category-select" style="width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; margin-bottom:10px;"></select>
+        <label style="display:block; font-size:12.5px; margin-bottom:4px; color:var(--muted);">Hashtags (bis zu 8)</label>
+        <div id="publish-tags-chips" style="margin-bottom:6px;"></div>
+        <div style="display:flex; gap:6px; margin-bottom:10px;">
+          <input type="text" id="publish-tag-input" placeholder="Eigenen Hashtag hinzufügen …" style="flex:1; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px;" />
+          <button id="btn-publish-tag-add" type="button">Hinzufügen</button>
+        </div>
+        <label style="display:block; font-size:12.5px; margin-bottom:4px; color:var(--muted);">Quelle</label>
+        <select id="publish-source-type" style="width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; margin-bottom:10px;">
+          <option value="selbstbericht">Selbst erzählt</option>
+          <option value="fremdbericht">Von Angehörigen über eine andere Person erzählt</option>
+          <option value="simulation">Simulation / Test</option>
+        </select>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="btn-publish-regenerate" type="button">Neuer Vorschlag</button>
+          <button id="btn-publish-cancel" type="button">Abbrechen</button>
+          <button id="btn-publish-confirm" type="button" class="primary">Jetzt im Archiv veröffentlichen</button>
+        </div>
+        <div class="hint" id="publish-status" style="margin-top:8px;"></div>
       </div>
     </div>
 
@@ -442,12 +480,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.4.5';
-const APP_BUILD = '2026-08-12 19:30 UTC';
+const APP_VERSION = '2.5.0';
+const APP_BUILD = '2026-08-12 21:00 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
 const PROMPTS_KEY = 'interviewAI_prompts_v1';
+
+// v2.5.0: öffentliches Web-Archiv (siehe Gespräch zum Thema "webbasiertes Archiv, Supabase").
+// Eigenes, von allen anderen Supabase-Projekten des Nutzers getrenntes Projekt, extra dafür
+// angelegt, damit das öffentlich lesbare/anonym beschreibbare Archiv keine Infrastruktur mit
+// sensiblen privaten Daten (z.B. einem Passwort-Tresor) teilt. Der Publishable Key ist bewusst
+// öffentlich (wie jeder Supabase-Anon-Key) – der Schreibschutz kommt ausschließlich aus RLS plus
+// der publish-story Edge Function (siehe unten), nicht aus der Geheimhaltung dieses Keys.
+const SUPABASE_URL = 'https://ktwjvgiakwnkgxvluysj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_crL838WKaqW2osm_f8x43Q_URrOYmR0';
+
+// Feste Oberkategorien fürs Archiv (siehe categories-Tabelle) – hier hart hinterlegt statt bei
+// jedem Seitenaufruf nachgeladen, damit die Kategorie-Auswahl auch offline/ohne Netzwerk sofort
+// verfügbar ist; die IDs müssen exakt mit der Supabase-Tabelle übereinstimmen.
+const ARCHIV_CATEGORIES = [
+  { id: 'verlust_trauer', label: 'Verlust & Trauer' },
+  { id: 'flucht_vertreibung', label: 'Flucht & Vertreibung' },
+  { id: 'unfall_verletzung', label: 'Unfall & Verletzung' },
+  { id: 'krankheit_diagnose', label: 'Krankheit & Diagnose' },
+  { id: 'gewalt_missbrauch', label: 'Gewalt & Missbrauch' },
+  { id: 'trennung_neuanfang', label: 'Trennung & Neuanfang' },
+  { id: 'familie_herkunft', label: 'Familie & Herkunft' },
+  { id: 'beruf_identitaet', label: 'Beruf & Identität' },
+  { id: 'sonstiges', label: 'Sonstiges' },
+];
+
+// Dünner fetch()-Wrapper im selben Stil wie callChat() weiter unten (siehe dort) – bewusst kein
+// zusätzliches Supabase-JS-SDK per CDN, damit die App eine einzige, selbstständige HTML-Datei
+// ohne externe Skript-Abhängigkeiten bleibt.
+async function supaFetch(path, opts = {}) {
+  const res = await fetch(SUPABASE_URL + path, {
+    ...opts,
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      ...(opts.headers || {}),
+    },
+  });
+  if (!res.ok) throw new Error(`Archiv-API-Fehler ${res.status}: ${await res.text()}`);
+  return res;
+}
 
 // Feste, deterministische App-Schritte am Anfang jedes neuen Projekts (siehe PFLICHTPUNKTE-PLANUNG
 // im Prompt) – bewusst NICHT von der KI frei formuliert, damit diese Basisinformationen IMMER an
@@ -1486,6 +1565,17 @@ function newInterviewRecord(id, projectId) {
     // weiter oben) – die für DIESE Sitzung einmalig ausgewählten (und kontextualisierten)
     // Abschlussfragen, null bis zum ersten echten Abschluss-Turn.
     closingPlan: null, // { questions: [{ id, text }, ...] }
+    // v2.5.0, auf Wunsch des Nutzers ("wir sollten an der hashtag lösung arbeiten"): Kategorie +
+    // Hashtags fürs öffentliche Web-Archiv (Supabase), analog zur Titel-Bestätigung erst nach
+    // KI-Vorschlag und menschlicher Bestätigung gesetzt (siehe showPublishConfirmPrompt weiter
+    // unten). Komplett unabhängig vom privaten Archiv-PDF-Export (archivTitle/archivTitleConfirmed
+    // oben) – eine Geschichte kann als PDF exportiert werden, ohne je im öffentlichen Archiv zu
+    // landen, und umgekehrt.
+    archivCategoryId: null,
+    archivTags: null, // [{ slug, label }, ...], von der Person bestätigt/bearbeitet
+    archivSourceType: null, // 'selbstbericht' | 'fremdbericht' | 'simulation'
+    publishedStoryId: null, // gesetzte Supabase-Story-ID, sobald einmal erfolgreich veröffentlicht
+    publishedAt: null,
   };
 }
 // --- PFLICHTPUNKT-MECHANIK (v2.0.0) -----------------------------------------
@@ -1695,6 +1785,13 @@ function migrateDB(db) {
     // Öffnen unerwartet erneut nach dem Titel fragen, obwohl das PDF schon einmal genau so erzeugt
     // wurde.
     if (iv.archivTitleConfirmed === undefined) iv.archivTitleConfirmed = !!iv.archivTitle;
+    // v2.5.0: Kategorie/Hashtags/Veröffentlichungsstatus fürs Web-Archiv – bei älteren Sitzungen
+    // ohne diese Felder defensiv "noch nie veröffentlicht", nie ein erfundener Status.
+    if (iv.archivCategoryId === undefined) iv.archivCategoryId = null;
+    if (iv.archivTags === undefined) iv.archivTags = null;
+    if (iv.archivSourceType === undefined) iv.archivSourceType = null;
+    if (iv.publishedStoryId === undefined) iv.publishedStoryId = null;
+    if (iv.publishedAt === undefined) iv.publishedAt = null;
   }
   if (!db.currentProjectId || !db.projects.find(p => p.id === db.currentProjectId)) {
     db.currentProjectId = db.projects.length ? db.projects[db.projects.length - 1].id : null;
@@ -3667,6 +3764,14 @@ function maybeShowReviewPrompt(iv) {
   const panel = el('review-prompt');
   const reorderPanel = el('reorder-prompt');
   if (!panel) return;
+  // v2.5.0: Diese Funktion ist die EINZIGE Stelle, die nach jedem Interview-Wechsel (openInterview)
+  // entscheidet, was in diesem Bereich zu sehen ist – deshalb hier IMMER zuerst die Titel- und
+  // Veröffentlichen-Dialoge eines evtl. vorher offenen ANDEREN Interviews ausblenden. Vorher blieben
+  // diese beiden Panels beim Wechsel zu einem neuen Interview fälschlich sichtbar, weil nur ein
+  // paar einzelne Aktionen (neues Interview anlegen, löschen) sie explizit zurücksetzten, nicht aber
+  // das normale Öffnen eines bereits bestehenden Interviews.
+  if (el('title-confirm-prompt')) el('title-confirm-prompt').style.display = 'none';
+  if (el('publish-confirm-prompt')) el('publish-confirm-prompt').style.display = 'none';
   if (!iv || (iv.status !== 'in_pruefung' && iv.status !== 'abgeschlossen')) {
     panel.style.display = 'none';
     if (reorderPanel) reorderPanel.style.display = 'none';
@@ -3696,6 +3801,16 @@ function maybeShowReviewPrompt(iv) {
     el('review-correction-messages').innerHTML = '';
     el('review-done-block').style.display = 'block';
     el('archiv-pdf-status').textContent = iv.archivTitle ? `Titel: „${iv.archivTitle}" – Klicke erneut, um das PDF wieder zu öffnen.` : '';
+    // v2.5.0: Veröffentlichen-Knopf zeigt den Status an statt sich beliebig oft erneut anklicken zu
+    // lassen - einmal veröffentlicht bleibt eine Geschichte veröffentlicht (kein Re-Publish in v1).
+    const publishBtn = el('btn-publish-story');
+    const publishStatus = el('publish-already-status');
+    if (publishBtn) publishBtn.disabled = !!iv.publishedStoryId;
+    if (publishStatus) {
+      publishStatus.textContent = iv.publishedStoryId
+        ? '🌐 Bereits im öffentlichen Archiv veröffentlicht.'
+        : '';
+    }
     return;
   }
   panel.style.display = 'block';
@@ -3813,6 +3928,7 @@ async function startNewInterview() {
     el('review-prompt').style.display = 'none'; // Überprüfungs-Block eines evtl. vorher offenen Interviews ausblenden
     if (el('reorder-prompt')) el('reorder-prompt').style.display = 'none';
     if (el('title-confirm-prompt')) el('title-confirm-prompt').style.display = 'none';
+    if (el('publish-confirm-prompt')) el('publish-confirm-prompt').style.display = 'none';
 
     await requestAndHandleReply(iv);
   } catch (err) {
@@ -4071,6 +4187,7 @@ async function runSimulation(genreDescription, mode) {
     el('review-prompt').style.display = 'none'; // Überprüfungs-Block eines evtl. vorher offenen Interviews ausblenden
     if (el('reorder-prompt')) el('reorder-prompt').style.display = 'none';
     if (el('title-confirm-prompt')) el('title-confirm-prompt').style.display = 'none';
+    if (el('publish-confirm-prompt')) el('publish-confirm-prompt').style.display = 'none';
 
     setSimulationStatus('🎭 Simulation läuft – Eröffnungsfrage wird generiert ...', true);
     await requestAndHandleReply(iv);
@@ -4432,15 +4549,41 @@ function buildArchivPdfHtml(iv, title, project) {
 // der Titel bereits bestätigt (z. B. beim erneuten Öffnen), wird sofort gebaut, ohne erneut zu
 // fragen. Funktioniert unverändert sowohl im normalen Ablauf als auch in der Simulation, da beide
 // denselben Knopf/dieselbe Funktion nutzen.
+// v2.5.0: hält fest, WOHIN es nach einer Titel-Bestätigung weitergehen soll – der Titel-Schritt
+// ist jetzt eine gemeinsame Voraussetzung für zwei getrennte Folgeaktionen (privates PDF ODER
+// Veröffentlichung im öffentlichen Web-Archiv, siehe openPublishFlow weiter unten), die beide
+// denselben Bestätigungs-Dialog nutzen, aber danach unterschiedlich weitermachen.
+let titleConfirmPurpose = 'pdf';
+
 async function openArchivPdf() {
   if (!interviewId) return;
   const iv = getInterview(interviewId);
   if (!iv || iv.status !== 'abgeschlossen') return;
+  titleConfirmPurpose = 'pdf';
   if (!iv.archivTitleConfirmed) {
     await showTitleConfirmPrompt(iv);
     return;
   }
   await buildAndOpenArchivPdf(iv);
+}
+
+// v2.5.0, auf Wunsch des Nutzers ("wir sollten an der hashtag lösung arbeiten am schlusse des
+// Interviews ... go for it"): Startet die Veröffentlichung im öffentlichen Web-Archiv, komplett
+// unabhängig vom privaten PDF-Export. Braucht ebenfalls zuerst einen bestätigten Titel (Titel ist
+// Pflichtfeld der stories-Tabelle) – ist der noch nicht bestätigt, läuft zuerst derselbe
+// Titel-Dialog wie beim PDF-Export, biegt danach aber zur Kategorie/Hashtag-Bestätigung ab statt
+// direkt das PDF zu bauen.
+async function openPublishFlow() {
+  if (!interviewId) return;
+  const iv = getInterview(interviewId);
+  if (!iv || iv.status !== 'abgeschlossen') return;
+  if (iv.publishedStoryId) return; // bereits veröffentlicht, siehe #publish-already-done
+  titleConfirmPurpose = 'publish';
+  if (!iv.archivTitleConfirmed) {
+    await showTitleConfirmPrompt(iv);
+    return;
+  }
+  await showPublishConfirmPrompt(iv);
 }
 
 // v2.4.5, auf Wunsch des Nutzers ("ich würde fragen ob der Titel so passt ... auch in der
@@ -4505,6 +4648,10 @@ async function confirmArchivTitleAndBuildPdf() {
   iv.archivTitleConfirmed = true;
   saveDB();
   el('title-confirm-prompt').style.display = 'none';
+  if (titleConfirmPurpose === 'publish') {
+    await showPublishConfirmPrompt(iv);
+    return;
+  }
   await buildAndOpenArchivPdf(iv);
   maybeShowReviewPrompt(iv); // zeigt #review-done-block mit dem jetzt bestätigten Titel wieder an
 }
@@ -4524,6 +4671,238 @@ async function buildAndOpenArchivPdf(iv) {
     if (statusLine) statusLine.textContent = `„${iv.archivTitle}“ wurde in einem neuen Tab geöffnet – dort über "🖨️ Als PDF speichern" (oder Strg/Cmd+P) als PDF sichern.`;
   } catch (err) {
     if (statusLine) statusLine.textContent = 'Fehler: ' + err.message;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// --- ÖFFENTLICHES WEB-ARCHIV: KATEGORIE + HASHTAGS + VERÖFFENTLICHEN (v2.5.0) ----------------
+// Gleiche Grundidee wie beim Titel: die KI schlägt vor (1 Kategorie + bis zu 5 Hashtags,
+// bevorzugt aus der bereits bestehenden Tag-Vokabelliste im Archiv, damit sich Tags über viele
+// Geschichten hinweg bündeln statt zu zersplittern), die Person bestätigt, entfernt oder ergänzt
+// von Hand, BEVOR irgendetwas veröffentlicht wird.
+
+function slugifyTag(s) {
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFKD').replace(/[̀-ͯ]/g, '')
+    .replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+}
+
+// Holt die aktuell bestehende Tag-Vokabelliste aus dem Archiv (öffentlich lesbar, siehe
+// tags_public_read Policy) – dient nur als Vorschlagsgrundlage für die KI, schlägt bei
+// Netzwerkfehlern (z.B. offline) einfach eine leere Liste vor, die KI erfindet dann neue Tags.
+async function fetchExistingTagVocabulary() {
+  try {
+    const res = await supaFetch('/rest/v1/tags?select=slug,label&order=label.asc&limit=300');
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
+function buildPublishSuggestionSystemPrompt(existingTags) {
+  const categoryList = ARCHIV_CATEGORIES.map(c => `${c.id}: ${c.label}`).join('\n');
+  const tagList = existingTags.length
+    ? existingTags.map(t => `${t.slug}: ${t.label}`).join('\n')
+    : '(noch keine bestehenden Hashtags im Archiv)';
+  return `Du ordnest eine Lebensgeschichte für ein Archiv ein.\n\n` +
+    `Wähle GENAU EINE der folgenden Oberkategorien (gib die ID zurück, nicht das Label):\n${categoryList}\n\n` +
+    `Wähle außerdem bis zu 5 Hashtags. Bevorzuge dabei PASSENDE Hashtags aus dieser bestehenden ` +
+    `Vokabelliste (gib slug UND label exakt wie vorgegeben zurück):\n${tagList}\n\n` +
+    `Nur wenn wirklich kein bestehender Hashtag passt, darfst du neue erfinden (kurz, ein bis zwei ` +
+    `Wörter, als slug in Kleinbuchstaben mit Bindestrichen statt Leerzeichen, z.B. "neuanfang").\n\n` +
+    `Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt, ohne Markdown-Codeblock:\n` +
+    `{"category_id": "<eine der IDs oben>", "tags": [{"slug": "...", "label": "..."}, ...]}`;
+}
+
+function sanitizePublishSuggestion(parsed) {
+  const validIds = new Set(ARCHIV_CATEGORIES.map(c => c.id));
+  const category_id = validIds.has(parsed && parsed.category_id) ? parsed.category_id : 'sonstiges';
+  const seen = new Set();
+  const tags = [];
+  if (Array.isArray(parsed && parsed.tags)) {
+    for (const t of parsed.tags) {
+      const label = ((t && (t.label || t.slug)) || '').toString().trim();
+      const slug = slugifyTag((t && t.slug) || label);
+      if (!slug || !label || seen.has(slug)) continue;
+      seen.add(slug);
+      tags.push({ slug, label });
+      if (tags.length >= 5) break;
+    }
+  }
+  return { category_id, tags };
+}
+
+async function getOrGeneratePublishSuggestion(iv) {
+  if (iv.archivCategoryId && Array.isArray(iv.archivTags) && iv.archivTags.length > 0) {
+    return { category_id: iv.archivCategoryId, tags: iv.archivTags };
+  }
+  const existingTags = await fetchExistingTagVocabulary();
+  const history = getHistory(iv.id);
+  const transcript = history.map(m => (m.role === 'ki' ? 'Interviewer: ' : 'Erzählperson: ') + m.text).join('\n');
+  try {
+    const raw = await callChat(buildPublishSuggestionSystemPrompt(existingTags), [{ role: 'user', content: transcript.slice(0, 14000) }], 500);
+    const parsed = parseJsonResponse(raw);
+    return sanitizePublishSuggestion(parsed);
+  } catch {
+    return { category_id: 'sonstiges', tags: [] };
+  }
+}
+
+// Rendert die Hashtag-Chips im Bestätigungs-Dialog (jede Chip mit eigenem Entfernen-Knopf) – hält
+// den aktuellen Arbeitsstand in window.__publishDraftTags, bis "Veröffentlichen" geklickt wird.
+function renderPublishTagChips() {
+  const container = el('publish-tags-chips');
+  if (!container) return;
+  container.innerHTML = '';
+  (window.__publishDraftTags || []).forEach((tag, idx) => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.style.cssText = 'display:inline-flex; align-items:center; gap:6px; padding:4px 10px; margin:0 6px 6px 0; border-radius:999px; background:var(--accent-soft, #eef4f2); border:1px solid var(--border); font-size:13px;';
+    chip.textContent = '#' + tag.label;
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = '×';
+    removeBtn.setAttribute('aria-label', 'Hashtag "' + tag.label + '" entfernen');
+    removeBtn.style.cssText = 'border:none; background:transparent; cursor:pointer; font-size:14px; line-height:1; padding:0;';
+    removeBtn.onclick = () => { window.__publishDraftTags.splice(idx, 1); renderPublishTagChips(); };
+    chip.appendChild(removeBtn);
+    container.appendChild(chip);
+  });
+}
+
+function addManualPublishTag() {
+  const input = el('publish-tag-input');
+  if (!input) return;
+  const label = (input.value || '').trim();
+  const slug = slugifyTag(label);
+  if (!slug || !label) return;
+  window.__publishDraftTags = window.__publishDraftTags || [];
+  if (window.__publishDraftTags.length >= 8) { input.value = ''; return; }
+  if (!window.__publishDraftTags.some(t => t.slug === slug)) {
+    window.__publishDraftTags.push({ slug, label });
+    renderPublishTagChips();
+  }
+  input.value = '';
+}
+
+async function showPublishConfirmPrompt(iv) {
+  const donePanel = el('review-done-block');
+  const panel = el('publish-confirm-prompt');
+  if (!panel) return;
+  if (donePanel) donePanel.style.display = 'none';
+  panel.style.display = 'block';
+  el('publish-confirm-loading').style.display = 'block';
+  el('publish-confirm-body').style.display = 'none';
+  el('publish-status').textContent = '';
+  try {
+    const suggestion = await getOrGeneratePublishSuggestion(iv);
+    if (!interviewId || interviewId !== iv.id) return; // Person hat inzwischen gewechselt
+    window.__publishDraftTags = suggestion.tags.slice();
+    el('publish-confirm-loading').style.display = 'none';
+    el('publish-confirm-body').style.display = 'block';
+    const select = el('publish-category-select');
+    if (select && !select.dataset.filled) {
+      select.innerHTML = ARCHIV_CATEGORIES.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+      select.dataset.filled = '1';
+    }
+    if (select) select.value = suggestion.category_id;
+    const project = getProject(iv.projectId);
+    const sourceSelect = el('publish-source-type');
+    if (sourceSelect) {
+      sourceSelect.value = iv.archivSourceType
+        || ((project && project.name && project.name.startsWith('Simulation:')) ? 'simulation' : 'selbstbericht');
+    }
+    renderPublishTagChips();
+  } catch (err) {
+    el('publish-confirm-loading').style.display = 'none';
+    el('publish-confirm-body').style.display = 'block';
+    window.__publishDraftTags = window.__publishDraftTags || [];
+    renderPublishTagChips();
+    el('publish-status').textContent = 'Vorschlag konnte nicht automatisch erzeugt werden (' + err.message + ') – bitte Kategorie/Hashtags von Hand prüfen.';
+  }
+}
+
+async function regeneratePublishSuggestion() {
+  if (!interviewId) return;
+  const iv = getInterview(interviewId);
+  if (!iv) return;
+  iv.archivCategoryId = null; // erzwingt einen frischen KI-Vorschlag statt des gecachten
+  iv.archivTags = null;
+  el('publish-confirm-loading').style.display = 'block';
+  el('publish-confirm-body').style.display = 'none';
+  const suggestion = await getOrGeneratePublishSuggestion(iv).catch(() => ({ category_id: 'sonstiges', tags: [] }));
+  window.__publishDraftTags = suggestion.tags.slice();
+  el('publish-confirm-loading').style.display = 'none';
+  el('publish-confirm-body').style.display = 'block';
+  const select = el('publish-category-select');
+  if (select) select.value = suggestion.category_id;
+  renderPublishTagChips();
+}
+
+function cancelPublishFlow() {
+  if (!interviewId) return;
+  const iv = getInterview(interviewId);
+  el('publish-confirm-prompt').style.display = 'none';
+  if (iv) maybeShowReviewPrompt(iv);
+}
+
+// Übernimmt Kategorie/Hashtags/Quellentyp als endgültig und ruft die publish-story Edge Function
+// auf (siehe Supabase-Projekt "arkaa-archiv") – die eigentliche Schreiboperation (inkl.
+// IP-Missbrauchserkennung) läuft ausschließlich dort server-seitig, der Client selbst hat keine
+// Schreibrechte auf die stories-Tabelle (siehe RLS-Policies der Migration).
+async function confirmPublish() {
+  if (!interviewId) return;
+  const iv = getInterview(interviewId);
+  if (!iv) return;
+  const select = el('publish-category-select');
+  const sourceSelect = el('publish-source-type');
+  const categoryId = select ? select.value : 'sonstiges';
+  const tags = (window.__publishDraftTags || []).slice();
+  const sourceType = sourceSelect ? sourceSelect.value : 'selbstbericht';
+
+  const btn = el('btn-publish-confirm');
+  if (btn) btn.disabled = true;
+  el('publish-status').textContent = 'Wird veröffentlicht …';
+  try {
+    const allPairs = buildRedactionPairs(getHistory(iv.id));
+    const orderedIds = resolveArchivPairOrder(iv, allPairs);
+    const pairs = orderedIds
+      .map(id => allPairs.find(p => p.id === id))
+      .filter(Boolean)
+      .map(p => ({ question: p.question, answer: p.answer }));
+    const res = await fetch(SUPABASE_URL + '/functions/v1/publish-story', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        title: iv.archivTitle,
+        category_id: categoryId,
+        source_type: sourceType,
+        narrated_at: (iv.created_at || '').slice(0, 10) || null,
+        qa_pairs: pairs,
+        tags,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Fehler ${res.status}`);
+    iv.archivCategoryId = categoryId;
+    iv.archivTags = tags;
+    iv.archivSourceType = sourceType;
+    iv.publishedStoryId = data.id;
+    iv.publishedAt = new Date().toISOString();
+    saveDB();
+    el('publish-confirm-prompt').style.display = 'none';
+    maybeShowReviewPrompt(iv);
+  } catch (err) {
+    el('publish-status').textContent = 'Fehler beim Veröffentlichen: ' + err.message;
   } finally {
     if (btn) btn.disabled = false;
   }
@@ -5496,6 +5875,7 @@ function deleteInterview(id) {
     el('review-prompt').style.display = 'none';
     if (el('reorder-prompt')) el('reorder-prompt').style.display = 'none';
     if (el('title-confirm-prompt')) el('title-confirm-prompt').style.display = 'none';
+    if (el('publish-confirm-prompt')) el('publish-confirm-prompt').style.display = 'none';
   }
   refreshStoryView();
   renderInterviewList();
@@ -5579,6 +5959,7 @@ function deleteProject(id) {
     el('review-prompt').style.display = 'none';
     if (el('reorder-prompt')) el('reorder-prompt').style.display = 'none';
     if (el('title-confirm-prompt')) el('title-confirm-prompt').style.display = 'none';
+    if (el('publish-confirm-prompt')) el('publish-confirm-prompt').style.display = 'none';
   }
   updateProjectDisplay();
   refreshStoryView();
@@ -5694,6 +6075,12 @@ on('btn-review-correction-send', 'click', sendReviewCorrection);
 on('btn-archiv-pdf', 'click', openArchivPdf);
 on('btn-title-confirm', 'click', confirmArchivTitleAndBuildPdf);
 on('btn-title-regenerate', 'click', regenerateArchivTitle);
+on('btn-publish-story', 'click', openPublishFlow);
+on('btn-publish-tag-add', 'click', addManualPublishTag);
+on('publish-tag-input', 'keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addManualPublishTag(); } });
+on('btn-publish-cancel', 'click', cancelPublishFlow);
+on('btn-publish-confirm', 'click', confirmPublish);
+on('btn-publish-regenerate', 'click', regeneratePublishSuggestion);
 on('review-correction-input', 'keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReviewCorrection(); } });
 
 on('btn-edit-modal', 'click', openEditModal);

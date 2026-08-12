@@ -17,6 +17,7 @@
     --accent-light: #e0f7f4;
     --sage: #0f766e;
     --border: #e7e0d6;
+    --panel: #ffffff;
   }
   * { box-sizing: border-box; }
   body {
@@ -24,24 +25,85 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     background: var(--bg); color: var(--ink);
   }
-  header { padding: 18px 24px; border-bottom: 1px solid var(--border); }
+  header {
+    padding: 16px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; text-decoration: none; color: var(--ink); }
   .brand img { width: 30px; height: 30px; border-radius: 8px; }
-  main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
-  .box { max-width: 480px; text-align: center; }
-  .badge {
-    width: 60px; height: 60px; border-radius: 16px; background: var(--accent-light);
-    display: flex; align-items: center; justify-content: center; margin: 0 auto 22px;
+  header nav { display: flex; gap: 10px; }
+  header nav a {
+    text-decoration: none; color: var(--ink); font-size: 13.5px; font-weight: 600;
+    padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: #fff;
   }
-  .badge svg { width: 28px; height: 28px; color: var(--accent); }
-  h1 { font-size: 26px; margin: 0 0 12px; }
-  p { color: var(--muted); font-size: 15.5px; line-height: 1.6; margin: 0 0 28px; }
-  .btn {
-    display: inline-flex; align-items: center; gap: 8px; font-weight: 600; text-decoration: none;
-    padding: 12px 22px; border-radius: 999px; font-size: 14.5px; margin: 0 6px 10px;
+
+  main { flex: 1; padding: 24px; max-width: 1080px; margin: 0 auto; width: 100%; }
+
+  .toolbar { display: flex; flex-direction: column; gap: 14px; margin-bottom: 22px; }
+  #search-input {
+    width: 100%; box-sizing: border-box; padding: 12px 16px; border-radius: 999px;
+    border: 1px solid var(--border); font-size: 15px; background: #fff;
   }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-ghost { background: #fff; color: var(--ink); border: 1px solid var(--border); }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    border: 1px solid var(--border); background: #fff; color: var(--ink); font-size: 13px;
+    padding: 6px 13px; border-radius: 999px; cursor: pointer; user-select: none;
+  }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip.tag-chip { background: var(--accent-light); border-color: transparent; color: var(--sage); }
+  .chip.tag-chip.active { background: var(--sage); color: #fff; }
+
+  .row-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  #result-count { font-size: 13px; color: var(--muted); }
+  #btn-random {
+    font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 999px;
+    border: 1px solid var(--border); background: #fff; color: var(--ink); cursor: pointer;
+  }
+
+  #status-line { font-size: 14px; color: var(--muted); padding: 30px 0; text-align: center; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px;
+    display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: box-shadow .15s ease, transform .15s ease;
+  }
+  .card:hover { box-shadow: 0 6px 18px rgba(43,38,32,.08); transform: translateY(-1px); }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .category-badge {
+    display: inline-block; font-size: 11.5px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase;
+    color: var(--sage); background: var(--accent-light); padding: 4px 10px; border-radius: 999px;
+  }
+  .dl-btn {
+    border: none; background: transparent; color: var(--muted); cursor: pointer; font-size: 17px;
+    padding: 2px 4px; line-height: 1; border-radius: 8px;
+  }
+  .dl-btn:hover { color: var(--sage); background: var(--accent-light); }
+  .card h3 { margin: 2px 0 0; font-size: 17px; line-height: 1.35; font-family: Georgia, "Times New Roman", serif; }
+  .card .teaser { font-size: 13.5px; color: var(--muted); line-height: 1.5; flex: 1; }
+  .card .meta-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .card .tag-list { display: flex; flex-wrap: wrap; gap: 5px; }
+  .card .tag-list span { background: var(--accent-light); color: var(--sage); font-size: 11px; padding: 2px 8px; border-radius: 999px; }
+
+  /* Detailansicht */
+  #detail-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(43,38,32,.45); z-index: 50;
+    align-items: flex-start; justify-content: center; overflow-y: auto; padding: 40px 16px;
+  }
+  #detail-panel {
+    background: var(--panel); border-radius: 16px; max-width: 720px; width: 100%; padding: 32px 36px 40px;
+    font-family: Georgia, "Times New Roman", serif; color: var(--ink);
+  }
+  #detail-panel .close-row { display: flex; justify-content: space-between; align-items: center; font-family: -apple-system, sans-serif; margin-bottom: 18px; }
+  #detail-panel .close-row button {
+    border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 8px 16px;
+    cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink);
+  }
+  #detail-panel h1 { font-size: 26px; line-height: 1.3; margin: 0 0 6px; }
+  #detail-panel .detail-meta { font-family: -apple-system, sans-serif; font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  #detail-panel .qa-block { margin-bottom: 18px; }
+  #detail-panel .q { font-family: -apple-system, sans-serif; font-weight: 700; font-size: 13px; letter-spacing: .01em; color: var(--sage); text-transform: uppercase; margin-bottom: 6px; }
+  #detail-panel .a { font-size: 16px; line-height: 1.7; }
+
   footer { padding: 20px 24px; text-align: center; font-size: 12.5px; color: var(--muted); }
 </style>
 </head>
@@ -52,32 +114,240 @@
     <img src="../assets/icon-192.png" alt="" />
     arkaa
   </a>
+  <nav>
+    <a href="../interview/">Eigene Geschichte erzählen</a>
+  </nav>
 </header>
 
 <main>
-  <div class="box">
-    <div class="badge">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-    </div>
-    <h1>Das Archiv entsteht gerade</h1>
-    <p>
-      Hier werden bald die veröffentlichten Geschichten aus arkaa zu lesen, zu durchsuchen und zu
-      entdecken sein – geordnet nach Ort, Zeit und Thema. Bis es so weit ist: Trag am besten schon
-      jetzt deine eigene Geschichte bei.
-    </p>
-    <a class="btn btn-primary" href="../interview/">Zum Interview</a>
-    <a class="btn btn-ghost" href="../">Zurück zur Startseite</a>
+  <div class="toolbar">
+    <input type="search" id="search-input" placeholder="Im Archiv suchen …" />
+    <div class="chip-row" id="category-chips"></div>
+    <div class="chip-row" id="tag-chips"></div>
   </div>
+
+  <div class="row-between">
+    <div id="result-count"></div>
+    <button id="btn-random" type="button">🎲 Zufällige Geschichte entdecken</button>
+  </div>
+
+  <div id="status-line">Geschichten werden geladen …</div>
+  <div class="grid" id="story-grid"></div>
 </main>
 
-<footer>arkaa — ein Archiv für die Geschichten aller Menschen.</footer>
+<footer>arkaa — ein offenes, dauerhaftes Archiv für persönliche Erinnerungen.</footer>
+
+<div id="detail-overlay">
+  <div id="detail-panel"></div>
+</div>
 
 <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('../service-worker.js', { scope: '../' }).catch(() => {});
-    });
+const SUPABASE_URL = 'https://ktwjvgiakwnkgxvluysj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_crL838WKaqW2osm_f8x43Q_URrOYmR0';
+const SOURCE_TYPE_LABEL = {
+  selbstbericht: 'Selbst erzählt',
+  fremdbericht: 'Von Angehörigen erzählt',
+  simulation: 'Simulation / Test',
+};
+
+let allStories = [];
+let allCategories = [];
+let activeCategoryId = null;
+let activeTagSlug = null;
+let searchTerm = '';
+
+async function supaGet(path) {
+  const res = await fetch(SUPABASE_URL + path, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+  });
+  if (!res.ok) throw new Error(`Archiv-API-Fehler ${res.status}`);
+  return res.json();
+}
+
+function el(id) { return document.getElementById(id); }
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function formatDate(d) {
+  if (!d) return '';
+  try { return new Date(d).toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' }); }
+  catch { return d; }
+}
+
+async function loadArchive() {
+  try {
+    // v1-Grenze: die letzten 200 veröffentlichten Geschichten, absichtlich hier vermerkt statt
+    // stillschweigend zu begrenzen - bei Bedarf später um echte Pagination ergänzen.
+    const [stories, categories] = await Promise.all([
+      supaGet('/rest/v1/stories_with_tags?select=*&order=published_at.desc&limit=200'),
+      supaGet('/rest/v1/categories?select=*&order=sort_order.asc'),
+    ]);
+    allStories = stories;
+    allCategories = categories;
+    renderCategoryChips();
+    renderTagChips();
+    render();
+  } catch (err) {
+    el('status-line').style.display = 'block';
+    el('status-line').textContent = 'Das Archiv konnte gerade nicht geladen werden (' + err.message + '). Bitte später erneut versuchen.';
   }
+}
+
+function renderCategoryChips() {
+  const container = el('category-chips');
+  const usedIds = new Set(allStories.map(s => s.category_id));
+  const cats = allCategories.filter(c => usedIds.has(c.id));
+  container.innerHTML = '<span class="chip' + (activeCategoryId === null ? ' active' : '') + '" data-cat="">Alle Kategorien</span>' +
+    cats.map(c => `<span class="chip${activeCategoryId === c.id ? ' active' : ''}" data-cat="${c.id}">${escapeHtml(c.label)}</span>`).join('');
+  container.querySelectorAll('.chip').forEach(chip => {
+    chip.onclick = () => { activeCategoryId = chip.dataset.cat || null; renderCategoryChips(); render(); };
+  });
+}
+
+function renderTagChips() {
+  const container = el('tag-chips');
+  const tagMap = new Map();
+  allStories.forEach(s => (s.tags || []).forEach(t => tagMap.set(t.slug, t.label)));
+  const tags = Array.from(tagMap.entries()).sort((a, b) => a[1].localeCompare(b[1], 'de'));
+  container.innerHTML = tags.map(([slug, label]) =>
+    `<span class="chip tag-chip${activeTagSlug === slug ? ' active' : ''}" data-tag="${slug}">#${escapeHtml(label)}</span>`
+  ).join('');
+  container.querySelectorAll('.chip').forEach(chip => {
+    chip.onclick = () => {
+      activeTagSlug = activeTagSlug === chip.dataset.tag ? null : chip.dataset.tag;
+      renderTagChips(); render();
+    };
+  });
+}
+
+function filteredStories() {
+  const term = searchTerm.trim().toLowerCase();
+  return allStories.filter(s => {
+    if (activeCategoryId && s.category_id !== activeCategoryId) return false;
+    if (activeTagSlug && !(s.tags || []).some(t => t.slug === activeTagSlug)) return false;
+    if (term) {
+      const haystack = (s.title + ' ' + (s.teaser || '')).toLowerCase();
+      if (!haystack.includes(term)) return false;
+    }
+    return true;
+  });
+}
+
+function render() {
+  const list = filteredStories();
+  el('status-line').style.display = allStories.length === 0 ? 'block' : 'none';
+  if (allStories.length === 0) el('status-line').textContent = 'Im Archiv sind noch keine Geschichten veröffentlicht.';
+  el('result-count').textContent = list.length === 0
+    ? 'Keine Geschichten gefunden.'
+    : `${list.length} Geschichte${list.length === 1 ? '' : 'n'}`;
+  el('story-grid').innerHTML = list.map(storyCardHtml).join('');
+  el('story-grid').querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.dl-btn')) return;
+      openDetail(card.dataset.id);
+    });
+  });
+  el('story-grid').querySelectorAll('.dl-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); downloadStory(btn.dataset.id); });
+  });
+}
+
+function storyCardHtml(s) {
+  const tags = (s.tags || []).slice(0, 3).map(t => `<span>#${escapeHtml(t.label)}</span>`).join('');
+  return `<div class="card" data-id="${s.id}">
+    <div class="card-top">
+      <span class="category-badge">${escapeHtml(s.category_label)}</span>
+      <button class="dl-btn" data-id="${s.id}" title="Als PDF herunterladen" aria-label="Als PDF herunterladen">⬇</button>
+    </div>
+    <h3>${escapeHtml(s.title)}</h3>
+    <div class="teaser">${escapeHtml(s.teaser || '')}</div>
+    <div class="tag-list">${tags}</div>
+    <div class="meta-row"><span>${formatDate(s.narrated_at || s.published_at)}</span><span>${SOURCE_TYPE_LABEL[s.source_type] || ''}</span></div>
+  </div>`;
+}
+
+function openDetail(id) {
+  const s = allStories.find(x => x.id === id);
+  if (!s) return;
+  const qa = (s.qa_pairs || []).map(p => `
+    <div class="qa-block">
+      ${p.question ? `<div class="q">${escapeHtml(p.question)}</div>` : ''}
+      ${p.answer ? `<div class="a">${escapeHtml(p.answer)}</div>` : ''}
+    </div>`).join('');
+  el('detail-panel').innerHTML = `
+    <div class="close-row">
+      <button id="btn-detail-download">⬇ Als PDF herunterladen</button>
+      <button id="btn-detail-close">Schließen ✕</button>
+    </div>
+    <h1>${escapeHtml(s.title)}</h1>
+    <div class="detail-meta">${escapeHtml(s.category_label)} · ${SOURCE_TYPE_LABEL[s.source_type] || ''} · ${formatDate(s.narrated_at || s.published_at)}</div>
+    ${qa}`;
+  el('detail-overlay').style.display = 'flex';
+  document.getElementById('btn-detail-close').onclick = closeDetail;
+  document.getElementById('btn-detail-download').onclick = () => downloadStory(id);
+  history.pushState({ storyId: id }, '', '#story-' + id);
+}
+function closeDetail() {
+  el('detail-overlay').style.display = 'none';
+  if (location.hash) history.pushState({}, '', location.pathname);
+}
+el('detail-overlay').addEventListener('click', (e) => { if (e.target === el('detail-overlay')) closeDetail(); });
+window.addEventListener('popstate', () => {
+  const m = location.hash.match(/^#story-(.+)$/);
+  if (m) openDetail(m[1]); else closeDetail();
+});
+
+function downloadStory(id) {
+  const s = allStories.find(x => x.id === id);
+  if (!s) return;
+  const qaHtml = (s.qa_pairs || []).map(p => `
+    <div style="margin-bottom:22px;">
+      ${p.question ? `<div style="font-weight:700; color:#0f766e; font-size:13px; text-transform:uppercase; letter-spacing:.02em; margin-bottom:6px;">${escapeHtml(p.question)}</div>` : ''}
+      ${p.answer ? `<div style="font-size:16px; line-height:1.7;">${escapeHtml(p.answer)}</div>` : ''}
+    </div>`).join('');
+  const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8" /><title>${escapeHtml(s.title)} – arkaa Archiv</title>
+    <style>
+      body { font-family: Georgia, "Times New Roman", serif; color:#2b2620; max-width:720px; margin:40px auto; padding:0 24px; }
+      .eyebrow { font-family: -apple-system, sans-serif; font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#14b8a6; text-align:center; }
+      h1 { text-align:center; font-size:30px; margin:8px 0 6px; }
+      .meta { font-family: -apple-system, sans-serif; text-align:center; color:#756e63; font-size:13px; margin-bottom:30px; }
+      hr { border:none; border-top:1px solid #e7e0d6; margin:26px 0; }
+      .no-print { text-align:center; margin-bottom:24px; }
+      @media print { .no-print { display:none; } }
+    </style></head><body>
+    <div class="no-print"><button onclick="window.print()">🖨️ Als PDF speichern</button></div>
+    <div class="eyebrow">ARKAA — ARCHIV DER ECHTEN GESCHICHTEN</div>
+    <h1>${escapeHtml(s.title)}</h1>
+    <div class="meta">${escapeHtml(s.category_label)} · ${SOURCE_TYPE_LABEL[s.source_type] || ''} · ${formatDate(s.narrated_at || s.published_at)}</div>
+    <hr />
+    ${qaHtml}
+    </body></html>`;
+  const blob = new Blob([html], { type: 'text/html' });
+  window.open(URL.createObjectURL(blob), '_blank');
+}
+
+el('search-input').addEventListener('input', (e) => { searchTerm = e.target.value; render(); });
+el('btn-random').addEventListener('click', () => {
+  if (allStories.length === 0) return;
+  const pick = allStories[Math.floor(Math.random() * allStories.length)];
+  openDetail(pick.id);
+});
+
+loadArchive();
+const initialMatch = location.hash.match(/^#story-(.+)$/);
+if (initialMatch) {
+  // Detail erst öffnen, sobald die Daten geladen sind (siehe loadArchive) - kurzer Poll statt
+  // Race Condition mit dem fetch oben.
+  const iv = setInterval(() => {
+    if (allStories.length > 0) { clearInterval(iv); openDetail(initialMatch[1]); }
+  }, 100);
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('../service-worker.js', { scope: '../' }).catch(() => {});
+  });
+}
 </script>
 
 </body>
