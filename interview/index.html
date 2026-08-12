@@ -171,6 +171,24 @@
   <section class="chat-col">
     <div id="messages"></div>
 
+    <!-- REIHENFOLGE-VORSCHLAG MIT ZUSTIMMUNG (v2.4.1, auf Wunsch des Nutzers): Läuft VOR der
+         Rohtext-Überprüfung unten, sobald ein Kapitel den Status "in_pruefung" erreicht und noch
+         nicht über die Reihenfolge entschieden wurde (iv.reorderDecision === null, siehe
+         maybeShowReviewPrompt). Schlägt NUR eine neue Reihenfolge derselben, wortgleichen
+         Frage-Antwort-Paare vor (kein Kürzen, kein Umformulieren, siehe REORDER_SYSTEM_PROMPT) –
+         die Person muss dem Vorschlag ausdrücklich zustimmen, bevor er irgendwo verwendet wird. -->
+    <div id="reorder-prompt" style="display:none; margin:10px 14px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--panel);">
+      <div id="reorder-prompt-loading" style="font-size:13.5px;">Ich schaue mir das Interview noch einmal mit Gesamtüberblick an …</div>
+      <div id="reorder-prompt-body" style="display:none;">
+        <div id="reorder-prompt-text" style="margin-bottom:10px; font-size:13.5px;"></div>
+        <ol id="reorder-prompt-preview" style="margin:0 0 12px; padding-left:26px; font-size:13px; color:var(--muted, #666); display:flex; flex-direction:column; gap:4px;"></ol>
+        <div style="display:flex; gap:8px;">
+          <button id="btn-reorder-decline" type="button">Ursprüngliche Reihenfolge behalten</button>
+          <button id="btn-reorder-accept" type="button" class="primary">Neue Reihenfolge übernehmen</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ROHTEXT-ÜBERPRÜFUNG NACH INTERVIEW-ENDE (v2.1.3, auf Wunsch des Nutzers): Sobald ein
          Kapitel den Status "in_pruefung" erreicht (siehe requestAndHandleReply), zeigt
          maybeShowReviewPrompt() diesen Block an. Der Rohtext selbst ist einfach der Chat oben, den
@@ -405,8 +423,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.4.0';
-const APP_BUILD = '2026-08-12 00:00 UTC';
+const APP_VERSION = '2.4.1';
+const APP_BUILD = '2026-08-12 09:30 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
@@ -1434,6 +1452,10 @@ function newInterviewRecord(id, projectId) {
     steeringHintShown: false, // wurde der einmalige Steuerungs-Hinweis nach der 5. Frage schon gezeigt? (siehe showSteeringHintIfNeeded)
     simulationHintShown: false, // wurde der einmalige Simulations-Hinweis nach der Eröffnungsfrage schon gezeigt? (siehe SIMULATIONSMODUS)
     archivTitle: null, // automatisch generierter Titel fürs Archiv-PDF (siehe generateArchivTitle), erst nach Abschluss gesetzt
+    // v2.4.1: REIHENFOLGE-VORSCHLAG MIT ZUSTIMMUNG (siehe getOrGenerateReorderProposal weiter unten).
+    reorderProposal: null, // zwischengespeicherter KI-Vorschlag { order, reasoning, basedOnMessageCount }
+    reorderDecision: null, // null (noch nicht gefragt) | 'accepted' | 'declined'
+    qaOrder: null, // von der Person BESTÄTIGTE Paar-Reihenfolge (Array von Paar-IDs), nur gültig wenn reorderDecision==='accepted'
   };
 }
 // --- PFLICHTPUNKT-MECHANIK (v2.0.0) -----------------------------------------
@@ -1631,6 +1653,12 @@ function migrateDB(db) {
     // Sitzungen ohne dieses Feld wird defensiv von 0 ausgegangen (kann höchstens dazu führen, dass
     // der Deckel für den Rest dieser einen Alt-Sitzung etwas später greift, nie zu früh).
     if (iv.factQuestionsAsked === undefined) iv.factQuestionsAsked = 0;
+    // v2.4.1: Reihenfolge-Vorschlag mit Zustimmung – bei älteren, bereits abgeschlossenen Sitzungen
+    // ohne diese Felder gilt defensiv "noch nicht gefragt" (zeigt beim nächsten Öffnen einmalig den
+    // Vorschlag), niemals fälschlich "bereits akzeptiert" mit einer erfundenen Reihenfolge.
+    if (iv.reorderProposal === undefined) iv.reorderProposal = null;
+    if (iv.reorderDecision === undefined) iv.reorderDecision = null;
+    if (iv.qaOrder === undefined) iv.qaOrder = null;
   }
   if (!db.currentProjectId || !db.projects.find(p => p.id === db.currentProjectId)) {
     db.currentProjectId = db.projects.length ? db.projects[db.projects.length - 1].id : null;
@@ -2014,7 +2042,15 @@ function looksLikeAftermathQuestion(text) {
   // ...?" – eine Beziehungs-/Groll-Frage ganz ohne die bisherigen Signalwörter. Ergänzt außerdem
   // "auseinandergelebt"/"zusammengeschweißt" (Beziehungsentwicklung seit dem Ereignis), da dieselbe
   // Lücke (zusammengesetzte Verben statt "Beziehung ... verändert") sich hier absehbar wiederholen würde.
-  return /nach (dem|diesem) (unfall|ereignis|sturm|vorfall|erlebnis|verfahren|prozess)|zwischen dem (unfall|ereignis|sturm|vorfall|erlebnis|geschehen|verfahren)|in den (darauffolgenden )?(tagen|wochen|monaten|jahren)( danach)?|\bfolgetag(en)?\b|\bfolgewoche(n)?\b|\bfolgemonate?n?\b|\bin dieser zeit\b|im laufe der zeit|jahre später|jahrestag|gedenktag|\bseitdem\b|\balltag\b|\bheute\b|\btherapie\b|therapeutin|therapeuten\b|\bgenesung(szeit)?\b|zeit der genesung|wie (hast du|habt ihr|haben sie) (gelernt|es geschafft)\b.{0,40}umzugehen|wie (bist du|seid ihr|sind sie) damit umgegangen|mit (diesem|dem) verlust|deine? routine|\britual\b|was hat (dich|dir|sie|ihn|euch) (getragen|gehalten|geholfen)|abgesehen von .{0,30}(therapie|verarbeitung)|sonst noch geholfen|\b(beziehung|verhältnis|freundschaft|kontakt)\b.{0,90}(verändert|entwickelt|ausgewirkt|auswirkt|beeinflusst)|\bauswirkung\b.{0,90}\b(beziehung|verhältnis|freundschaft|kontakt)\b|übel\s?genommen|\bauseinandergelebt\b|\bzusammengeschweißt\b|\bdas schwerste daran\b|\bauf diese wahrheit\b|\bnachdem\b.{0,60}(überwunden|verarbeitet|vorbei|geschafft)|stellt sich (für dich|für sie)\b.{0,60}\bdar\b/i.test(text || '');
+  //
+  // v2.4.1 (echter Nutzer-Testlauf "Nebel auf der A7", Autounfall mit Todesfolge): EINE weitere reale
+  // Nachwirkungsfrage rutschte durch, vor der Zäsur: "Habt ihr als Familie Wege gefunden, darüber zu
+  // sprechen, oder ist es weiterhin ein schwieriges Thema, das ihr eher ausklammert?" – fragt danach,
+  // WIE die Familie seither über das Ereignis redet (bzw. ob sie es meidet), also klassische
+  // Verarbeitung/Bewältigung, aber ganz ohne die bisherigen Signalwörter (kein "seitdem"/"Alltag"/
+  // "Therapie" o.Ä.). Neues Muster gezielt auf "(Wege gefunden,) darüber zu sprechen" bzw.
+  // "ausklammern/ausklammert" als Verarbeitungs-Vokabular.
+  return /nach (dem|diesem) (unfall|ereignis|sturm|vorfall|erlebnis|verfahren|prozess)|zwischen dem (unfall|ereignis|sturm|vorfall|erlebnis|geschehen|verfahren)|in den (darauffolgenden )?(tagen|wochen|monaten|jahren)( danach)?|\bfolgetag(en)?\b|\bfolgewoche(n)?\b|\bfolgemonate?n?\b|\bin dieser zeit\b|im laufe der zeit|jahre später|jahrestag|gedenktag|\bseitdem\b|\balltag\b|\bheute\b|\btherapie\b|therapeutin|therapeuten\b|\bgenesung(szeit)?\b|zeit der genesung|wie (hast du|habt ihr|haben sie) (gelernt|es geschafft)\b.{0,40}umzugehen|wie (bist du|seid ihr|sind sie) damit umgegangen|mit (diesem|dem) verlust|deine? routine|\britual\b|was hat (dich|dir|sie|ihn|euch) (getragen|gehalten|geholfen)|abgesehen von .{0,30}(therapie|verarbeitung)|sonst noch geholfen|\b(beziehung|verhältnis|freundschaft|kontakt)\b.{0,90}(verändert|entwickelt|ausgewirkt|auswirkt|beeinflusst)|\bauswirkung\b.{0,90}\b(beziehung|verhältnis|freundschaft|kontakt)\b|übel\s?genommen|\bauseinandergelebt\b|\bzusammengeschweißt\b|wege gefunden,?\s?darüber zu (sprechen|reden)|\bausklammer(t|n|st)?\b|schwieriges thema,?\s?(das|dass)\b.{0,40}\b(auskl|vermeid)|\bdas schwerste daran\b|\bauf diese wahrheit\b|\bnachdem\b.{0,60}(überwunden|verarbeitet|vorbei|geschafft)|stellt sich (für dich|für sie)\b.{0,60}\bdar\b/i.test(text || '');
 }
 
 // Erkennt Selbsthilfe-/Lebensweisheits-Fragen (siehe "KEINE SELBSTHILFE-/LEBENSWEISHEITS-FRAGEN" im
@@ -2845,6 +2881,23 @@ async function getInterviewReply(history, phase, closingQuestionsAsked, priorCha
 
 // Behält nur den letzten Satz, der mit "?" endet – entfernt vorangestellte oder
 // nachgestellte Kommentar-/Empathiesätze, falls das Modell mehr als einen Satz liefert.
+//
+// v2.4.1 (echter Nutzer-Testlauf "Nebel auf der A7"): Im exportierten Archiv-PDF stand als erste
+// Abschlussfrage nur noch das abgeschnittene Fragment "NOVEMBER 2019 IM ALLTAG VERÄNDERT?" statt
+// des vollständigen Satzes. Ursache: Die Satzgrenzen-Erkennung splittet bisher NACH JEDEM Punkt
+// (auch "!"/"?"), gefolgt von einem Leerzeichen – das trifft aber auch auf Abkürzungen mitten im
+// Satz (z. B. "Nov." vor einer Jahreszahl, "z.B.", "bzw.", "ca.") und zerreißt dadurch einen
+// eigentlich zusammenhängenden Satz in ein bedeutungsloses Fragment plus einen unvollständigen
+// Rest. Playwright-Repro: stripToSingleQuestion("... im Nov. 2019 im Alltag verändert?") lieferte
+// vorher "2019 im Alltag verändert?" statt des vollständigen Satzes. Fix, zweiteilig: (1) Ein
+// Satzende zählt nur noch als echte Satzgrenze, wenn direkt danach ein Großbuchstabe folgt (oder
+// der Text dort endet) – nach einer Abkürzung folgt fast immer ein kleingeschriebenes oder
+// numerisches Wort, nach einem echten Satzende (im Deutschen) fast immer ein großgeschriebenes.
+// (2) Zusätzliches Sicherheitsnetz: Liefert diese Erkennung trotzdem ein verdächtig kurzes
+// Fragment (unter MIN_SENTENCE_LEN Zeichen) als vermeintlich einzige Frage, obwohl der Originaltext
+// deutlich länger war, ist das mit hoher Wahrscheinlichkeit selbst wieder so ein Fehlschnitt –
+// dann lieber den unveränderten Gesamttext zurückgeben (eventuell mit einem überflüssigen
+// Einleitungssatz) als ein für sich unverständliches Bruchstück zeigen.
 function stripToSingleQuestion(text) {
   const trimmed = (text || '').trim();
   if (!trimmed.includes('?')) return trimmed; // keine erkennbare Frage, unverändert lassen (Fallback)
@@ -2852,10 +2905,13 @@ function stripToSingleQuestion(text) {
   const withoutFinal = trimmed.slice(0, -1);
   if (!/[.!?]/.test(withoutFinal)) return trimmed;
 
-  const sentences = trimmed.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+  const sentences = trimmed.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ])/).map(s => s.trim()).filter(Boolean);
   const questionSentences = sentences.filter(s => s.endsWith('?'));
   if (questionSentences.length === 0) return trimmed;
-  return questionSentences[questionSentences.length - 1];
+  const candidate = questionSentences[questionSentences.length - 1];
+  const MIN_SENTENCE_LEN = 20;
+  if (candidate.length < MIN_SENTENCE_LEN && candidate.length < trimmed.length) return trimmed;
+  return candidate;
 }
 
 async function generateSummary(history) {
@@ -3411,13 +3467,26 @@ function showSteeringHintIfNeeded(iv) {
 // Status des gerade geöffneten Interviews. Wird sowohl nach jeder neuen KI-Antwort aufgerufen
 // (requestAndHandleReply) als auch beim (erneuten) Öffnen eines Interviews (openInterview), damit
 // eine noch offene Überprüfung auch nach einem Neuladen der Seite wieder korrekt angezeigt wird.
+//
+// v2.4.1: Läuft VOR der eigentlichen Rohtext-Überprüfung jetzt zuerst der Reihenfolge-Vorschlag
+// (siehe #reorder-prompt/showReorderPrompt) – solange darüber noch nicht entschieden wurde
+// (iv.reorderDecision === null), wird NUR dieser eine Block gezeigt, der Rest der Funktion bleibt
+// unangetastet und läuft erst beim nächsten Aufruf (nach der Entscheidung).
 function maybeShowReviewPrompt(iv) {
   const panel = el('review-prompt');
+  const reorderPanel = el('reorder-prompt');
   if (!panel) return;
   if (!iv || (iv.status !== 'in_pruefung' && iv.status !== 'abgeschlossen')) {
     panel.style.display = 'none';
+    if (reorderPanel) reorderPanel.style.display = 'none';
     return;
   }
+  if (iv.status === 'in_pruefung' && iv.reorderDecision === null) {
+    panel.style.display = 'none';
+    showReorderPrompt(iv);
+    return;
+  }
+  if (reorderPanel) reorderPanel.style.display = 'none';
   if (iv.status === 'abgeschlossen') {
     // ARCHIV-PDF-Angebot (siehe #review-done-block) statt der Ja/Nein-Buttons – bleibt auch beim
     // späteren erneuten Öffnen eines bereits abgeschlossenen Interviews sichtbar, damit das
@@ -3439,6 +3508,77 @@ function maybeShowReviewPrompt(iv) {
   el('review-done-block').style.display = 'none';
 }
 
+// Zeigt den Reihenfolge-Vorschlag (siehe #reorder-prompt, REORDER_SYSTEM_PROMPT weiter unten) und
+// stößt bei Bedarf den einmaligen KI-Aufruf dafür an (gecacht über iv.reorderProposal, siehe
+// getOrGenerateReorderProposal). Läuft ausschließlich, solange iv.reorderDecision === null.
+async function showReorderPrompt(iv) {
+  const panel = el('reorder-prompt');
+  if (!panel) return;
+  panel.style.display = 'block';
+  el('reorder-prompt-loading').style.display = 'block';
+  el('reorder-prompt-body').style.display = 'none';
+  try {
+    const proposal = await getOrGenerateReorderProposal(iv);
+    // Zwischen Anstoßen und Antwort könnte die Person das Interview gewechselt oder die Entscheidung
+    // bereits anderweitig getroffen haben (z. B. zweiter Klick) – dann nicht mehr überschreiben.
+    if (!interviewId || interviewId !== iv.id || iv.reorderDecision !== null) return;
+    const history = getHistory(iv.id);
+    const pairs = buildRedactionPairs(history);
+    const byId = new Map(pairs.map(p => [p.id, p]));
+    const originalOrder = pairs.map(p => p.id);
+    const changed = JSON.stringify(proposal.order) !== JSON.stringify(originalOrder);
+
+    el('reorder-prompt-loading').style.display = 'none';
+    el('reorder-prompt-body').style.display = 'block';
+    const preview = el('reorder-prompt-preview');
+    preview.innerHTML = '';
+    if (!changed) {
+      el('reorder-prompt-text').textContent = 'Ich habe mir das Interview noch einmal mit Gesamtüberblick angeschaut – die Reihenfolge passt so bereits gut, ich habe nichts zum Umsortieren gefunden.';
+      el('btn-reorder-accept').style.display = 'none';
+      el('btn-reorder-decline').textContent = 'Weiter';
+    } else {
+      el('reorder-prompt-text').textContent = 'Ich habe mir das Interview noch einmal angeschaut. ' + proposal.reasoning;
+      el('btn-reorder-accept').style.display = '';
+      el('btn-reorder-decline').textContent = 'Ursprüngliche Reihenfolge behalten';
+      for (const id of proposal.order) {
+        const pair = byId.get(id);
+        if (!pair || !pair.question) continue;
+        const li = document.createElement('li');
+        const preview70 = pair.question.length > 90 ? pair.question.slice(0, 90) + '…' : pair.question;
+        li.textContent = preview70;
+        preview.appendChild(li);
+      }
+    }
+  } catch (err) {
+    el('reorder-prompt-loading').style.display = 'none';
+    el('reorder-prompt-body').style.display = 'block';
+    el('reorder-prompt-text').textContent = 'Der Reihenfolge-Vorschlag konnte nicht erstellt werden (' + err.message + '). Du kannst mit der ursprünglichen Reihenfolge fortfahren.';
+    el('reorder-prompt-preview').innerHTML = '';
+    el('btn-reorder-accept').style.display = 'none';
+    el('btn-reorder-decline').textContent = 'Weiter';
+  }
+}
+
+function acceptReorder() {
+  if (!interviewId) return;
+  const iv = getInterview(interviewId);
+  if (!iv || iv.status !== 'in_pruefung' || !iv.reorderProposal) return;
+  iv.reorderDecision = 'accepted';
+  iv.qaOrder = iv.reorderProposal.order;
+  saveDB();
+  maybeShowReviewPrompt(iv);
+}
+
+function declineReorder() {
+  if (!interviewId) return;
+  const iv = getInterview(interviewId);
+  if (!iv || iv.status !== 'in_pruefung') return;
+  iv.reorderDecision = 'declined';
+  iv.qaOrder = null;
+  saveDB();
+  maybeShowReviewPrompt(iv);
+}
+
 async function startNewInterview() {
   setBusy(true);
   try {
@@ -3454,6 +3594,7 @@ async function startNewInterview() {
     interviewId = iv.id;
     hasStory = false;
     el('review-prompt').style.display = 'none'; // Überprüfungs-Block eines evtl. vorher offenen Interviews ausblenden
+    if (el('reorder-prompt')) el('reorder-prompt').style.display = 'none';
 
     await requestAndHandleReply(iv);
   } catch (err) {
@@ -3703,6 +3844,7 @@ async function runSimulation(genreDescription, mode) {
     renderMessages(getHistory(iv.id), iv);
     updateStatusLine(iv);
     el('review-prompt').style.display = 'none'; // Überprüfungs-Block eines evtl. vorher offenen Interviews ausblenden
+    if (el('reorder-prompt')) el('reorder-prompt').style.display = 'none';
 
     setSimulationStatus('🎭 Simulation läuft – Eröffnungsfrage wird generiert ...', true);
     await requestAndHandleReply(iv);
@@ -3867,6 +4009,17 @@ async function sendReviewCorrection() {
     const result = await processCorrectionMessage(iv, text);
     renderCorrectionMessages(interviewId);
     if (result.typ === 'anwenden') {
+      // v2.4.1: Ändert die Korrektur die Anzahl der Paare (Löschung/Ergänzung, nicht nur eine
+      // Antwort ersetzt), ist ein zuvor bereits akzeptierter Reihenfolge-Vorschlag nicht mehr
+      // gültig (die gespeicherten Paar-IDs passen nicht mehr zum neuen Paar-Satz) – die Person wird
+      // dann beim nächsten Aufruf von maybeShowReviewPrompt einmalig erneut gefragt, statt eine
+      // inzwischen unpassende Reihenfolge stillschweigend weiterzuverwenden.
+      const countChanged = Array.isArray(result.applied) && result.applied.some(a => a && a.aktion !== 'antwort_ersetzen');
+      if (countChanged) {
+        iv.reorderDecision = null;
+        iv.qaOrder = null;
+        iv.reorderProposal = null;
+      }
       // Der Rohtext wurde mechanisch geändert (siehe applyCorrectionActions) – Chat oben neu
       // rendern und wieder zur Ja/Nein-Frage zurückkehren, damit die Person die Änderung erneut
       // lesen und entweder weiter korrigieren oder abschließen kann ("erneut lesen" im Flowchart).
@@ -3924,15 +4077,41 @@ sonst nichts.`;
 // Baut die eigenständige, druckoptimierte HTML-Seite (siehe oben). Serifenschrift für einen
 // warmen, buchartigen Charakter, arkaa-Farbakzent, ein Deckblatt-Bereich, dann Frage/Antwort im
 // Originalwortlaut. .no-print blendet den Drucken-Knopf beim tatsächlichen Drucken/PDF-Export aus.
+// v2.4.1 (auf Wunsch des Nutzers: sichtbare Nummerierung "Frage 01, 02, ..." sowie die vom
+// Reihenfolge-Vorschlag bestätigte Reihenfolge, siehe #reorder-prompt/getOrGenerateReorderProposal
+// oben): Rendert jetzt Paar-weise (Frage + zugehörige Antwort als EINE Einheit, siehe
+// buildRedactionPairs) statt Nachricht für Nachricht, damit sich Fragen und Antworten überhaupt
+// gemeinsam umsortieren lassen. Verwendet iv.qaOrder NUR, wenn es tatsächlich noch exakt zur
+// aktuellen Paar-Menge passt (gleiche Anzahl, dieselben IDs) – sonst (z. B. nach einer späteren
+// Korrektur ohne erneute Reihenfolge-Bestätigung) defensiv die ursprüngliche, chronologische
+// Reihenfolge, statt eine inzwischen unpassende gespeicherte Reihenfolge zu verwenden.
+function resolveArchivPairOrder(iv, pairs) {
+  const naturalOrder = pairs.map(p => p.id);
+  if (!Array.isArray(iv.qaOrder) || iv.qaOrder.length !== pairs.length) return naturalOrder;
+  const validIds = new Set(naturalOrder);
+  const orderSet = new Set(iv.qaOrder);
+  const isValidPermutation = iv.qaOrder.every(id => validIds.has(id)) && orderSet.size === naturalOrder.length;
+  return isValidPermutation ? iv.qaOrder : naturalOrder;
+}
+
 function buildArchivPdfHtml(iv, title, project) {
   const dateStr = new Date(iv.created_at).toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
   const history = getHistory(iv.id);
+  const pairs = buildRedactionPairs(history);
+  const byId = new Map(pairs.map(p => [p.id, p]));
+  const displayOrder = resolveArchivPairOrder(iv, pairs);
   let qaHtml = '';
-  for (const m of history) {
-    if (m.role === 'ki') {
-      qaHtml += `<div class="frage">${escapeHtml(m.text)}</div>`;
-    } else {
-      qaHtml += `<div class="antwort">${escapeHtml(m.text)}</div>`;
+  let n = 0;
+  for (const id of displayOrder) {
+    const pair = byId.get(id);
+    if (!pair) continue;
+    n++;
+    const num = String(n).padStart(2, '0');
+    if (pair.question) {
+      qaHtml += `<div class="frage"><span class="frage-nr">Frage ${num}</span> ${escapeHtml(pair.question)}</div>`;
+    }
+    if (pair.answer) {
+      qaHtml += `<div class="antwort">${escapeHtml(pair.answer)}</div>`;
     }
   }
   const projectName = project ? escapeHtml(project.name) : '';
@@ -3962,6 +4141,8 @@ function buildArchivPdfHtml(iv, title, project) {
   .qa-block { margin-bottom: 8px; }
   .frage { font-family: -apple-system, sans-serif; font-size: 12px; letter-spacing: 0.03em; text-transform: uppercase;
     color: #0f766e; font-weight: 700; margin: 26px 0 6px; page-break-after: avoid; }
+  .frage-nr { display: inline-block; background: #14b8a6; color: #fff; border-radius: 4px; padding: 1px 6px;
+    margin-right: 6px; letter-spacing: 0.02em; }
   .antwort { font-size: 15.5px; margin: 0 0 4px; page-break-inside: avoid; white-space: pre-wrap; }
   footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid #e7e0d6; text-align: center;
     font-family: -apple-system, sans-serif; font-size: 11px; color: #756e63; }
@@ -4368,6 +4549,116 @@ async function getOrGenerateRedaction(iv) {
   iv.redaction = { ...result, generatedAt: new Date().toISOString() };
   saveDB();
   return iv.redaction;
+}
+
+// --- REIHENFOLGE-VORSCHLAG MIT ZUSTIMMUNG (v2.4.1, auf Wunsch des Nutzers) ----------------------
+// Nutzer-Feedback zur bestehenden REDAKTION oben: "Das gefällt mir aber nicht, da wir zu viel
+// Verantwortung der KI übergeben. Ich würde zunächst nur an dem Reihenfolgenproblem arbeiten." Im
+// Unterschied zu analyzeRedaction/getOrGenerateRedaction oben (die zusätzlich auch Paare VERWERFEN
+// und kürzen darf) macht dieser Mechanismus ABSICHTLICH nur EINE einzige, eng begrenzte Sache:
+// einen Vorschlag für eine bessere Reihenfolge derselben, unveränderten Frage-Antwort-Paare – kein
+// Streichen, kein Kürzen, kein Umformulieren. Und im Unterschied zum bisherigen Redaktions-Export
+// (der die neue Reihenfolge einfach direkt in eine Textdatei schreibt) MUSS die Person dem
+// Vorschlag hier ausdrücklich zustimmen, BEVOR er irgendwo verwendet wird (siehe
+// #reorder-prompt/maybeShowReviewPrompt) – lehnt sie ab, bleibt es bei der ursprünglichen,
+// chronologischen Reihenfolge. Läuft VOR der bestehenden Rohtext-Überprüfung (Korrektur-Chat), damit
+// die Person das Interview gleich in der für sie vorgesehenen, finalen Reihenfolge gegenliest.
+const REORDER_SYSTEM_PROMPT = `Du bist ein sorgfältiger Redakteur, der die Reihenfolge eines bereits geführten ` +
+  `Interviews zu einem einzelnen Lebensereignis überprüft – wie ein Journalist, der vor der Veröffentlichung ` +
+  `noch einmal durchgeht, ob die Fragen in einer nachvollziehbaren, gut lesbaren Reihenfolge stehen.\n\n` +
+  `ABSOLUTE REGELN:\n` +
+  `1. Du darfst KEIN einziges Wort in irgendeiner Frage oder Antwort verändern, hinzufügen oder kürzen. Der ` +
+  `genaue Wortlaut jedes Paares bleibt exakt wie im Original.\n` +
+  `2. Du darfst KEIN Paar weglassen und KEIN Paar hinzufügen. ALLE dir gegebenen Paare müssen in deiner ` +
+  `Antwort exakt einmal vorkommen – du entscheidest hier nicht, ob ein Paar wichtig genug ist, das ist nicht ` +
+  `deine Aufgabe in diesem Schritt.\n` +
+  `3. Du darfst NUR die Reihenfolge ändern, und auch das nur, wenn es die Lesbarkeit wirklich verbessert (z. B. ` +
+  `weil eine Detailfrage zum Hergang chronologisch deutlich besser weiter vorne passen würde, oder weil zwei ` +
+  `zusammengehörige Fragen durch andere Themen getrennt wurden). Verschiebe ein Paar NUR, wenn die Frage GENAU ` +
+  `IN IHREM VORLIEGENDEN WORTLAUT auch an der neuen Stelle für sich allein verständlich bleibt. Bezieht sich ` +
+  `die Frage erkennbar auf "das", "diesen Moment", "wie du gerade gesagt hast" o. Ä. aus der unmittelbar ` +
+  `vorausgehenden Antwort, und wäre sie an der neuen Stelle dadurch unverständlich, MUSS sie an ihrer ` +
+  `ursprünglichen Position bleiben. Im Zweifel: nicht verschieben. Ein abschließendes Paar ohne Antwort ` +
+  `(typischerweise die Abschieds-Formel) bleibt immer das letzte Paar.\n\n` +
+  `Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt, ohne Markdown-Codeblock, in genau diesem Format:\n` +
+  `{"vorgeschlagene_reihenfolge": [<Paar-ID>, <Paar-ID>, ...], "begruendung": "1-2 kurze, konkrete Sätze in ` +
+  `Ich-Form an die erzählende Person, WAS du umsortiert hast und warum – oder falls keine Änderung nötig ist: ` +
+  `dass die Reihenfolge bereits gut ist."}\n\n` +
+  `"vorgeschlagene_reihenfolge" muss ALLE gegebenen Paar-IDs enthalten, jede genau einmal. Ist die bestehende ` +
+  `Reihenfolge bereits gut, gib einfach die IDs unverändert in ihrer ursprünglichen Reihenfolge zurück.`;
+
+// Ruft die KI EINMAL mit dem kompletten Kapitel auf und liefert den validierten, mechanisch
+// abgesicherten Reihenfolge-Vorschlag zurück. Nutzt dieselbe Paar-Zerlegung wie die Redaktion oben
+// (buildRedactionPairs) – der Wortlaut wird an keiner Stelle verändert, nur referenziert.
+async function analyzeReorder(interviewId) {
+  const history = getHistory(interviewId);
+  const pairs = buildRedactionPairs(history);
+  if (pairs.length === 0) return { order: [], reasoning: '', basedOnMessageCount: history.length };
+
+  const promptBody = pairs.map(p =>
+    `PAAR ${p.id}:\n` + (p.question ? `FRAGE: ${p.question}\n` : '') + (p.answer ? `ANTWORT: ${p.answer}\n` : '')
+  ).join('\n');
+  const userContent = `Hier ist das vollständige Kapitel als nummerierte Frage-Antwort-Paare, in der ` +
+    `ursprünglichen, chronologischen Reihenfolge:\n\n${promptBody}`;
+
+  const raw = await callChat(REORDER_SYSTEM_PROMPT, [{ role: 'user', content: userContent }], 2000);
+  let parsed;
+  try { parsed = parseJsonResponse(raw); }
+  catch (err) { parsed = robustParseJson(raw, {}); }
+
+  return sanitizeReorderResult(pairs, parsed, history.length);
+}
+
+// Mechanische Validierung/Absicherung des vom Modell gelieferten Reihenfolge-Vorschlags, getrennt
+// von analyzeReorder gehalten, damit sie ohne echten API-Aufruf testbar ist. Vertraut NICHT blind
+// auf die vom Modell gelieferte ID-Liste (dieselbe Lektion wie überall sonst in diesem Projekt):
+// ungültige IDs werden ignoriert, Duplikate entfernt, und – anders als bei der Redaktion oben, wo
+// ein Paar ganz fehlen darf – FEHLENDE Paare werden hier zwingend ergänzt (in ihrer ursprünglichen
+// relativen Reihenfolge), weil dieser Mechanismus laut Definition NIEMALS ein Paar verlieren darf.
+// Das Abschieds-Paar (letztes Paar, answer=null) steht danach immer mechanisch ganz am Ende.
+function sanitizeReorderResult(pairs, parsed, historyLength) {
+  const validIds = new Set(pairs.map(p => p.id));
+  const lastPair = pairs[pairs.length - 1];
+  const farewellId = (lastPair && lastPair.answer === null) ? lastPair.id : null;
+
+  let order = Array.isArray(parsed && parsed.vorgeschlagene_reihenfolge)
+    ? parsed.vorgeschlagene_reihenfolge.filter(id => validIds.has(id))
+    : [];
+  order = [...new Set(order)]; // Duplikate entfernen, erste genannte Position behalten
+
+  // Fehlende Paare (vom Modell vergessen, oder komplett unbrauchbare Antwort) IN IHRER
+  // URSPRÜNGLICHEN REIHENFOLGE ergänzen – nichts darf verloren gehen.
+  const present = new Set(order);
+  for (const p of pairs) {
+    if (!present.has(p.id)) order.push(p.id);
+  }
+
+  // Abschieds-Paar mechanisch ans Ende, unabhängig davon, wo das Modell es einsortiert hätte.
+  if (farewellId !== null) {
+    order = order.filter(id => id !== farewellId);
+    order.push(farewellId);
+  }
+
+  const reasoning = (parsed && typeof parsed.begruendung === 'string' && parsed.begruendung.trim())
+    ? parsed.begruendung.trim()
+    : 'Ich habe mir das Interview noch einmal angeschaut – die Reihenfolge passt so bereits gut.';
+
+  return { order, reasoning, basedOnMessageCount: historyLength };
+}
+
+// Liefert den zwischengespeicherten Reihenfolge-Vorschlag, falls vorhanden und noch aktuell
+// (Nachrichtenanzahl unverändert seit der letzten Generierung), sonst wird er einmalig neu erzeugt
+// und gespeichert. Verhindert unnötige wiederholte API-Aufrufe bei mehrfachem Anzeigen desselben,
+// unveränderten Kapitels (z. B. nach einem Seiten-Neuladen).
+async function getOrGenerateReorderProposal(iv) {
+  const history = getHistory(iv.id);
+  if (iv.reorderProposal && iv.reorderProposal.basedOnMessageCount === history.length) {
+    return iv.reorderProposal;
+  }
+  const result = await analyzeReorder(iv.id);
+  iv.reorderProposal = { ...result, generatedAt: new Date().toISOString() };
+  saveDB();
+  return iv.reorderProposal;
 }
 
 // --- ROHTEXT-ÜBERPRÜFUNG NACH INTERVIEW-ENDE (v2.1.3, auf Wunsch des Nutzers) --------------------
@@ -4864,6 +5155,7 @@ function deleteInterview(id) {
     renderMessages([]);
     statusEl.textContent = 'Kein Interview ausgewählt';
     el('review-prompt').style.display = 'none';
+    if (el('reorder-prompt')) el('reorder-prompt').style.display = 'none';
   }
   refreshStoryView();
   renderInterviewList();
@@ -4945,6 +5237,7 @@ function deleteProject(id) {
     interviewId = null;
     renderMessages([]);
     el('review-prompt').style.display = 'none';
+    if (el('reorder-prompt')) el('reorder-prompt').style.display = 'none';
   }
   updateProjectDisplay();
   refreshStoryView();
@@ -5054,6 +5347,8 @@ on('input', 'keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preven
 
 on('btn-review-yes', 'click', openReviewCorrectionChat);
 on('btn-review-no', 'click', finalizeReview);
+on('btn-reorder-accept', 'click', acceptReorder);
+on('btn-reorder-decline', 'click', declineReorder);
 on('btn-review-correction-send', 'click', sendReviewCorrection);
 on('btn-archiv-pdf', 'click', openArchivPdf);
 on('review-correction-input', 'keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReviewCorrection(); } });
