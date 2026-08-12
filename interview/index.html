@@ -423,8 +423,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.4.3';
-const APP_BUILD = '2026-08-12 14:30 UTC';
+const APP_VERSION = '2.4.4';
+const APP_BUILD = '2026-08-12 17:00 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
@@ -1248,18 +1248,20 @@ formulierst NICHT du, sondern die App selbst mit einem festen Übergangssatz –
 "message" lieferst, wird für diesen einen Turn ohnehin überschrieben. Antworte trotzdem ganz normal
 mit phase="closing".
 
-AB DER ZWEITEN NACHRICHT DER ABSCHLUSSPHASE (abschlussfragen_gestellt=1 oder höher) stellst du bis
-zu insgesamt FÜNF persönliche, reflektierende Fragen – nicht nur eine –, zum Beispiel zur Bedeutung
-des Ereignisses, zu Beziehungen, die sich dadurch verändert haben, oder dazu, was der Person heute
-noch wichtig ist. Antwortet die Person auf eine dieser Fragen ablehnend oder erkennbar knapp
-abwinkend (siehe KEINE FRAGEN-SCHLEIFE oben), beendest du die Sitzung SOFORT freundlich, auch wenn
-noch nicht alle fünf gestellt wurden – keine weitere Frage in anderen Worten. Sind bereits FÜNF
-Abschlussfragen gestellt (abschlussfragen_gestellt ist 5 oder höher), MUSST du in dieser Antwort
-phase="done" verwenden. Baue deine Abschiedsnachricht knapp und warm auf: ein kurzer Dank/Abschluss,
-die Erwähnung, dass alles automatisch gespeichert ist. Wurde die Sitzung beendet, OBWOHL laut
-internem Status noch Pflichtpunkte offen waren (z. B. weil die Person selbst abbrechen wollte),
-erwähne kurz, dass ihr bei Gelegenheit an genau dieser Stelle weitermachen könnt – erfinde dabei
-aber kein konkretes nächstes Thema und keine Sitzungsanzahl. Sind alle Pflichtpunkte bereits
+AB DER ZWEITEN NACHRICHT DER ABSCHLUSSPHASE (abschlussfragen_gestellt=1 oder höher, bis zu insgesamt
+VIER Turns): Die tatsächliche Frage wird NICHT von dir formuliert, sondern von der App aus einem
+vorbereiteten, zur Geschichte passenden Plan eingesetzt – was du hier als "message" lieferst, wird
+für diese Turns ohnehin überschrieben, du musst dir also keine Formulierung ausdenken. Deine einzige
+Aufgabe an dieser Stelle ist die Entscheidung, OB überhaupt weitergemacht wird: Antwortet die Person
+auf die zuletzt gestellte Abschlussfrage ablehnend oder erkennbar knapp abwinkend (siehe KEINE
+FRAGEN-SCHLEIFE oben), beendest du die Sitzung SOFORT freundlich mit phase="done", auch wenn noch
+nicht alle vier gestellt wurden. Antwortet sie inhaltlich, bleibst du bei phase="closing". Sind
+bereits VIER Abschlussfragen gestellt (abschlussfragen_gestellt ist 5 oder höher), MUSST du in
+dieser Antwort phase="done" verwenden. Baue deine Abschiedsnachricht knapp und warm auf: ein kurzer
+Dank/Abschluss, die Erwähnung, dass alles automatisch gespeichert ist. Wurde die Sitzung beendet,
+OBWOHL laut internem Status noch Pflichtpunkte offen waren (z. B. weil die Person selbst abbrechen
+wollte), erwähne kurz, dass ihr bei Gelegenheit an genau dieser Stelle weitermachen könnt – erfinde
+dabei aber kein konkretes nächstes Thema und keine Sitzungsanzahl. Sind alle Pflichtpunkte bereits
 geklärt, ist keine Ankündigung einer Fortsetzung nötig.
 
 ---
@@ -1290,15 +1292,15 @@ Regeln für das Feld "phase":
   FAKTENCHECK HAT VORRANG in ABSCHLUSSPHASE oben.
 - "closing": Der Faktencheck ist vollständig (das ist insbesondere IMMER der Fall, sobald
   pflichtpunkte_offen auf 0 steht, siehe "ALLE PFLICHTPUNKTE SIND BEREITS GEKLÄRT" im Status, falls
-  vorhanden) – NIEMALS solange pflichtpunkte_offen noch größer als 0 ist. "message" enthält in
-  diesem Fall eine der bis zu FÜNF persönlichen Abschlussfragen aus der ABSCHLUSSPHASE oben (die
-  allererste dieser Nachrichten wird ohnehin von der App selbst überschrieben). Verwende "closing"
-  so lange, bis entweder abschlussfragen_gestellt bereits 5 erreicht hat oder die Person erkennbar
-  fertig ist (siehe abschlussfragen_gestellt im internen Status) – erst dann "done", siehe unten.
-  WICHTIG: Steht phase im internen Status bereits als "closing" da, bist du bereits in der
-  Abschlussphase – melde für JEDE weitere Antwort in dieser Sitzung ebenfalls "closing" (niemals
-  wieder "interview"), bis der Deckel (5) erreicht ist oder die Person erkennbar fertig ist.
-- "done": Du hast bereits FÜNF Abschlussfragen gestellt (abschlussfragen_gestellt ist bereits 5
+  vorhanden) – NIEMALS solange pflichtpunkte_offen noch größer als 0 ist. "message" wird für JEDEN
+  Turn der Abschlussphase von der App selbst überschrieben (siehe ABSCHLUSSPHASE oben) – wichtig ist
+  hier nur das "phase"-Feld. Verwende "closing" so lange, bis entweder abschlussfragen_gestellt
+  bereits 5 erreicht hat oder die Person erkennbar fertig ist (siehe abschlussfragen_gestellt im
+  internen Status) – erst dann "done", siehe unten. WICHTIG: Steht phase im internen Status bereits
+  als "closing" da, bist du bereits in der Abschlussphase – melde für JEDE weitere Antwort in
+  dieser Sitzung ebenfalls "closing" (niemals wieder "interview"), bis der Deckel (5) erreicht ist
+  oder die Person erkennbar fertig ist.
+- "done": Du hast bereits VIER Abschlussfragen gestellt (abschlussfragen_gestellt ist bereits 5
   oder mehr), oder die Person hat eindeutig signalisiert, dass sie fertig ist (siehe KEINE
   FRAGEN-SCHLEIFE oben), und "message" enthält die freundliche Abschiedsnachricht wie in
   ABSCHLUSSPHASE beschrieben.
@@ -1456,6 +1458,10 @@ function newInterviewRecord(id, projectId) {
     reorderProposal: null, // zwischengespeicherter KI-Vorschlag { order, reasoning, basedOnMessageCount }
     reorderDecision: null, // null (noch nicht gefragt) | 'accepted' | 'declined'
     qaOrder: null, // von der Person BESTÄTIGTE Paar-Reihenfolge (Array von Paar-IDs), nur gültig wenn reorderDecision==='accepted'
+    // v2.4.4: STATISCHER ABSCHLUSSFRAGEN-POOL (siehe getOrGenerateClosingPlan/CLOSING_QUESTION_POOL
+    // weiter oben) – die für DIESE Sitzung einmalig ausgewählten (und kontextualisierten)
+    // Abschlussfragen, null bis zum ersten echten Abschluss-Turn.
+    closingPlan: null, // { questions: [{ id, text }, ...] }
   };
 }
 // --- PFLICHTPUNKT-MECHANIK (v2.0.0) -----------------------------------------
@@ -1659,6 +1665,7 @@ function migrateDB(db) {
     if (iv.reorderProposal === undefined) iv.reorderProposal = null;
     if (iv.reorderDecision === undefined) iv.reorderDecision = null;
     if (iv.qaOrder === undefined) iv.qaOrder = null;
+    if (iv.closingPlan === undefined) iv.closingPlan = null;
   }
   if (!db.currentProjectId || !db.projects.find(p => p.id === db.currentProjectId)) {
     db.currentProjectId = db.projects.length ? db.projects[db.projects.length - 1].id : null;
@@ -2237,6 +2244,123 @@ function textSimilarity(a, b) {
 const CLOSING_FAREWELL_MESSAGE = 'Alles klar. Dann beenden wir die Sitzung hier – vielen Dank, dass du mir deine Geschichte erzählt hast. ' +
   'Falls dir später noch etwas einfällt, geht nichts verloren: Du kannst jederzeit in einer neuen Sitzung an dieser Geschichte weiterarbeiten.';
 
+// --- STATISCHER ABSCHLUSSFRAGEN-POOL (v2.4.4) -----------------------------------------------
+// Auf Wunsch des Nutzers, nachdem ein echtes Test-Archiv ("Eine Narbe, die nach Vergangenheit
+// klingt") zeigte, dass die Abschlussphase am Ende oft gar keine wirklich PERSÖNLICHE Frage mehr
+// stellte (die KI hatte frei "Möchtest du noch etwas ergänzen?" gewählt – das ist keine der in
+// ABSCHLUSSPHASE vorgesehenen reflektierenden Fragen, siehe Analyse dazu): "gibt der KI einfach 20
+// Fragen die ungefähr passen ... die KI soll sich dann 4 aussuchen die zur Story passen und
+// vielleicht noch in den Kontext gesetzt werden zur Story." Die Abschlussfrage wird also NICHT
+// mehr pro Turn frei von der KI formuliert, sondern EINMALIG pro Sitzung mechanisch aus diesem
+// festen Pool von 20 Vorlagen ausgewählt (siehe getOrGenerateClosingPlan/sanitizeClosingSelection
+// unten) und dabei leicht auf die konkrete Geschichte zugeschnitten. Die KI entscheidet an den
+// einzelnen Abschluss-Turns danach nur noch, OB weitergemacht wird (siehe Override in
+// requestAndHandleReply) – nicht mehr, WAS gefragt wird. MAX_CLOSING_QUESTIONS_SELECTED (4) ist
+// bewusst EINS kleiner als MAX_CLOSING_QUESTIONS (5): Turn 0 der Abschlussphase ist immer die feste
+// CLOSING_TRANSITION_TEXT (keine "echte" Frage), Turns 1–4 sind die vier ausgewählten Fragen, Turn
+// 5 löst den bestehenden Deckel aus (siehe MAX_CLOSING_QUESTIONS oben) – zusammen also GENAU vier
+// persönliche Fragen im Normalfall, keine fünf.
+const MAX_CLOSING_QUESTIONS_SELECTED = 4;
+const CLOSING_QUESTION_POOL = [
+  { id: 1, template: 'Hat dieses Erlebnis dein Leben grundlegend verändert – und wenn ja, wie?' },
+  { id: 2, template: 'Wie hat sich deine Beziehung zu den Menschen, die dir am nächsten stehen, durch das Erlebte verändert?' },
+  { id: 3, template: 'Was ist dir seit diesem Ereignis im Leben wichtiger geworden als vorher?' },
+  { id: 4, template: 'Wenn du heute darauf zurückblickst – wie siehst du das Erlebte jetzt, im Vergleich zu damals?' },
+  { id: 5, template: 'Was hat dir am meisten geholfen, das Erlebte zu verarbeiten?' },
+  { id: 6, template: 'Gibt es etwas, das du im Rückblick anders machen würdest?' },
+  { id: 7, template: 'Wie hat sich dein Blick auf dich selbst durch dieses Erlebnis verändert?' },
+  { id: 8, template: 'Was hat diese Erfahrung dich über dich selbst gelehrt?' },
+  { id: 9, template: 'Wie haben Menschen in deinem Umfeld auf das reagiert, was passiert ist?' },
+  { id: 10, template: 'Sind Ängste oder Vorsichtsmaßnahmen geblieben, die es vorher nicht gab?' },
+  { id: 11, template: 'Was würdest du jemandem mitgeben, der oder die etwas Ähnliches erlebt?' },
+  { id: 12, template: 'Wie hat sich dein Alltag seit diesem Ereignis verändert?' },
+  { id: 13, template: 'Gibt es einen Moment aus der Zeit danach, der dir besonders in Erinnerung geblieben ist?' },
+  { id: 14, template: 'Was bedeutet es dir, diese Geschichte heute zu erzählen?' },
+  { id: 15, template: 'Hat sich dein Verhältnis zu Sicherheit oder Kontrolle im Leben seitdem verändert?' },
+  { id: 16, template: 'Gibt es etwas an dieser Erfahrung, für das du im Rückblick sogar dankbar bist?' },
+  { id: 17, template: 'Wie oft denkst du heute noch an dieses Ereignis, und in welchen Momenten?' },
+  { id: 18, template: 'Hat sich durch das Erlebte etwas an deinen Prioritäten oder Werten verschoben?' },
+  { id: 19, template: 'Hat diese Erfahrung die Menschen um dich herum näher zusammengebracht, oder eher belastet?' },
+  { id: 20, template: 'Was würdest du dir selbst, kurz nach dem Ereignis, im Nachhinein gerne sagen?' },
+];
+
+function buildClosingPlanSystemPrompt() {
+  const poolText = CLOSING_QUESTION_POOL.map(q => `${q.id}. ${q.template}`).join('\n');
+  return `Du bekommst gleich den Rohtext eines Interviews über eine persönliche Lebensgeschichte. Das
+faktische Ereignis ist bereits vollständig erzählt – jetzt geht es nur noch um die abschließende
+persönliche/reflektierende Runde am Ende der Sitzung.
+
+Hier ist ein fester Pool von 20 möglichen Abschlussfragen (nummeriert):
+${poolText}
+
+AUFGABE: Wähle genau ${MAX_CLOSING_QUESTIONS_SELECTED} dieser Fragen aus, die am besten zu DIESER
+konkreten Geschichte passen – bevorzuge Fragen, die inhaltlich noch NICHT beantwortet sind (wurde
+z. B. schon ausführlich erzählt, wie das Umfeld reagiert hat, wähle Frage 9 eher nicht erneut aus).
+Formuliere jede ausgewählte Frage in einer KONTEXTUALISIERTEN Version: Baue, wo es natürlich passt,
+konkrete Details aus der Geschichte ein (Namen, das Ereignis selbst, genannte Beziehungen) – die
+Kernabsicht der Vorlage muss dabei erhalten bleiben, du darfst NICHT das Thema wechseln oder eine
+völlig neue Frage erfinden. Bleibt eine Vorlage inhaltlich näher am Original passend, ist eine
+leichte Umformulierung (z. B. Einsetzen eines Namens) völlig ausreichend, das ist kein Zwang zu
+starker Umformulierung.
+
+Gib AUSSCHLIESSLICH ein JSON-Objekt zurück, ohne Markdown-Codeblock, in genau diesem Format:
+{"ausgewaehlt": [{"id": <Zahl aus dem Pool oben>, "frage": "<kontextualisierte Frage, endet mit einem Fragezeichen>"}, ...]}
+Genau ${MAX_CLOSING_QUESTIONS_SELECTED} Einträge, jede "id" nur einmal, nur IDs aus dem Pool oben.`;
+}
+
+// Mechanische Validierung der KI-Auswahl (analog zu sanitizeReorderResult weiter unten): filtert
+// auf tatsächlich existierende Pool-IDs, verwirft Duplikate, deckelt auf
+// MAX_CLOSING_QUESTIONS_SELECTED Einträge, und fällt für eine fehlende/unbrauchbare
+// Kontextualisierung auf den unveränderten Vorlagentext zurück statt eine kaputte Frage zu zeigen.
+// Liefert die KI gar nichts Brauchbares, fällt die Funktion auf die ersten
+// MAX_CLOSING_QUESTIONS_SELECTED Vorlagen des Pools zurück – die Abschlussphase funktioniert so in
+// JEDEM Fall, auch wenn der KI-Aufruf fehlschlägt oder unparsbar antwortet.
+function sanitizeClosingSelection(pool, parsed) {
+  const byId = new Map(pool.map(q => [q.id, q]));
+  const seen = new Set();
+  const out = [];
+  const rawList = Array.isArray(parsed && parsed.ausgewaehlt) ? parsed.ausgewaehlt : [];
+  for (const item of rawList) {
+    if (!item) continue;
+    const id = Number(item.id);
+    const poolEntry = byId.get(id);
+    if (!poolEntry || seen.has(id)) continue;
+    seen.add(id);
+    let text = (item.frage || '').toString().trim();
+    if (!text || !text.endsWith('?') || text.length < 15) {
+      text = poolEntry.template;
+    }
+    out.push({ id, text });
+    if (out.length >= MAX_CLOSING_QUESTIONS_SELECTED) break;
+  }
+  if (out.length === 0) {
+    return pool.slice(0, MAX_CLOSING_QUESTIONS_SELECTED).map(q => ({ id: q.id, text: q.template }));
+  }
+  return out;
+}
+
+// Erzeugt (bzw. holt gecacht) den einmaligen Abschlussfragen-Plan dieser Sitzung. Wird beim ERSTEN
+// tatsächlichen Abschluss-Turn (closingQuestionsAsked===1 in requestAndHandleReply) angestoßen und
+// danach dauerhaft an iv.closingPlan zwischengespeichert – anders als der Reihenfolge-Vorschlag
+// (der sich bei wachsendem Verlauf neu generieren lässt) wird dieser Plan bewusst NICHT neu erzeugt,
+// sobald er einmal steht, damit die Auswahl über die ganze Abschlussphase konsistent bleibt.
+async function getOrGenerateClosingPlan(iv, history) {
+  if (iv.closingPlan && Array.isArray(iv.closingPlan.questions) && iv.closingPlan.questions.length > 0) {
+    return iv.closingPlan;
+  }
+  const transcript = history.map(m => (m.role === 'ki' ? 'Interviewer: ' : 'Erzählperson: ') + m.text).join('\n');
+  try {
+    const raw = await callChat(buildClosingPlanSystemPrompt(),
+      [{ role: 'user', content: 'Hier der bisherige Gesprächsverlauf:\n\n' + transcript.slice(0, 16000) + '\n\nWähle jetzt aus.' }], 900);
+    const parsed = parseJsonResponse(raw);
+    iv.closingPlan = { questions: sanitizeClosingSelection(CLOSING_QUESTION_POOL, parsed) };
+  } catch (err) {
+    iv.closingPlan = { questions: CLOSING_QUESTION_POOL.slice(0, MAX_CLOSING_QUESTIONS_SELECTED).map(q => ({ id: q.id, text: q.template })) };
+  }
+  saveDB();
+  return iv.closingPlan;
+}
+
 // Holt die letzten N KI-Nachrichten aus dem Verlauf (neueste zuerst). Wird für die
 // Duplikat-Erkennung gebraucht: Ein echtes Testinterview zeigte, dass sich dieselbe Frage
 // ("Magst du mir erzählen, wie es für dich in diesem Moment war?") NICHT nur unmittelbar
@@ -2288,8 +2412,9 @@ async function getInterviewReply(history, phase, closingQuestionsAsked, priorCha
       : '') +
     (slot.allSlotsResolved
       ? `\n\nALLE PFLICHTPUNKTE SIND BEREITS GEKLÄRT ODER ÜBERSPRUNGEN: Stelle KEINE weitere inhaltliche Frage mehr ` +
-        `zum Ereignis selbst. Wechsle jetzt gemäß ABSCHLUSSPHASE in phase="closing" (bis zu FÜNF persönliche ` +
-        `Abschlussfragen sind erlaubt, siehe abschlussfragen_gestellt oben) – oder direkt phase="done", falls ` +
+        `zum Ereignis selbst. Wechsle jetzt gemäß ABSCHLUSSPHASE in phase="closing" (bis zu VIER persönliche ` +
+        `Abschlussfragen folgen, von der App aus einem Plan eingesetzt, siehe abschlussfragen_gestellt oben) – ` +
+        `oder direkt phase="done", falls ` +
         `abschlussfragen_gestellt bereits 5 oder höher ist. WICHTIG: Ist phase oben bereits als "closing" ` +
         `angegeben, bist du bereits in der Abschlussphase – melde für JEDE weitere Antwort in dieser Phase ` +
         `weiterhin phase="closing" (niemals wieder zurück zu "interview"), bis du entweder den Deckel erreichst ` +
@@ -3149,7 +3274,9 @@ function buildSimulationHintBubble() {
 // ZÄSUR-SPRECHBLASE (v2.3.0, siehe CLOSING_TRANSITION_TEXT/getInterviewReply/renderMessages oben):
 // zeigt den mechanischen, fest formulierten Übergang vom Fakten-Check zu den persönlichen
 // Abschlussfragen als eigene, klar erkennbare grüne Zäsur statt als normale Interviewer-Frage.
-function buildClosingTransitionBubble() {
+// v2.4.4: "num" ist die laufende Frage-Nummer dieser Nachricht (siehe renderMessages) – die
+// sichtbare "Frage NN"-Nummerierung lebt jetzt hier im Chat statt im Archiv-PDF.
+function buildClosingTransitionBubble(num) {
   const div = document.createElement('div');
   div.className = 'bubble hint';
   div.style.alignSelf = 'center';
@@ -3163,7 +3290,7 @@ function buildClosingTransitionBubble() {
   label.style.textTransform = 'uppercase';
   label.style.opacity = '0.75';
   label.style.marginBottom = '4px';
-  label.textContent = '✂️ Zäsur – Fakten-Check abgeschlossen';
+  label.textContent = '✂️ Zäsur – Fakten-Check abgeschlossen' + (num ? ` · Frage ${String(num).padStart(2, '0')}` : '');
   div.appendChild(label);
   const text = document.createElement('div');
   text.textContent = CLOSING_TRANSITION_TEXT;
@@ -3174,6 +3301,11 @@ function buildClosingTransitionBubble() {
 // `iv` ist optional (z.B. beim Leeren der Ansicht nach dem Löschen eines Interviews): nur wenn es
 // übergeben wird UND iv.steeringHintShown bereits true ist, wird die Hinweis-Sprechblase direkt
 // nach der 5. KI-Frage mitgerendert (siehe showSteeringHintIfNeeded).
+//
+// v2.4.4, auf Wunsch des Nutzers ("bei der nummerierung haben wir uns missverstanden – bitte nur
+// im Chat, nicht auf dem PDF"): Jede Interviewer-Nachricht (inklusive der festen Zäsur- und
+// Abschieds-Nachrichten) bekommt hier fortlaufend eine sichtbare "Frage NN" – dieselbe Zählung wie
+// zuvor im Archiv-PDF (v2.4.1), nur jetzt live im Chat statt im exportierten PDF.
 function renderMessages(messages, iv) {
   messagesEl.innerHTML = '';
   let kiCount = 0;
@@ -3185,21 +3317,25 @@ function renderMessages(messages, iv) {
     // wie RESUME_MESSAGE_GENERIC an anderer Stelle der App).
     if (m.role === 'ki' && m.text === CLOSING_TRANSITION_TEXT) {
       kiCount++;
-      messagesEl.appendChild(buildClosingTransitionBubble());
+      messagesEl.appendChild(buildClosingTransitionBubble(kiCount));
       continue;
     }
     const div = document.createElement('div');
     div.className = 'bubble ' + m.role;
     const label = document.createElement('span');
     label.className = 'role-label';
-    label.textContent = m.role === 'ki' ? 'Interviewer' : 'Du';
+    if (m.role === 'ki') {
+      kiCount++;
+      label.textContent = `Interviewer · Frage ${String(kiCount).padStart(2, '0')}`;
+    } else {
+      label.textContent = 'Du';
+    }
     div.appendChild(label);
     const text = document.createElement('div');
     text.textContent = m.text;
     div.appendChild(text);
     messagesEl.appendChild(div);
     if (m.role === 'ki') {
-      kiCount++;
       if (kiCount === 1 && iv && iv.simulationStory && iv.simulationHintShown) {
         messagesEl.appendChild(buildSimulationHintBubble());
       }
@@ -3386,6 +3522,28 @@ async function requestAndHandleReply(iv) {
     message = result.message; phase = result.phase;
   }
 
+  // v2.4.4, auf Wunsch des Nutzers ("gibt der KI einfach 20 Fragen ... die KI soll sich dann 4
+  // aussuchen die zur Story passen"): Ab dem ZWEITEN Abschluss-Turn (iv.closingQuestionsAsked ist
+  // an dieser Stelle noch der Stand VOR dem Turn, also >=1 bedeutet "die feste Übergangsnachricht
+  // wurde bereits gezeigt") wird die eigentliche Frage NICHT mehr vom Modell frei formuliert,
+  // sondern mechanisch aus dem einmalig erzeugten, zur Geschichte passenden Plan entnommen (siehe
+  // getOrGenerateClosingPlan/CLOSING_QUESTION_POOL oben) – das Modell entscheidet in diesem Aufruf
+  // nur noch, OB überhaupt weitergemacht wird (phase bleibt "closing") oder die Person erkennbar
+  // abgelehnt hat (phase="done", dann bleibt die vom Modell/den Sicherheitsnetzen bereits
+  // gesetzte Abschiedsnachricht unangetastet). Bleiben in einem seltenen Fehlerfall weniger als
+  // MAX_CLOSING_QUESTIONS_SELECTED taugliche Fragen im Plan übrig, wird sauber abgeschlossen statt
+  // eine nicht vorhandene Frage zu zeigen.
+  if (phase === 'closing' && iv.closingQuestionsAsked >= 1) {
+    const plan = await getOrGenerateClosingPlan(iv, history);
+    const nextQuestion = plan.questions[iv.closingQuestionsAsked - 1];
+    if (nextQuestion && nextQuestion.text) {
+      message = nextQuestion.text;
+    } else {
+      phase = 'done';
+      message = CLOSING_FAREWELL_MESSAGE;
+    }
+  }
+
   addMessage(iv.id, 'ki', message);
 
   if (phase === 'closing') {
@@ -3441,7 +3599,11 @@ function updateStatusLine(iv) {
   if (iv.phase === 'interview') {
     counterText = ` · Frage ${Math.min((iv.factQuestionsAsked || 0) + 1, HARD_FACT_QUESTION_CAP)} von ${HARD_FACT_QUESTION_CAP}`;
   } else if (iv.phase === 'closing') {
-    counterText = ` · Abschlussfrage ${Math.min(iv.closingQuestionsAsked, MAX_CLOSING_QUESTIONS)} von ${MAX_CLOSING_QUESTIONS}`;
+    // v2.4.4: Der feste Übergangs-Turn (CLOSING_TRANSITION_TEXT) zählt hier bewusst NICHT als
+    // "Abschlussfrage" mit – gezeigt wird der Fortschritt innerhalb der vier tatsächlich aus dem
+    // Plan gestellten Fragen (siehe getOrGenerateClosingPlan/MAX_CLOSING_QUESTIONS_SELECTED oben).
+    const realAsked = Math.max(0, (iv.closingQuestionsAsked || 0) - 1);
+    counterText = ` · Abschlussfrage ${Math.min(realAsked, MAX_CLOSING_QUESTIONS_SELECTED)} von ${MAX_CLOSING_QUESTIONS_SELECTED}`;
   }
   statusEl.textContent = `Interview #${iv.id} · ${statusLabel(iv.status)}${counterText}`;
 }
@@ -4124,14 +4286,15 @@ sonst nichts.`;
 // Baut die eigenständige, druckoptimierte HTML-Seite (siehe oben). Serifenschrift für einen
 // warmen, buchartigen Charakter, arkaa-Farbakzent, ein Deckblatt-Bereich, dann Frage/Antwort im
 // Originalwortlaut. .no-print blendet den Drucken-Knopf beim tatsächlichen Drucken/PDF-Export aus.
-// v2.4.1 (auf Wunsch des Nutzers: sichtbare Nummerierung "Frage 01, 02, ..." sowie die vom
-// Reihenfolge-Vorschlag bestätigte Reihenfolge, siehe #reorder-prompt/getOrGenerateReorderProposal
-// oben): Rendert jetzt Paar-weise (Frage + zugehörige Antwort als EINE Einheit, siehe
-// buildRedactionPairs) statt Nachricht für Nachricht, damit sich Fragen und Antworten überhaupt
-// gemeinsam umsortieren lassen. Verwendet iv.qaOrder NUR, wenn es tatsächlich noch exakt zur
-// aktuellen Paar-Menge passt (gleiche Anzahl, dieselben IDs) – sonst (z. B. nach einer späteren
-// Korrektur ohne erneute Reihenfolge-Bestätigung) defensiv die ursprüngliche, chronologische
-// Reihenfolge, statt eine inzwischen unpassende gespeicherte Reihenfolge zu verwenden.
+// v2.4.1 (auf Wunsch des Nutzers: die vom Reihenfolge-Vorschlag bestätigte Reihenfolge, siehe
+// #reorder-prompt/getOrGenerateReorderProposal oben): Rendert jetzt Paar-weise (Frage + zugehörige
+// Antwort als EINE Einheit, siehe buildRedactionPairs) statt Nachricht für Nachricht, damit sich
+// Fragen und Antworten überhaupt gemeinsam umsortieren lassen. Verwendet iv.qaOrder NUR, wenn es
+// tatsächlich noch exakt zur aktuellen Paar-Menge passt (gleiche Anzahl, dieselben IDs) – sonst
+// (z. B. nach einer späteren Korrektur ohne erneute Reihenfolge-Bestätigung) defensiv die
+// ursprüngliche, chronologische Reihenfolge, statt eine inzwischen unpassende gespeicherte
+// Reihenfolge zu verwenden. Die sichtbare "Frage 01, 02, ..."-Nummerierung aus v2.4.1 wurde in
+// v2.4.4 wieder aus dem PDF entfernt und lebt jetzt stattdessen im Chat (siehe renderMessages).
 function resolveArchivPairOrder(iv, pairs) {
   const naturalOrder = pairs.map(p => p.id);
   if (!Array.isArray(iv.qaOrder) || iv.qaOrder.length !== pairs.length) return naturalOrder;
@@ -4147,15 +4310,16 @@ function buildArchivPdfHtml(iv, title, project) {
   const pairs = buildRedactionPairs(history);
   const byId = new Map(pairs.map(p => [p.id, p]));
   const displayOrder = resolveArchivPairOrder(iv, pairs);
+  // v2.4.4, auf Wunsch des Nutzers ("bei der nummerierung haben wir uns missverstanden – bitte
+  // nur im Chat, nicht auf dem PDF"): Die sichtbare "Frage 01, 02, ..."-Nummerierung aus v2.4.1
+  // ist ins Chat-Fenster gewandert (siehe renderMessages/buildClosingTransitionBubble weiter
+  // unten) – das Archiv-PDF zeigt Frage/Antwort wieder ganz ohne Nummer, wie vor v2.4.1.
   let qaHtml = '';
-  let n = 0;
   for (const id of displayOrder) {
     const pair = byId.get(id);
     if (!pair) continue;
-    n++;
-    const num = String(n).padStart(2, '0');
     if (pair.question) {
-      qaHtml += `<div class="frage"><span class="frage-nr">Frage ${num}</span> ${escapeHtml(pair.question)}</div>`;
+      qaHtml += `<div class="frage">${escapeHtml(pair.question)}</div>`;
     }
     if (pair.answer) {
       qaHtml += `<div class="antwort">${escapeHtml(pair.answer)}</div>`;
@@ -4188,8 +4352,6 @@ function buildArchivPdfHtml(iv, title, project) {
   .qa-block { margin-bottom: 8px; }
   .frage { font-family: -apple-system, sans-serif; font-size: 12px; letter-spacing: 0.03em; text-transform: uppercase;
     color: #0f766e; font-weight: 700; margin: 26px 0 6px; page-break-after: avoid; }
-  .frage-nr { display: inline-block; background: #14b8a6; color: #fff; border-radius: 4px; padding: 1px 6px;
-    margin-right: 6px; letter-spacing: 0.02em; }
   .antwort { font-size: 15.5px; margin: 0 0 4px; page-break-inside: avoid; white-space: pre-wrap; }
   footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid #e7e0d6; text-align: center;
     font-family: -apple-system, sans-serif; font-size: 11px; color: #756e63; }
