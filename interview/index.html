@@ -480,8 +480,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.5.0';
-const APP_BUILD = '2026-08-12 21:00 UTC';
+const APP_VERSION = '2.5.1';
+const APP_BUILD = '2026-08-13 13:00 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
@@ -5334,6 +5334,46 @@ async function analyzeReorder(interviewId) {
 // ein Paar ganz fehlen darf – FEHLENDE Paare werden hier zwingend ergänzt (in ihrer ursprünglichen
 // relativen Reihenfolge), weil dieser Mechanismus laut Definition NIEMALS ein Paar verlieren darf.
 // Das Abschieds-Paar (letztes Paar, answer=null) steht danach immer mechanisch ganz am Ende.
+// v2.5.1, nach einem echten Testlauf ("Schwere Kopfverletzung durch faulen Ast beim
+// Eichenfällen"): Das Paar, das eine Begleitperson zum ERSTEN MAL überhaupt namentlich nennt
+// ("Ich und mein Kollege Jürgen ..."), wurde vom Modell ans Ende des Kapitels verschoben – weit
+// hinter die feste Klärungsfrage "Wer ist Jürgen, und in welcher Beziehung steht er zu dir?"
+// (siehe checkForUnclarifiedPerson), die dadurch völlig ohne Vorlauf dastand: die Person wurde an
+// dieser Stelle gefragt, wer jemand ist, der bis dahin nirgends erwähnt wurde. Die einzelne
+// Verschiebung erfüllte technisch die Verständlichkeits-Regel (die Klärungsfrage selbst ist
+// eigenständig verständlich), brach aber den Lesefluss trotzdem, weil eine ANDERE, an ihrer Stelle
+// belassene Frage plötzlich ins Leere lief. Das Modell prüft das nicht zuverlässig selbst (dieselbe
+// Lektion wie überall sonst in diesem Projekt), deshalb hier mechanisch nachträglich erzwungen:
+// Findet sich eine feste "Wer ist NAME"-Klärungsfrage, muss die chronologisch früheste Antwort, die
+// diesen Namen bereits VOR der Klärungsfrage nennt, in der vorgeschlagenen Reihenfolge weiterhin
+// VOR (oder an gleicher Stelle wie) dieser Klärungsfrage stehen – sonst wird sie direkt davor
+// zurückgeschoben.
+function enforceNameIntroductionOrder(pairs, order) {
+  const clarifications = [];
+  for (const p of pairs) {
+    const m = /^Wer ist ([A-ZÄÖÜ][\wäöüß]*)/u.exec((p.question || '').trim());
+    if (m) clarifications.push({ pairId: p.id, name: m[1] });
+  }
+  if (clarifications.length === 0) return order;
+
+  let result = order.slice();
+  for (const clar of clarifications) {
+    const mentionCandidates = pairs.filter(p =>
+      p.id !== clar.pairId && p.id < clar.pairId && p.answer && p.answer.includes(clar.name)
+    );
+    if (mentionCandidates.length === 0) continue;
+    const firstMention = mentionCandidates.reduce((a, b) => (a.id < b.id ? a : b));
+
+    const clarPos = result.indexOf(clar.pairId);
+    const mentionPos = result.indexOf(firstMention.id);
+    if (clarPos === -1 || mentionPos === -1 || mentionPos <= clarPos) continue;
+    result.splice(mentionPos, 1);
+    const newClarPos = result.indexOf(clar.pairId);
+    result.splice(newClarPos, 0, firstMention.id);
+  }
+  return result;
+}
+
 function sanitizeReorderResult(pairs, parsed, historyLength) {
   const validIds = new Set(pairs.map(p => p.id));
   const lastPair = pairs[pairs.length - 1];
@@ -5351,7 +5391,11 @@ function sanitizeReorderResult(pairs, parsed, historyLength) {
     if (!present.has(p.id)) order.push(p.id);
   }
 
-  // Abschieds-Paar mechanisch ans Ende, unabhängig davon, wo das Modell es einsortiert hätte.
+  // Personen-Ersterwähnung darf nie hinter ihre eigene Klärungsfrage rutschen (siehe oben).
+  order = enforceNameIntroductionOrder(pairs, order);
+
+  // Abschieds-Paar mechanisch ans Ende, unabhängig davon, wo das Modell es einsortiert hätte
+  // (bewusst als LETZTER Schritt, damit die Korrektur oben daran nichts mehr ändern kann).
   if (farewellId !== null) {
     order = order.filter(id => id !== farewellId);
     order.push(farewellId);
