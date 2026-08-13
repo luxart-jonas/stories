@@ -480,8 +480,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.5.1';
-const APP_BUILD = '2026-08-13 13:00 UTC';
+const APP_VERSION = '2.5.2';
+const APP_BUILD = '2026-08-13 14:30 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
@@ -3149,6 +3149,18 @@ async function getInterviewReply(history, phase, closingQuestionsAsked, priorCha
 // deutlich länger war, ist das mit hoher Wahrscheinlichkeit selbst wieder so ein Fehlschnitt –
 // dann lieber den unveränderten Gesamttext zurückgeben (eventuell mit einem überflüssigen
 // Einleitungssatz) als ein für sich unverständliches Bruchstück zeigen.
+// v2.5.2 (echter Nutzer-Testlauf "Wespenstich mit Herzstillstand"): Titel-Abkürzungen vor
+// Eigennamen ("Dr. Sommer") wurden von der obigen Satzgrenzen-Heuristik fälschlich als echtes
+// Satzende erkannt, weil direkt danach ein Großbuchstabe folgt (der Name) – genau das Kriterium,
+// das laut Fix oben eigentlich Abkürzungen von echten Satzenden unterscheiden soll. Playwright-
+// Repro: stripToSingleQuestion("Kanntest du Dr. Sommer schon vor dem Vorfall, oder war sie eine
+// der Ärztinnen, die dich im Krankenhaus versorgt haben?") lieferte vorher nur den abgeschnittenen
+// Rest ab "Sommer vor dem Vorfall...". Fix: bekannte Abkürzungen werden vor dem Split maskiert
+// (ihr Punkt wird durch einen Platzhalter ersetzt, der von der Satzgrenzen-Regex nicht als
+// Satzzeichen erkannt wird) und nach dem Split wieder in einen echten Punkt zurückverwandelt.
+const ABBREVIATION_PATTERN = /\b(?:Dr|Prof|Hr|Fr|Nr|St|Str|ca|bzw|usw|etc|z\.B|u\.a)\.(?=\s)/g;
+const ABBREVIATION_PLACEHOLDER = '';
+
 function stripToSingleQuestion(text) {
   const trimmed = (text || '').trim();
   if (!trimmed.includes('?')) return trimmed; // keine erkennbare Frage, unverändert lassen (Fallback)
@@ -3156,7 +3168,10 @@ function stripToSingleQuestion(text) {
   const withoutFinal = trimmed.slice(0, -1);
   if (!/[.!?]/.test(withoutFinal)) return trimmed;
 
-  const sentences = trimmed.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ])/).map(s => s.trim()).filter(Boolean);
+  const masked = trimmed.replace(ABBREVIATION_PATTERN, m => m.slice(0, -1) + ABBREVIATION_PLACEHOLDER);
+  const sentences = masked.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ])/)
+    .map(s => s.trim().split(ABBREVIATION_PLACEHOLDER).join('.'))
+    .filter(Boolean);
   const questionSentences = sentences.filter(s => s.endsWith('?'));
   if (questionSentences.length === 0) return trimmed;
   const candidate = questionSentences[questionSentences.length - 1];
