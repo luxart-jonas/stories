@@ -66,6 +66,11 @@
   button.icon-btn { font-size: 16px; padding: 7px 10px; line-height: 1; }
   #project-name-display { cursor: pointer; }
   #project-name-display:hover { text-decoration: underline; }
+  /* v2.6.0, auf Wunsch des Nutzers ("Simulation ... als Extra Button rechts"): dezenter, kleinerer
+     Button, der optisch klar als Nebenfunktion (Testmodus) erkennbar ist und über margin-left:auto
+     an den rechten Rand der Kopfzeile rutscht, statt zwischen den Hauptaktionen zu stehen. */
+  button.btn-subtle { opacity: 0.62; font-size: 11.5px; padding: 6px 10px; margin-left: auto; }
+  button.btn-subtle:hover { opacity: 0.95; }
 
   main {
     flex: 1;
@@ -157,12 +162,17 @@
     <div class="sub" id="version-badge" style="color:#2e7d4f;"></div>
   </div>
   <div class="controls">
-    <button id="btn-new">Neues Interview</button>
-    <button id="btn-simulation" title="Lässt die App automatisch ein komplettes Testinterview mit sich selbst führen (KI vs. KI), ohne dass du selbst antworten musst">🎭 Simulation</button>
-    <button id="btn-edit-modal">Zusammenfassen</button>
+    <!-- v2.6.0, auf Wunsch des Nutzers ("Die Hauptseite besteht aus neues Interview"): einzige,
+         hervorgehobene Hauptaktion. Das frühere "Zusammenfassen" ist hier bewusst entfernt (bleibt
+         als Modal/Funktion im Code erhalten, nur ohne Einstiegspunkt in der Kopfzeile) - für
+         Test-Interviewpartner unnötige, verwirrende Zusatzfunktion. -->
+    <button id="btn-new" class="primary">Neues Interview</button>
     <button id="btn-list">Meine Interviews</button>
     <button id="btn-pause">⏸ Pause</button>
     <button id="btn-export">⬇️ Exportieren</button>
+    <!-- Bewusst als letztes, optisch zurückgenommenes Element (siehe .btn-subtle oben) - eine
+         Testfunktion, keine Hauptaktion. -->
+    <button id="btn-simulation" class="btn-subtle" title="Lässt die App automatisch ein komplettes Testinterview mit sich selbst führen (KI vs. KI), ohne dass du selbst antworten musst">🎭 Simulation</button>
   </div>
   <button id="btn-settings" class="icon-btn" title="Einstellungen">⚙️</button>
 </header>
@@ -225,20 +235,20 @@
       </div>
     </div>
 
-    <!-- TITEL-BESTÄTIGUNG VOR DEM ARCHIV-PDF (v2.4.5, auf Wunsch des Nutzers: "ich würde fragen ob
-         der Titel so passt"): Erscheint anstelle von #review-done-block, sobald "Archiv-PDF
-         erstellen" geklickt wird, aber der Titel noch nicht bestätigt ist (iv.archivTitleConfirmed
-         === false, siehe showTitleConfirmPrompt/openArchivPdf weiter unten) – funktioniert
-         identisch in der normalen Nutzung UND in der Simulation, da beide denselben Knopf/dieselbe
-         Funktion nutzen. Das eigentliche PDF wird erst NACH der Bestätigung erzeugt, der Titel kann
-         dabei auch direkt von Hand angepasst werden statt nur pauschal zugestimmt/abgelehnt. -->
+    <!-- TITELVERGABE VOR DEM ARCHIV-PDF (v2.6.0, auf Wunsch des Nutzers: "Die Titelfindung finde
+         ich auch ein bisschen kompliziert. Ich würde einfach nur am Schluss fragen wie soll dein
+         Interview heißen" – ersetzt die frühere KI-generierte Titel-Vorschlag+Bestätigung aus
+         v2.4.5). Erscheint anstelle von #review-done-block, sobald "Archiv-PDF erstellen" geklickt
+         wird, aber noch kein Titel vergeben ist (iv.archivTitleConfirmed === false, siehe
+         showTitleConfirmPrompt/openArchivPdf weiter unten) – funktioniert identisch in der
+         normalen Nutzung UND in der Simulation, da beide denselben Knopf/dieselbe Funktion nutzen.
+         Das eigentliche PDF wird erst NACH der Eingabe erzeugt. -->
     <div id="title-confirm-prompt" style="display:none; margin:10px 14px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--panel);">
-      <div id="title-confirm-loading" style="font-size:13.5px;">Ich überlege mir einen Titel fürs Archiv …</div>
-      <div id="title-confirm-body" style="display:none;">
-        <div style="margin-bottom:8px; font-size:13.5px;">Passt dieser Titel fürs Archiv? Du kannst ihn hier auch direkt anpassen.</div>
-        <input type="text" id="title-confirm-input" style="width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; margin-bottom:10px;" />
+      <div id="title-confirm-loading" style="font-size:13.5px; display:none;"></div>
+      <div id="title-confirm-body" style="display:block;">
+        <div style="margin-bottom:8px; font-size:13.5px;">Wie soll dein Interview heißen?</div>
+        <input type="text" id="title-confirm-input" placeholder="Titel eingeben …" style="width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; margin-bottom:10px;" />
         <div style="display:flex; gap:8px;">
-          <button id="btn-title-regenerate" type="button">Neuen Vorschlag</button>
           <button id="btn-title-confirm" type="button" class="primary">Titel übernehmen &amp; weiter</button>
         </div>
       </div>
@@ -267,6 +277,10 @@
           <option value="fremdbericht">Von Angehörigen über eine andere Person erzählt</option>
           <option value="simulation">Simulation / Test</option>
         </select>
+        <!-- v2.6.0, auf Wunsch des Nutzers: eine super einfache Erklärung des wichtigsten AGB-Punkts
+             direkt vor der eigentlichen Veröffentlichung, statt auf lange AGB-Seiten zu verweisen,
+             die ohnehin niemand liest. -->
+        <div class="warn" style="margin-bottom:10px;">📖 Wichtig: Das Archiv ist öffentlich – jede veröffentlichte Geschichte kann von allen gelesen werden. Nach dem Veröffentlichen bekommst du unten einen Zugangscode angezeigt: Bitte bewahre ihn gut auf, denn nur damit kann dein Eintrag später wieder geändert oder gelöscht werden.</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button id="btn-publish-regenerate" type="button">Neuer Vorschlag</button>
           <button id="btn-publish-cancel" type="button">Abbrechen</button>
@@ -284,7 +298,11 @@
   </section>
 
   <section class="story-col" id="story-col">
-    <div class="placeholder">Noch keine Zusammenfassung vorhanden. Führe zuerst ein Interview, dann klicke oben auf „Zusammenfassen“.</div>
+    <!-- v2.6.0: dient jetzt in erster Linie dazu, bei einer laufenden Simulation sofort die interne
+         Test-Geschichte anzuzeigen (siehe renderSimulationStoryPanel) - auf Wunsch des Nutzers:
+         "Diese Geschichte möchte ich dann aber auch sofort ansehen können ... das brauche ich
+         zunächst mal nicht als Downloads". -->
+    <div class="placeholder" id="story-col-placeholder">Hier erscheint automatisch die interne Test-Geschichte, sobald du eine Simulation startest.</div>
   </section>
 </main>
 
@@ -480,8 +498,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.5.2';
-const APP_BUILD = '2026-08-13 14:30 UTC';
+const APP_VERSION = '2.6.0';
+const APP_BUILD = '2026-08-29 00:00 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
@@ -1419,9 +1437,16 @@ GEWICHTUNG (wichtig, da insgesamt nur 20 Fragen tatsächlich gestellt werden, si
 
 VERBOTEN: Erzeuge KEINEN Punkt zur Zeit NACH dem Ereignis (Verarbeitung, Therapie, wie sich der Alltag/eine Beziehung seitdem verändert hat, was der Person sonst geholfen hat, heutiges Befinden) und KEINEN Punkt zu Selbsthilfe/Lebensweisheiten (was die Person anderen mitteilen möchte, welchen Rat sie ihrem früheren Ich geben würde). Diese Themen sind für dieses Interview vollständig tabu, unabhängig davon, wie naheliegend sie beim beschriebenen Ereignis erscheinen – die App verwirft solche Punkte ohnehin automatisch, aber erzeuge sie erst gar nicht.
 
-Formuliere außerdem eine kurze (2-3 Sätze), warme, aber sachliche Übergangsnachricht an die Person: bestätigt knapp, was sie erzählen möchte (in ihren eigenen Worten, nicht ausgeschmückt), erwähnt, dass jederzeit pausiert werden kann und alles automatisch gespeichert wird, und leitet direkt zur ersten inhaltlichen Frage über (ohne diese Frage selbst schon zu stellen). Erfinde keine Fakten, keine Sitzungsanzahl, keine Fragenliste ankündigen.
+Formuliere außerdem eine kurze (1-2 Sätze), warme, aber sachliche Übergangsnachricht an die Person.
+WICHTIG (v2.6.0, auf Wunsch des Nutzers: "Mir ist aufgefallen, dass die KI irgendwann das Thema noch
+einmal zusammenfasst ... das brauche ich nicht"): Wiederhole und fasse dabei NICHT noch einmal
+zusammen, worüber die Person gerade schon erzählt hat (kein "Du möchtest also von ... erzählen") –
+das wirkt bevormundend und überflüssig, sie hat es gerade selbst gesagt. Erwähne stattdessen nur
+knapp, dass jederzeit pausiert werden kann und alles automatisch gespeichert wird, und leite direkt
+zur ersten inhaltlichen Frage über (ohne diese Frage selbst schon zu stellen). Erfinde keine
+Fakten, keine Sitzungsanzahl, keine Fragenliste ankündigen.
 
-Beispiel für eine gute Übergangsnachricht: "Du möchtest also von dem Unfall auf der Almhütte erzählen. Du kannst jederzeit pausieren, alles wird automatisch gespeichert. Lass uns direkt einsteigen."
+Beispiel für eine gute Übergangsnachricht: "Alles klar, danke dir. Du kannst jederzeit pausieren, alles wird automatisch gespeichert. Lass uns direkt einsteigen."
 
 Gib deine Antwort AUSSCHLIESSLICH als valides JSON-Objekt zurück, ohne Markdown-Codeblock, mit exakt folgender Struktur:
 
@@ -1516,6 +1541,9 @@ function newProjectRecord(id, name) {
   return {
     id,
     name: name || 'Neues Projekt',
+    // v2.6.0: markiert Projekte, die aus einer Simulation (Testmodus) entstanden sind - siehe
+    // createProject/runSimulation und die Prüfung in startNewInterview weiter unten.
+    isSimulation: false,
     nameConfirmed: false, // wird true, sobald die KI einen echten Namen (z.B. Personenname) vorgeschlagen hat
     introAsked: false,         // ob die feste Kennenlern-Frage (Name/Alter/Beruf/Herkunft) bereits gestellt wurde
     introFollowUpAsked: false, // ob die mechanische Rückfrage zu fehlenden Kennenlern-Angaben bereits gestellt (oder geprüft und für unnötig befunden) wurde
@@ -1549,9 +1577,9 @@ function newInterviewRecord(id, projectId) {
     pendingPersonClarification: null, // Bezeichnung einer Person, zu der gerade eine Klärungsfrage gestellt wurde (siehe checkForUnclarifiedPerson)
     simulationStory: null, // nur bei Testmodus-Simulationen gesetzt: die geheime, interne Story (siehe SIMULATIONSMODUS)
     redaction: null, // zwischengespeichertes Ergebnis der nachträglichen Redaktion (siehe REDAKTION / "redigierte Version"), null bis zum ersten Export
-    steeringHintShown: false, // wurde der einmalige Steuerungs-Hinweis nach der 5. Frage schon gezeigt? (siehe showSteeringHintIfNeeded)
+    hintsShown: 0, // Anzahl der bereits gezeigten periodischen grünen Hinweis-Sprechblasen (nach Frage 5, 10, 15, ... siehe showPeriodicHintIfNeeded/HINT_POOL)
     simulationHintShown: false, // wurde der einmalige Simulations-Hinweis nach der Eröffnungsfrage schon gezeigt? (siehe SIMULATIONSMODUS)
-    archivTitle: null, // automatisch generierter Titel fürs Archiv-PDF (siehe generateArchivTitle), erst nach Abschluss gesetzt
+    archivTitle: null, // von der Person selbst vergebener Titel fürs Archiv-PDF (siehe showTitleConfirmPrompt), erst nach Abschluss gesetzt
     // v2.4.5, auf Wunsch des Nutzers ("ich würde fragen ob der Titel so passt"): Der generierte
     // Titel wird VOR dem ersten PDF-Export explizit bestätigt (oder direkt von Hand angepasst,
     // siehe #title-confirm-prompt/showTitleConfirmPrompt weiter unten) – erst danach gilt er als
@@ -1766,7 +1794,9 @@ function migrateDB(db) {
     if (iv.currentSlotId === undefined) iv.currentSlotId = null;
     if (iv.pendingPersonClarification === undefined) iv.pendingPersonClarification = null;
     if (iv.redaction === undefined) iv.redaction = null;
-    if (iv.steeringHintShown === undefined) iv.steeringHintShown = false;
+    // v2.6.0: löst das frühere einmalige steeringHintShown-Flag ab durch einen Zähler, der bei
+    // Alt-Daten aus dem alten Flag abgeleitet wird (schon gezeigt -> 1, sonst 0).
+    if (iv.hintsShown === undefined) iv.hintsShown = iv.steeringHintShown ? 1 : 0;
     if (iv.simulationHintShown === undefined) iv.simulationHintShown = false;
     if (iv.archivTitle === undefined) iv.archivTitle = null;
     // v2.4.0: harter Fakten-Fragen-Deckel (siehe HARD_FACT_QUESTION_CAP) – bei älteren, geladenen
@@ -1877,8 +1907,9 @@ function getProject(id) { return DB.projects.find(p => p.id === id); }
 function getProjectInterviews(projectId) {
   return DB.interviews.filter(iv => iv.projectId === projectId).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 }
-function createProject(name) {
+function createProject(name, opts) {
   const proj = newProjectRecord(nextId(), name);
+  if (opts && opts.isSimulation) proj.isSimulation = true;
   DB.projects.push(proj);
   DB.currentProjectId = proj.id;
   saveDB();
@@ -3380,11 +3411,18 @@ const storyColEl = el('story-col');
 const spinnerEl = el('spinner');
 const statusEl = el('interview-status');
 
-// Baut die Steuerungs-Hinweis-Sprechblase (v2.1.4, auf Wunsch des Nutzers: "bitte lasse das im
-// chat auftauchen. auch so grün hinterlegt" – ursprünglich in v2.1.3 als eigene, feste
-// Statusleiste ganz oben gezeigt, jetzt stattdessen als ganz normale Nachricht MITTEN im Chat,
-// direkt nach der 5. Frage, an der Stelle, an der sie chronologisch "gesagt" wurde).
-function buildSteeringHintBubble() {
+// PERIODISCHE HINWEIS-SPRECHBLASEN (v2.6.0, auf Wunsch des Nutzers: "ich habe mir überlegt, dass
+// man damit diese Internetseite besonders userfreundlich wird, im Interview immer wieder kleine
+// Hinweise gibt ... ich würde dann immer nach fünf Fragen so einen kleinen Hinweis bringen. Die
+// anderen weiß ich im Moment noch nicht"). Löst den früheren EINMALIGEN Hinweis aus v2.1.4 ("bitte
+// lasse das im chat auftauchen, auch so grün hinterlegt") ab: statt nur einmal nach Frage 5, wird
+// nach JEDER fünften Frage (5, 10, 15, ...) der Reihe nach ein Hinweis aus HINT_POOL gezeigt – ist
+// die Liste erschöpft, wiederholt sich einfach der letzte Eintrag, bis es weitere Hinweise gibt.
+const HINT_POOL = [
+  '💡 Du kannst frei entscheiden, ob deine Geschichte mit deinem echten Namen oder anonym erscheint – das kannst du dir jederzeit anders überlegen, auch ganz am Schluss, bevor irgendetwas veröffentlicht wird.',
+  '💡 Du kannst mir jederzeit sagen, wenn du das Gefühl hast, dass das Interview in eine falsche Richtung geht, oder worüber du lieber sprechen möchtest – zum Beispiel „Bitte frag mehr nach meiner Schwester." Ich richte mich danach.',
+];
+function buildPeriodicHintBubble(index) {
   const div = document.createElement('div');
   div.className = 'bubble hint';
   div.style.alignSelf = 'center';
@@ -3392,11 +3430,11 @@ function buildSteeringHintBubble() {
   div.style.color = '#fff';
   div.style.maxWidth = '90%';
   div.style.textAlign = 'center';
-  div.textContent = '💡 Du kannst mir jederzeit sagen, wenn du das Gefühl hast, dass das Interview in eine falsche Richtung geht, oder worüber du lieber sprechen möchtest – zum Beispiel „Bitte frag mehr nach meiner Schwester." Ich richte mich danach.';
+  div.textContent = HINT_POOL[Math.min(index, HINT_POOL.length - 1)];
   return div;
 }
 
-// Entspricht buildSteeringHintBubble() oben, aber für den SIMULATIONSMODUS (v2.2.0, auf Wunsch des
+// Entspricht buildPeriodicHintBubble() oben, aber für den SIMULATIONSMODUS (v2.2.0, auf Wunsch des
 // Nutzers): Erklärt gleich zu Beginn einer Simulation, dass die Simulation ab jetzt nach jeder
 // Frage pausiert und die Person optional selbst eingreifen kann. Wird einmalig direkt nach der
 // ersten KI-Frage einer Simulation gezeigt (siehe runSimulation, iv.simulationHintShown).
@@ -3440,8 +3478,8 @@ function buildClosingTransitionBubble(num) {
 }
 
 // `iv` ist optional (z.B. beim Leeren der Ansicht nach dem Löschen eines Interviews): nur wenn es
-// übergeben wird UND iv.steeringHintShown bereits true ist, wird die Hinweis-Sprechblase direkt
-// nach der 5. KI-Frage mitgerendert (siehe showSteeringHintIfNeeded).
+// übergeben wird, werden die periodischen Hinweis-Sprechblasen nach Frage 5, 10, 15, ... passend
+// zu iv.hintsShown mitgerendert (siehe showPeriodicHintIfNeeded/HINT_POOL).
 //
 // v2.4.4, auf Wunsch des Nutzers ("bei der nummerierung haben wir uns missverstanden – bitte nur
 // im Chat, nicht auf dem PDF"): Jede Interviewer-Nachricht (inklusive der festen Zäsur- und
@@ -3453,7 +3491,7 @@ function renderMessages(messages, iv) {
   for (const m of messages) {
     // ZÄSUR-ERKENNUNG (v2.3.0, siehe CLOSING_TRANSITION_TEXT/getInterviewReply oben): Diese eine,
     // exakte Nachricht ist mechanisch von der App vorformuliert, nicht von der KI – wird deshalb
-    // wie buildSteeringHintBubble/buildSimulationHintBubble als eigene, grün hervorgehobene
+    // wie buildPeriodicHintBubble/buildSimulationHintBubble als eigene, grün hervorgehobene
     // Sprechblase dargestellt statt als normale Interviewer-Frage (gleiches Textvergleichs-Muster
     // wie RESUME_MESSAGE_GENERIC an anderer Stelle der App).
     if (m.role === 'ki' && m.text === CLOSING_TRANSITION_TEXT) {
@@ -3480,8 +3518,11 @@ function renderMessages(messages, iv) {
       if (kiCount === 1 && iv && iv.simulationStory && iv.simulationHintShown) {
         messagesEl.appendChild(buildSimulationHintBubble());
       }
-      if (kiCount === 5 && iv && iv.steeringHintShown) {
-        messagesEl.appendChild(buildSteeringHintBubble());
+      if (kiCount % 5 === 0 && iv) {
+        const hintNumber = kiCount / 5; // 1 bei Frage 5, 2 bei Frage 10, 3 bei Frage 15, ...
+        if (hintNumber <= (iv.hintsShown || 0)) {
+          messagesEl.appendChild(buildPeriodicHintBubble(hintNumber - 1));
+        }
       }
     }
   }
@@ -3719,7 +3760,7 @@ async function requestAndHandleReply(iv) {
   }
   iv.pendingPersonClarification = resolvedPersonDescriptor;
   saveDB();
-  showSteeringHintIfNeeded(iv); // muss vor dem Rendern laufen, siehe Kommentar dort
+  showPeriodicHintIfNeeded(iv); // muss vor dem Rendern laufen, siehe Kommentar dort
   renderMessages(getHistory(iv.id), iv);
   updateStatusLine(iv);
   maybeShowReviewPrompt(iv);
@@ -3749,20 +3790,19 @@ function updateStatusLine(iv) {
   statusEl.textContent = `Interview #${iv.id} · ${statusLabel(iv.status)}${counterText}`;
 }
 
-// Markiert den einmaligen Steuerungs-Hinweis als "fällig", sobald die 5. KI-Frage dieses
-// Interviews gestellt wurde – rein mechanisch anhand der Nachrichtenzahl, kein API-Aufruf nötig.
-// Bewusst NICHT Teil des Prompts/der KI-Antwort: eine reine Prompt-Anweisung "erkläre der Person
-// nach der 5. Frage die Steuerungsmöglichkeit" wäre in diesem Projekt erfahrungsgemäß nicht
-// zuverlässig genug (siehe die vielen anderen mechanischen Sicherheitsnetze hier). MUSS vor dem
-// nächsten renderMessages(..., iv)-Aufruf laufen, damit die Sprechblase (siehe
-// buildSteeringHintBubble) direkt im selben Render-Durchlauf inline im Chat erscheint (v2.1.4, auf
-// Wunsch des Nutzers: "bitte lasse das im chat auftauchen", statt der ursprünglichen v2.1.3-
-// Statusleiste ganz oben).
-function showSteeringHintIfNeeded(iv) {
-  if (iv.steeringHintShown) return;
+// Markiert jede fällige periodische Hinweis-Sprechblase (nach Frage 5, 10, 15, ...) rein mechanisch
+// anhand der Nachrichtenzahl, kein API-Aufruf nötig. Bewusst NICHT Teil des Prompts/der KI-Antwort:
+// eine reine Prompt-Anweisung wäre in diesem Projekt erfahrungsgemäß nicht zuverlässig genug (siehe
+// die vielen anderen mechanischen Sicherheitsnetze hier). MUSS vor dem nächsten
+// renderMessages(..., iv)-Aufruf laufen, damit die Sprechblase (siehe buildPeriodicHintBubble)
+// direkt im selben Render-Durchlauf inline im Chat erscheint. v2.6.0: löst das frühere einmalige
+// showSteeringHintIfNeeded (v2.1.4) ab - zählt jetzt hoch statt nur einmal umzuschalten, siehe
+// HINT_POOL weiter oben.
+function showPeriodicHintIfNeeded(iv) {
   const fragenBisher = getHistory(iv.id).filter(m => m.role === 'ki').length;
-  if (fragenBisher < 5) return;
-  iv.steeringHintShown = true;
+  const faellig = Math.floor(fragenBisher / 5); // wie viele 5er-Schwellen (5, 10, 15, ...) sind erreicht?
+  if (faellig <= (iv.hintsShown || 0)) return;
+  iv.hintsShown = faellig;
   saveDB();
 }
 
@@ -3822,8 +3862,13 @@ function maybeShowReviewPrompt(iv) {
     const publishStatus = el('publish-already-status');
     if (publishBtn) publishBtn.disabled = !!iv.publishedStoryId;
     if (publishStatus) {
-      publishStatus.textContent = iv.publishedStoryId
-        ? '🌐 Bereits im öffentlichen Archiv veröffentlicht.'
+      // v2.6.0, auf Wunsch des Nutzers ("bitte bewahre den Code immer gut auf, damit du das
+      // Interview löschen oder noch nachträglich verändern kannst"): zeigt die veröffentlichte
+      // Story-ID als Zugangscode an, solange es noch kein eigenes Zugangscode-System gibt (Thema
+      // für eine spätere Sitzung) - bleibt auch beim erneuten Öffnen sichtbar, nicht nur direkt
+      // nach dem Veröffentlichen.
+      publishStatus.innerHTML = iv.publishedStoryId
+        ? `🌐 Im öffentlichen Archiv veröffentlicht.<br />Dein Zugangscode (bitte gut aufbewahren): <code style="background:var(--accent-light); padding:2px 6px; border-radius:5px;">${escapeHtml(iv.publishedStoryId)}</code>`
         : '';
     }
     return;
@@ -3929,9 +3974,15 @@ function declineReorder() {
 async function startNewInterview() {
   setBusy(true);
   try {
-    // Falls noch kein Projekt existiert (allererste Nutzung der App), transparent eines anlegen.
+    // Falls noch kein Projekt existiert (allererste Nutzung der App) ODER das zuletzt aktive
+    // Projekt ein Simulations-Testlauf war, transparent ein frisches, neutrales Projekt anlegen.
+    // v2.6.0, auf Wunsch des Nutzers ("Ein neuer Interviewpartner sollte natürlich nicht den Titel
+    // des alten Interviews sehen"): ohne diese Prüfung würde ein echter, neuer Interviewpartner im
+    // selben Browser sonst einfach im zuletzt von Jonas gestarteten Test-Projekt weiterschreiben
+    // und dessen (Test-)Titel in der Kopfzeile sehen.
     let projectId = DB.currentProjectId;
-    if (!projectId || !getProject(projectId)) {
+    const activeProject = projectId ? getProject(projectId) : null;
+    if (!activeProject || activeProject.isSimulation) {
       const proj = createProject('Neues Projekt');
       projectId = proj.id;
       updateProjectDisplay();
@@ -3944,6 +3995,10 @@ async function startNewInterview() {
     if (el('reorder-prompt')) el('reorder-prompt').style.display = 'none';
     if (el('title-confirm-prompt')) el('title-confirm-prompt').style.display = 'none';
     if (el('publish-confirm-prompt')) el('publish-confirm-prompt').style.display = 'none';
+    // v2.6.0: ein evtl. von einer vorherigen Simulation gefülltes Story-Panel (siehe
+    // renderSimulationStoryPanel) gehört nicht zu diesem neuen, echten Interview.
+    const storyCol = el('story-col');
+    if (storyCol) storyCol.innerHTML = '<div class="placeholder" id="story-col-placeholder">Hier erscheint automatisch die interne Test-Geschichte, sobald du eine Simulation startest.</div>';
 
     await requestAndHandleReply(iv);
   } catch (err) {
@@ -4036,6 +4091,32 @@ Gib NUR ein JSON-Objekt zurück, ohne Markdown-Codeblock, mit dieser Struktur:
     return parseJsonResponse(await attempt(' WICHTIG: Gib AUSSCHLIESSLICH kompaktes, valides JSON zurück, keine ' +
       'unescapten Anführungszeichen oder Zeilenumbrüche in den Strings, keine Markdown-Codeblöcke.'));
   }
+}
+
+// v2.6.0, auf Wunsch des Nutzers ("Diese Geschichte möchte ich dann aber auch sofort ansehen
+// können ... das brauche ich zunächst mal nicht als Downloads"): zeigt die geheime, interne
+// Test-Geschichte direkt im rechten Panel (#story-col) an, sobald eine Simulation startet - dieses
+// Panel diente vorher der "Zusammenfassen"-Ansicht, die für Test-Interviewpartner nicht mehr
+// prominent zugänglich ist (siehe Header). Bleibt zusätzlich weiterhin über "Exportieren" als
+// Download verfügbar (exportSimulationStory), das hier ist aber der primäre, sofortige Weg.
+function renderSimulationStoryPanel(story) {
+  const col = el('story-col');
+  if (!col || !story) return;
+  const rows = [
+    ['Wer', story.wer], ['Was', story.was], ['Wann', story.wann], ['Wo', story.wo],
+    ['Warum', story.warum], ['Wie', story.wie], ['Nachwirkung', story.nachwirkung],
+  ];
+  let rowsHtml = rows.filter(([, v]) => v).map(([label, v]) =>
+    `<div class="chapter"><h3>${escapeHtml(label)}</h3><p>${escapeHtml(v)}</p></div>`).join('');
+  if (Array.isArray(story.verborgene_details) && story.verborgene_details.length) {
+    rowsHtml += `<div class="story-section-title">Verborgene Details (nur bei gezielter Nachfrage)</div><ul>${
+      story.verborgene_details.map(d => `<li>${escapeHtml(d)}</li>`).join('')}</ul>`;
+  }
+  if (story.kausalitaets_falle) {
+    rowsHtml += `<div class="story-section-title">Kausalitätsfalle</div><p style="font-size:13.5px;">${escapeHtml(story.kausalitaets_falle)}</p>`;
+  }
+  col.innerHTML = `<div class="book-chapter-label">🕵️ Geheime Test-Geschichte (dem Interviewer nie bekannt)</div>` +
+    `<h2>${escapeHtml(story.titel || 'Ohne Titel')}</h2>` + rowsHtml;
 }
 
 // Baut den System-Prompt für die "Proband"-Rolle: kennt nur die geheime Story, antwortet kurz
@@ -4187,7 +4268,12 @@ async function runSimulation(genreDescription, mode) {
     // den unerwarteten Wechsel ins förmliche "Sie" für das gesamte restliche Interview (die feste,
     // informelle "du"-Eröffnung fehlte als sprachlicher Anker völlig). Jede Simulation bekommt
     // deshalb jetzt immer ein frisches Projekt, unabhängig davon, was DB.currentProjectId gerade ist.
-    const proj = createProject('Simulation: ' + genreDescription);
+    // v2.6.0, auf Wunsch des Nutzers ("das sollte natürlich neutral gehalten werden. Ein neuer
+    // Interviewpartner sollte natürlich nicht den Titel des alten Interviews sehen"): bewusst KEIN
+    // Thema/Genre mehr im Projektnamen (der prominent in der Kopfzeile erscheint), plus
+    // isSimulation-Markierung, damit startNewInterview() ein solches Test-Projekt nie für einen
+    // echten, neuen Interviewpartner weiterverwendet.
+    const proj = createProject('🎭 Testlauf (Simulation)', { isSimulation: true });
     const projectId = proj.id;
     updateProjectDisplay();
     const iv = newInterviewRecord(nextId(), projectId);
@@ -4195,6 +4281,10 @@ async function runSimulation(genreDescription, mode) {
     DB.interviews.push(iv); saveDB();
     interviewId = iv.id;
     hasStory = false;
+    // v2.6.0, auf Wunsch des Nutzers ("Diese Geschichte möchte ich dann aber auch sofort ansehen
+    // können ... das brauche ich zunächst mal nicht als Downloads"): zeigt die geheime interne
+    // Test-Geschichte direkt im rechten Panel an, statt nur als Download im Export-Modal.
+    renderSimulationStoryPanel(story);
     // Macht das neu angelegte Simulations-Interview sofort im Chat sichtbar (leer, bis die erste
     // Frage eintrifft) – dieselbe Ansicht wie bei einem normal per Hand gestarteten Interview.
     renderMessages(getHistory(iv.id), iv);
@@ -4431,34 +4521,8 @@ function finalizeReview() {
 // bedeutet hier ganz bewusst: der tatsächliche Frage/Antwort-Rohtext (siehe getHistory), NICHT die
 // von der KI umformulierte Zusammenfassung (siehe chapterHtml weiter unten).
 
-// Generiert per kurzem KI-Aufruf einen einmaligen Titel aus dem Rohtranskript. Wird am
-// Interview-Datensatz zwischengespeichert (iv.archivTitle), damit ein erneutes Öffnen des PDFs
-// später nicht jedes Mal einen neuen Titel erzeugt (und wird VOR dem ersten Export außerdem
-// explizit bestätigt, siehe showTitleConfirmPrompt weiter unten).
-//
-// v2.4.5, auf Wunsch des Nutzers, nachdem mehrere echte Archiv-Titel ("Der Tag, als die Stille
-// begann", "Eine Narbe, die nach Vergangenheit klingt") als zu poetisch/verschleiernd empfunden
-// wurden ("nicht poetisch und verschleiert, ich will wissen was passiert ist"): Der Titel muss
-// jetzt SACHLICH und KONKRET benennen, was tatsächlich passiert ist (das zentrale Ereignis), statt
-// es hinter einem Bild oder einer Stimmung zu verstecken.
-async function generateArchivTitle(iv) {
-  const history = getHistory(iv.id);
-  const transcript = history.map(m => (m.role === 'ki' ? 'Interviewer: ' : 'Erzählperson: ') + m.text).join('\n');
-  const system = `Du liest den Rohtext eines Interviews über eine persönliche Lebensgeschichte und erfindest dafür
-einen kurzen, klaren, WÜRDEVOLLEN Titel – aber vor allem einen KONKRETEN und INFORMATIVEN: Wer den
-Titel liest, muss sofort verstehen, worum es inhaltlich geht (das zentrale Ereignis), nicht nur eine
-Stimmung erahnen.
-
-WICHTIG: KEINE poetische, rätselhafte oder verschleiernde Formulierung, KEINE Metapher, die das
-eigentliche Ereignis verschweigt oder umschreibt (also NICHT "Der Tag, als die Stille begann" oder
-"Eine Narbe, die nach Vergangenheit klingt", SONDERN z. B. "Der Tod meines Sohnes an Heiligabend"
-oder "Ein Spinnenbiss im Weinkeller"). Benenne das Ereignis selbst beim Namen (was ist passiert),
-ergänzt um so viel Kontext wie in der Kürze möglich (wer/wann/wo, falls es natürlich reinpasst).
-Maximal 10 Wörter. Kein Klickbait, keine Anführungszeichen, kein Punkt am Ende, keine Emojis. Gib
-AUSSCHLIESSLICH den Titel selbst zurück, sonst nichts.`;
-  const raw = await callChat(system, [{ role: 'user', content: transcript.slice(0, 14000) }], 60);
-  return raw.trim().replace(/^["'„»]+|["'“«]+$/g, '').replace(/\.$/, '');
-}
+// v2.6.0: Der frühere per-KI-generierte Titel-Vorschlag (generateArchivTitle) entfällt – die Person
+// gibt den Titel jetzt direkt selbst ein (siehe showTitleConfirmPrompt weiter unten).
 
 // Baut die eigenständige, druckoptimierte HTML-Seite (siehe oben). Serifenschrift für einen
 // warmen, buchartigen Charakter, arkaa-Farbakzent, ein Deckblatt-Bereich, dann Frage/Antwort im
@@ -4601,55 +4665,24 @@ async function openPublishFlow() {
   await showPublishConfirmPrompt(iv);
 }
 
-// v2.4.5, auf Wunsch des Nutzers ("ich würde fragen ob der Titel so passt ... auch in der
-// Simulation"): Generiert bei Bedarf einmalig einen Titel-Vorschlag (gecacht in iv.archivTitle) und
-// zeigt ihn in einem editierbaren Textfeld an, statt ihn ungefragt zu verwenden – die Person kann
-// ihn direkt anpassen oder per "Neuen Vorschlag" neu generieren lassen, bevor sie ihn über
-// confirmArchivTitle endgültig bestätigt.
+// v2.6.0, auf Wunsch des Nutzers ("Die Titelfindung finde ich auch ein bisschen kompliziert. Ich
+// würde einfach nur am Schluss fragen wie soll dein Interview heißen"): fragt die Person direkt,
+// statt vorher per KI-Aufruf einen Titel-Vorschlag zu erzeugen (das frühere Verhalten aus v2.4.5).
+// Das Eingabefeld startet leer bzw. mit einem zuvor schon einmal eingegebenen Titel, falls die
+// Person diesen Dialog aus irgendeinem Grund ein zweites Mal sieht.
 async function showTitleConfirmPrompt(iv) {
   const donePanel = el('review-done-block');
   const panel = el('title-confirm-prompt');
   if (!panel) return;
   if (donePanel) donePanel.style.display = 'none';
   panel.style.display = 'block';
-  el('title-confirm-loading').style.display = 'block';
-  el('title-confirm-body').style.display = 'none';
-  try {
-    if (!iv.archivTitle) {
-      iv.archivTitle = await generateArchivTitle(iv);
-      saveDB();
-    }
-    if (!interviewId || interviewId !== iv.id) return; // Person hat inzwischen das Interview gewechselt
-    el('title-confirm-loading').style.display = 'none';
-    el('title-confirm-body').style.display = 'block';
-    el('title-confirm-input').value = iv.archivTitle;
-  } catch (err) {
-    el('title-confirm-loading').style.display = 'none';
-    el('title-confirm-body').style.display = 'block';
-    el('title-confirm-input').value = iv.archivTitle || '';
-    el('title-confirm-input').placeholder = 'Titel konnte nicht automatisch erzeugt werden (' + err.message + ') – bitte selbst eingeben.';
-  }
-}
-
-// Lässt EINEN neuen Titel-Vorschlag generieren (ersetzt den bisherigen in iv.archivTitle), ohne den
-// Bestätigungs-Schritt selbst zu verlassen – schlägt der Aufruf fehl, bleibt der bisherige Titel im
-// Textfeld einfach stehen, statt die Person mit einem leeren Feld zurückzulassen.
-async function regenerateArchivTitle() {
-  if (!interviewId) return;
-  const iv = getInterview(interviewId);
-  if (!iv) return;
-  el('title-confirm-loading').style.display = 'block';
-  el('title-confirm-body').style.display = 'none';
-  try {
-    iv.archivTitle = await generateArchivTitle(iv);
-    saveDB();
-  } catch (err) { /* alter Titel bleibt erhalten */ }
   el('title-confirm-loading').style.display = 'none';
   el('title-confirm-body').style.display = 'block';
   el('title-confirm-input').value = iv.archivTitle || '';
+  el('title-confirm-input').focus();
 }
 
-// Übernimmt den (ggf. von Hand angepassten) Titel aus dem Textfeld als endgültig und baut danach
+// Übernimmt den von Hand eingegebenen Titel aus dem Textfeld als endgültig und baut danach
 // direkt das PDF – erst ab hier gilt iv.archivTitleConfirmed als true, spätere PDF-Öffnungen fragen
 // dann nicht mehr erneut.
 async function confirmArchivTitleAndBuildPdf() {
@@ -6133,7 +6166,6 @@ on('btn-reorder-decline', 'click', declineReorder);
 on('btn-review-correction-send', 'click', sendReviewCorrection);
 on('btn-archiv-pdf', 'click', openArchivPdf);
 on('btn-title-confirm', 'click', confirmArchivTitleAndBuildPdf);
-on('btn-title-regenerate', 'click', regenerateArchivTitle);
 on('btn-publish-story', 'click', openPublishFlow);
 on('btn-publish-tag-add', 'click', addManualPublishTag);
 on('publish-tag-input', 'keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addManualPublishTag(); } });
@@ -6142,7 +6174,8 @@ on('btn-publish-confirm', 'click', confirmPublish);
 on('btn-publish-regenerate', 'click', regeneratePublishSuggestion);
 on('review-correction-input', 'keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReviewCorrection(); } });
 
-on('btn-edit-modal', 'click', openEditModal);
+// v2.6.0: kein Header-Button mehr, der openEditModal() öffnet (siehe "Zusammenfassen" oben) – das
+// Modal selbst bleibt im Code, nur ohne Einstiegspunkt in der Oberfläche.
 on('btn-edit-modal-close', 'click', () => el('edit-modal').classList.remove('open'));
 on('btn-do-summarize', 'click', summarizeProject);
 
