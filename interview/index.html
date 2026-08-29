@@ -205,9 +205,14 @@
          die Person jetzt noch einmal durchliest – es gibt bewusst keine separate Textansicht. -->
     <div id="review-prompt" style="display:none; margin:10px 14px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--panel);">
       <div id="review-prompt-text" style="margin-bottom:10px; font-size:13.5px;">Bitte lies dir das Interview oben noch einmal durch. Möchtest du noch etwas klarstellen oder ändern?</div>
+      <!-- v2.6.1, auf Wunsch des Nutzers ("Lies dir alles noch mal gut durch, du kannst alles noch
+           ändern oder einzelne Fragen löschen ... hier gibt es einen 'bitte durchlesen Button'"):
+           ersetzt die frühere Ja/Nein-Entscheidung durch einen einzigen Einstieg in die neue
+           Lese-&-Bearbeiten-Ansicht (siehe #qa-edit-modal/openQaEditModal weiter unten). Der
+           bisherige Korrektur-Chat direkt hier im Panel bleibt als Alternative erreichbar, über
+           einen Knopf INNERHALB dieses neuen Modals ("Lieber im Chat beschreiben"). -->
       <div id="review-prompt-buttons" style="display:flex; gap:8px;">
-        <button id="btn-review-yes" type="button">Ja, ich möchte etwas ändern</button>
-        <button id="btn-review-no" type="button" class="primary">Nein, das passt so</button>
+        <button id="btn-review-open-editor" type="button" class="primary">📖 Interview durchlesen &amp; bearbeiten</button>
       </div>
       <div id="review-correction-chat" style="display:none; margin-top:10px;">
         <div id="review-correction-messages" style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;"></div>
@@ -235,20 +240,49 @@
       </div>
     </div>
 
-    <!-- TITELVERGABE VOR DEM ARCHIV-PDF (v2.6.0, auf Wunsch des Nutzers: "Die Titelfindung finde
-         ich auch ein bisschen kompliziert. Ich würde einfach nur am Schluss fragen wie soll dein
-         Interview heißen" – ersetzt die frühere KI-generierte Titel-Vorschlag+Bestätigung aus
-         v2.4.5). Erscheint anstelle von #review-done-block, sobald "Archiv-PDF erstellen" geklickt
-         wird, aber noch kein Titel vergeben ist (iv.archivTitleConfirmed === false, siehe
-         showTitleConfirmPrompt/openArchivPdf weiter unten) – funktioniert identisch in der
-         normalen Nutzung UND in der Simulation, da beide denselben Knopf/dieselbe Funktion nutzen.
-         Das eigentliche PDF wird erst NACH der Eingabe erzeugt. -->
+    <!-- INTERVIEW DURCHLESEN & BEARBEITEN (v2.6.1, auf Wunsch des Nutzers: "Lies dir alles noch mal
+         gut durch, du kannst alles noch ändern oder einzelne Fragen löschen ... das Interview
+         erscheint in einem klaren Layout, sowohl die Fragen wie auch der Text ist editierbar, das
+         gilt auch für die Reihenfolge der Fragen"). Öffnet sich über den Knopf in
+         #review-prompt-buttons (siehe openQaEditModal). Arbeitet auf einer lokalen Arbeitskopie
+         (qaEditPairs) – erst der Klick auf "Fertig" schreibt die Änderungen über replaceHistory()
+         tatsächlich zurück (siehe finishQaEdit weiter unten); "Später weiterlesen" schließt das
+         Modal ohne etwas zu verändern. -->
+    <div class="modal-backdrop" id="qa-edit-modal">
+      <div class="modal" style="max-width:760px;">
+        <h2>Interview durchlesen</h2>
+        <div class="hint" style="margin-top:0;">Lies dir alles noch einmal durch. Du kannst Fragen und Antworten direkt bearbeiten, die Reihenfolge ändern (▲▼) oder einzelne Fragen löschen (🗑).</div>
+        <div id="qa-edit-list" style="display:flex; flex-direction:column; gap:12px; margin:16px 0;"></div>
+        <div class="hint">
+          <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; color:inherit;">
+            <input type="checkbox" id="qa-edit-ack-checkbox" style="margin-top:3px;" />
+            <span>Ich habe alles durchgelesen.</span>
+          </label>
+        </div>
+        <div class="row" style="justify-content:space-between;">
+          <button id="btn-qa-edit-use-chat" type="button">💬 Lieber im Chat beschreiben</button>
+          <div style="display:flex; gap:8px;">
+            <button id="btn-qa-edit-close" type="button">Später weiterlesen</button>
+            <button id="btn-qa-edit-done" type="button" class="primary" disabled>Fertig, Interview abschließen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TITELVERGABE VOR DEM ARCHIV-PDF (v2.6.1, auf Wunsch des Nutzers: "Letzte Frage: Wie willst
+         du deinen Text nennen? ... Hier macht die KI einen Vorschlag. Man kann natürlich auch
+         selber eine Titel finden"). Erscheint anstelle von #review-done-block, sobald "Archiv-PDF
+         erstellen" geklickt wird, aber noch kein Titel vergeben ist (iv.archivTitleConfirmed ===
+         false, siehe showTitleConfirmPrompt/openArchivPdf weiter unten) – funktioniert identisch in
+         der normalen Nutzung UND in der Simulation, da beide denselben Knopf/dieselbe Funktion
+         nutzen. Das eigentliche PDF wird erst NACH der Eingabe erzeugt. -->
     <div id="title-confirm-prompt" style="display:none; margin:10px 14px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--panel);">
-      <div id="title-confirm-loading" style="font-size:13.5px; display:none;"></div>
-      <div id="title-confirm-body" style="display:block;">
-        <div style="margin-bottom:8px; font-size:13.5px;">Wie soll dein Interview heißen?</div>
+      <div id="title-confirm-loading" style="font-size:13.5px;">Ich überlege mir einen Titel-Vorschlag …</div>
+      <div id="title-confirm-body" style="display:none;">
+        <div style="margin-bottom:8px; font-size:13.5px;">Wie soll dein Interview heißen? Du kannst diesen Vorschlag übernehmen oder einen eigenen Titel eintragen.</div>
         <input type="text" id="title-confirm-input" placeholder="Titel eingeben …" style="width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; margin-bottom:10px;" />
         <div style="display:flex; gap:8px;">
+          <button id="btn-title-regenerate" type="button">🔄 Neuer Vorschlag</button>
           <button id="btn-title-confirm" type="button" class="primary">Titel übernehmen &amp; weiter</button>
         </div>
       </div>
@@ -277,14 +311,26 @@
           <option value="fremdbericht">Von Angehörigen über eine andere Person erzählt</option>
           <option value="simulation">Simulation / Test</option>
         </select>
-        <!-- v2.6.0, auf Wunsch des Nutzers: eine super einfache Erklärung des wichtigsten AGB-Punkts
-             direkt vor der eigentlichen Veröffentlichung, statt auf lange AGB-Seiten zu verweisen,
-             die ohnehin niemand liest. -->
-        <div class="warn" style="margin-bottom:10px;">📖 Wichtig: Das Archiv ist öffentlich – jede veröffentlichte Geschichte kann von allen gelesen werden. Nach dem Veröffentlichen bekommst du unten einen Zugangscode angezeigt: Bitte bewahre ihn gut auf, denn nur damit kann dein Eintrag später wieder geändert oder gelöscht werden.</div>
+        <!-- v2.6.1, auf Wunsch des Nutzers ("die drei wichtigsten AGBs noch mal in einfacher
+             Sprache" + "der Hinweis sich bitte ganz durchzulesen"): drei knappe Punkte statt eines
+             einzelnen Satzes (v2.6.0), zusätzlich als Checkbox-Gate - "Jetzt im Archiv
+             veröffentlichen" bleibt gesperrt (siehe togglePublishConfirmEnabled), bis das explizit
+             bestätigt wurde. Punkt 3 (Eigenverantwortung) ist ein Platzhalter, solange es noch keine
+             endgültigen AGBs gibt - mit Jonas noch abzustimmen. -->
+        <div class="warn" style="margin-bottom:10px;">
+          <div style="font-weight:700; margin-bottom:6px;">📖 Bevor du veröffentlichst – bitte ganz durchlesen:</div>
+          <div style="margin-bottom:4px;">1. Das Archiv ist öffentlich – jede veröffentlichte Geschichte kann von allen gelesen werden.</div>
+          <div style="margin-bottom:4px;">2. Nach der Veröffentlichung bekommst du einen Zugangscode. Nur damit kann dein Eintrag später geändert oder gelöscht werden – bewahre ihn gut auf.</div>
+          <div style="margin-bottom:8px;">3. Du bist dafür verantwortlich, dass deine Angaben stimmen und keine Rechte anderer Personen verletzt werden.</div>
+          <label style="display:flex; align-items:flex-start; gap:8px; font-weight:600; cursor:pointer;">
+            <input type="checkbox" id="publish-agb-checkbox" style="margin-top:3px;" />
+            <span>Ich habe das gelesen und verstanden.</span>
+          </label>
+        </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button id="btn-publish-regenerate" type="button">Neuer Vorschlag</button>
           <button id="btn-publish-cancel" type="button">Abbrechen</button>
-          <button id="btn-publish-confirm" type="button" class="primary">Jetzt im Archiv veröffentlichen</button>
+          <button id="btn-publish-confirm" type="button" class="primary" disabled>Jetzt im Archiv veröffentlichen</button>
         </div>
         <div class="hint" id="publish-status" style="margin-top:8px;"></div>
       </div>
@@ -298,11 +344,13 @@
   </section>
 
   <section class="story-col" id="story-col">
-    <!-- v2.6.0: dient jetzt in erster Linie dazu, bei einer laufenden Simulation sofort die interne
-         Test-Geschichte anzuzeigen (siehe renderSimulationStoryPanel) - auf Wunsch des Nutzers:
-         "Diese Geschichte möchte ich dann aber auch sofort ansehen können ... das brauche ich
-         zunächst mal nicht als Downloads". -->
-    <div class="placeholder" id="story-col-placeholder">Hier erscheint automatisch die interne Test-Geschichte, sobald du eine Simulation startest.</div>
+    <!-- v2.6.1, auf Wunsch des Nutzers ("wir nutzen die Spalte ... um die Hints zu geben, dann
+         bleibt der eigentliche Chat sauber"): zeigt normalerweise die wachsende Hinweisliste für das
+         offene Interview (siehe renderHintsPanel), bei einer laufenden Simulation stattdessen
+         vorrangig die geheime Test-Geschichte (siehe renderSimulationStoryPanel, v2.6.0 - "Diese
+         Geschichte möchte ich dann aber auch sofort ansehen können ... das brauche ich zunächst mal
+         nicht als Downloads"). Die zentrale Weiche dafür ist renderSidebar(). -->
+    <div class="placeholder" id="story-col-placeholder">Hier erscheinen hilfreiche Hinweise, sobald du ein Interview startest.</div>
   </section>
 </main>
 
@@ -498,8 +546,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.6.0';
-const APP_BUILD = '2026-08-29 00:00 UTC';
+const APP_VERSION = '2.6.1';
+const APP_BUILD = '2026-08-29 12:00 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 const SETTINGS_KEY = 'interviewAI_settings_v1';
@@ -1437,16 +1485,17 @@ GEWICHTUNG (wichtig, da insgesamt nur 20 Fragen tatsächlich gestellt werden, si
 
 VERBOTEN: Erzeuge KEINEN Punkt zur Zeit NACH dem Ereignis (Verarbeitung, Therapie, wie sich der Alltag/eine Beziehung seitdem verändert hat, was der Person sonst geholfen hat, heutiges Befinden) und KEINEN Punkt zu Selbsthilfe/Lebensweisheiten (was die Person anderen mitteilen möchte, welchen Rat sie ihrem früheren Ich geben würde). Diese Themen sind für dieses Interview vollständig tabu, unabhängig davon, wie naheliegend sie beim beschriebenen Ereignis erscheinen – die App verwirft solche Punkte ohnehin automatisch, aber erzeuge sie erst gar nicht.
 
-Formuliere außerdem eine kurze (1-2 Sätze), warme, aber sachliche Übergangsnachricht an die Person.
-WICHTIG (v2.6.0, auf Wunsch des Nutzers: "Mir ist aufgefallen, dass die KI irgendwann das Thema noch
-einmal zusammenfasst ... das brauche ich nicht"): Wiederhole und fasse dabei NICHT noch einmal
-zusammen, worüber die Person gerade schon erzählt hat (kein "Du möchtest also von ... erzählen") –
-das wirkt bevormundend und überflüssig, sie hat es gerade selbst gesagt. Erwähne stattdessen nur
-knapp, dass jederzeit pausiert werden kann und alles automatisch gespeichert wird, und leite direkt
-zur ersten inhaltlichen Frage über (ohne diese Frage selbst schon zu stellen). Erfinde keine
-Fakten, keine Sitzungsanzahl, keine Fragenliste ankündigen.
+Formuliere außerdem eine ganz kurze (1 Satz), warme, aber sachliche Übergangsnachricht an die
+Person. WICHTIG (v2.6.0, auf Wunsch des Nutzers: "Mir ist aufgefallen, dass die KI irgendwann das
+Thema noch einmal zusammenfasst ... das brauche ich nicht"): Wiederhole und fasse dabei NICHT noch
+einmal zusammen, worüber die Person gerade schon erzählt hat (kein "Du möchtest also von ...
+erzählen") – das wirkt bevormundend und überflüssig, sie hat es gerade selbst gesagt. Der Hinweis
+aufs Pausieren/automatische Speichern steht seit v2.6.1 dauerhaft sichtbar im Seitenpanel (siehe
+START_HINT) – erwähne ihn deshalb NICHT mehr zusätzlich hier. Leite stattdessen einfach direkt zur
+ersten inhaltlichen Frage über (ohne diese Frage selbst schon zu stellen). Erfinde keine Fakten,
+keine Sitzungsanzahl, keine Fragenliste ankündigen.
 
-Beispiel für eine gute Übergangsnachricht: "Alles klar, danke dir. Du kannst jederzeit pausieren, alles wird automatisch gespeichert. Lass uns direkt einsteigen."
+Beispiel für eine gute Übergangsnachricht: "Alles klar, danke dir. Lass uns direkt einsteigen."
 
 Gib deine Antwort AUSSCHLIESSLICH als valides JSON-Objekt zurück, ohne Markdown-Codeblock, mit exakt folgender Struktur:
 
@@ -1577,7 +1626,7 @@ function newInterviewRecord(id, projectId) {
     pendingPersonClarification: null, // Bezeichnung einer Person, zu der gerade eine Klärungsfrage gestellt wurde (siehe checkForUnclarifiedPerson)
     simulationStory: null, // nur bei Testmodus-Simulationen gesetzt: die geheime, interne Story (siehe SIMULATIONSMODUS)
     redaction: null, // zwischengespeichertes Ergebnis der nachträglichen Redaktion (siehe REDAKTION / "redigierte Version"), null bis zum ersten Export
-    hintsShown: 0, // Anzahl der bereits gezeigten periodischen grünen Hinweis-Sprechblasen (nach Frage 5, 10, 15, ... siehe showPeriodicHintIfNeeded/HINT_POOL)
+    hintsShown: 0, // Anzahl der bereits fälligen periodischen Hinweise im Seitenpanel (nach Frage 5, 10, 15, ... siehe showPeriodicHintIfNeeded/renderHintsPanel/HINT_POOL)
     simulationHintShown: false, // wurde der einmalige Simulations-Hinweis nach der Eröffnungsfrage schon gezeigt? (siehe SIMULATIONSMODUS)
     archivTitle: null, // von der Person selbst vergebener Titel fürs Archiv-PDF (siehe showTitleConfirmPrompt), erst nach Abschluss gesetzt
     // v2.4.5, auf Wunsch des Nutzers ("ich würde fragen ob der Titel so passt"): Der generierte
@@ -3411,33 +3460,65 @@ const storyColEl = el('story-col');
 const spinnerEl = el('spinner');
 const statusEl = el('interview-status');
 
-// PERIODISCHE HINWEIS-SPRECHBLASEN (v2.6.0, auf Wunsch des Nutzers: "ich habe mir überlegt, dass
-// man damit diese Internetseite besonders userfreundlich wird, im Interview immer wieder kleine
-// Hinweise gibt ... ich würde dann immer nach fünf Fragen so einen kleinen Hinweis bringen. Die
-// anderen weiß ich im Moment noch nicht"). Löst den früheren EINMALIGEN Hinweis aus v2.1.4 ("bitte
-// lasse das im chat auftauchen, auch so grün hinterlegt") ab: statt nur einmal nach Frage 5, wird
-// nach JEDER fünften Frage (5, 10, 15, ...) der Reihe nach ein Hinweis aus HINT_POOL gezeigt – ist
-// die Liste erschöpft, wiederholt sich einfach der letzte Eintrag, bis es weitere Hinweise gibt.
+// HINWEISE IM SEITENPANEL (v2.6.1, auf Wunsch des Nutzers: "ich überlege ob wir die Spalte nicht
+// nutzen, da wo jetzt die simulierte Geschichte steht, um die Hints zu geben. Dann bleibt der
+// eigentliche Chat sauber"). Löst die vorherige Version (v2.6.0, Sprechblasen MITTEN im Chat) ab:
+// Hinweise erscheinen jetzt als wachsende Liste im rechten Panel (#story-col, siehe
+// renderSidebar/renderHintsPanel weiter unten) statt den Chatverlauf zu unterbrechen. Bei einer
+// Simulation zeigt dasselbe Panel weiterhin vorrangig die geheime Test-Geschichte (siehe
+// renderSimulationStoryPanel) – Hinweise erscheinen dort nicht zusätzlich.
+//
+// START_HINT ist ab der ersten Nachricht sichtbar (vorher Teil der von der KI gesprochenen
+// Übergangsnachricht, siehe eventPlan-Prompt). HINT_POOL erscheint der Reihe nach alle 5 Fragen
+// (mechanisch, siehe showPeriodicHintIfNeeded) – ist die Liste erschöpft, wird kein weiterer
+// Eintrag mehr ergänzt (es gibt aktuell nur die zwei hier). FINAL_HINTS erscheint komplett, sobald
+// das Interview zur Überprüfung ansteht oder abgeschlossen ist.
+const START_HINT = 'Du kannst jederzeit pausieren, alles wird automatisch gespeichert.';
 const HINT_POOL = [
-  '💡 Du kannst frei entscheiden, ob deine Geschichte mit deinem echten Namen oder anonym erscheint – das kannst du dir jederzeit anders überlegen, auch ganz am Schluss, bevor irgendetwas veröffentlicht wird.',
-  '💡 Du kannst mir jederzeit sagen, wenn du das Gefühl hast, dass das Interview in eine falsche Richtung geht, oder worüber du lieber sprechen möchtest – zum Beispiel „Bitte frag mehr nach meiner Schwester." Ich richte mich danach.',
+  'Du kannst mir jederzeit sagen, wenn du das Gefühl hast, dass das Interview in eine falsche Richtung geht, oder worüber du lieber sprechen möchtest – zum Beispiel „Bitte frag mich mehr über meine psychische Verfassung." Ich richte mich danach.',
+  'Du kannst frei entscheiden, ob deine Geschichte mit deinem echten Namen oder anonym erscheint – das kannst du dir jederzeit anders überlegen, auch ganz am Schluss, bevor irgendetwas veröffentlicht wird.',
 ];
-function buildPeriodicHintBubble(index) {
-  const div = document.createElement('div');
-  div.className = 'bubble hint';
-  div.style.alignSelf = 'center';
-  div.style.background = '#3a6b3a';
-  div.style.color = '#fff';
-  div.style.maxWidth = '90%';
-  div.style.textAlign = 'center';
-  div.textContent = HINT_POOL[Math.min(index, HINT_POOL.length - 1)];
-  return div;
+const FINAL_HINTS = [
+  'Keine Sorge: Du kannst am Schluss noch einmal alles ändern – Reihenfolge, Fragen und Inhalte.',
+  'Denke daran, deinen Zugangscode nach der Veröffentlichung gut aufzubewahren – nur damit lässt sich dein Eintrag später noch ändern oder löschen.',
+  '📖 Das Archiv ist öffentlich einsehbar – jeder kann veröffentlichte Geschichten lesen. Bitte lies dir das vor der Veröffentlichung ganz durch.',
+  'Lies dir am Ende alles noch einmal gut durch – du kannst Fragen und Antworten bearbeiten, umsortieren oder einzelne Fragen löschen.',
+];
+
+// Baut die Hinweisliste für das rechte Panel (siehe renderSidebar) passend zum aktuellen Stand
+// dieses Interviews.
+function renderHintsPanel(iv) {
+  const col = el('story-col');
+  if (!col) return;
+  const items = [START_HINT];
+  const periodicShown = Math.min(iv.hintsShown || 0, HINT_POOL.length);
+  for (let i = 0; i < periodicShown; i++) items.push(HINT_POOL[i]);
+  if (iv.status === 'in_pruefung' || iv.status === 'abgeschlossen') items.push(...FINAL_HINTS);
+  col.innerHTML = '<div class="book-chapter-label">💡 Hinweise für dieses Interview</div>' +
+    items.map(t => `<div class="chapter"><p>${escapeHtml(t)}</p></div>`).join('');
 }
 
-// Entspricht buildPeriodicHintBubble() oben, aber für den SIMULATIONSMODUS (v2.2.0, auf Wunsch des
-// Nutzers): Erklärt gleich zu Beginn einer Simulation, dass die Simulation ab jetzt nach jeder
-// Frage pausiert und die Person optional selbst eingreifen kann. Wird einmalig direkt nach der
-// ersten KI-Frage einer Simulation gezeigt (siehe runSimulation, iv.simulationHintShown).
+// Zentrale Stelle für das rechte Panel: bei einer Simulation bleibt die geheime Test-Geschichte
+// stehen (siehe runSimulation/renderSimulationStoryPanel, wird dort einmalig gesetzt), sonst zeigt
+// das Panel die Hinweisliste für das aktuell offene, echte Interview. `iv` ist optional (z.B. beim
+// Leeren der Ansicht nach dem Löschen eines Interviews) – dann zurück auf den Platzhalter.
+function renderSidebar(iv) {
+  if (!iv) { resetStoryColPlaceholder(); return; }
+  if (iv.simulationStory) return;
+  renderHintsPanel(iv);
+}
+
+function resetStoryColPlaceholder() {
+  const col = el('story-col');
+  if (col) col.innerHTML = '<div class="placeholder" id="story-col-placeholder">Hier erscheinen hilfreiche Hinweise, sobald du ein Interview startest.</div>';
+}
+
+// Eigene, separate Sprechblase NUR für den SIMULATIONSMODUS (v2.2.0, auf Wunsch des Nutzers):
+// bleibt bewusst im Chat (nicht im Seitenpanel wie renderHintsPanel oben), da sie den manuellen
+// Test-Ablauf selbst erklärt, nicht das Interview aus Sicht einer erzählenden Person. Erklärt
+// gleich zu Beginn einer Simulation, dass die Simulation ab jetzt nach jeder Frage pausiert und die
+// Person optional selbst eingreifen kann. Wird einmalig direkt nach der ersten KI-Frage einer
+// Simulation gezeigt (siehe runSimulation, iv.simulationHintShown).
 function buildSimulationHintBubble() {
   const div = document.createElement('div');
   div.className = 'bubble hint';
@@ -3477,9 +3558,9 @@ function buildClosingTransitionBubble(num) {
   return div;
 }
 
-// `iv` ist optional (z.B. beim Leeren der Ansicht nach dem Löschen eines Interviews): nur wenn es
-// übergeben wird, werden die periodischen Hinweis-Sprechblasen nach Frage 5, 10, 15, ... passend
-// zu iv.hintsShown mitgerendert (siehe showPeriodicHintIfNeeded/HINT_POOL).
+// `iv` ist optional (z.B. beim Leeren der Ansicht nach dem Löschen eines Interviews) – wird am Ende
+// an renderSidebar() weitergereicht, das damit entscheidet, was im rechten Panel zu sehen ist
+// (Hinweisliste, Simulations-Story oder Platzhalter, siehe dort).
 //
 // v2.4.4, auf Wunsch des Nutzers ("bei der nummerierung haben wir uns missverstanden – bitte nur
 // im Chat, nicht auf dem PDF"): Jede Interviewer-Nachricht (inklusive der festen Zäsur- und
@@ -3491,9 +3572,9 @@ function renderMessages(messages, iv) {
   for (const m of messages) {
     // ZÄSUR-ERKENNUNG (v2.3.0, siehe CLOSING_TRANSITION_TEXT/getInterviewReply oben): Diese eine,
     // exakte Nachricht ist mechanisch von der App vorformuliert, nicht von der KI – wird deshalb
-    // wie buildPeriodicHintBubble/buildSimulationHintBubble als eigene, grün hervorgehobene
-    // Sprechblase dargestellt statt als normale Interviewer-Frage (gleiches Textvergleichs-Muster
-    // wie RESUME_MESSAGE_GENERIC an anderer Stelle der App).
+    // wie buildSimulationHintBubble als eigene, grün hervorgehobene Sprechblase dargestellt statt
+    // als normale Interviewer-Frage (gleiches Textvergleichs-Muster wie RESUME_MESSAGE_GENERIC an
+    // anderer Stelle der App).
     if (m.role === 'ki' && m.text === CLOSING_TRANSITION_TEXT) {
       kiCount++;
       messagesEl.appendChild(buildClosingTransitionBubble(kiCount));
@@ -3514,19 +3595,12 @@ function renderMessages(messages, iv) {
     text.textContent = m.text;
     div.appendChild(text);
     messagesEl.appendChild(div);
-    if (m.role === 'ki') {
-      if (kiCount === 1 && iv && iv.simulationStory && iv.simulationHintShown) {
-        messagesEl.appendChild(buildSimulationHintBubble());
-      }
-      if (kiCount % 5 === 0 && iv) {
-        const hintNumber = kiCount / 5; // 1 bei Frage 5, 2 bei Frage 10, 3 bei Frage 15, ...
-        if (hintNumber <= (iv.hintsShown || 0)) {
-          messagesEl.appendChild(buildPeriodicHintBubble(hintNumber - 1));
-        }
-      }
+    if (m.role === 'ki' && kiCount === 1 && iv && iv.simulationStory && iv.simulationHintShown) {
+      messagesEl.appendChild(buildSimulationHintBubble());
     }
   }
   messagesEl.scrollTop = messagesEl.scrollHeight;
+  renderSidebar(iv);
 }
 
 function getInterview(id) { return DB.interviews.find(i => i.id === id); }
@@ -3607,7 +3681,7 @@ async function requestAndHandleReply(iv) {
       project.factSlots = ensureMandatorySlots(planResult.slots, topicAnswer);
       project.factSlotsGenerated = true;
       addMessage(iv.id, 'ki', planResult.message ||
-        'Danke, das gibt mir einen guten Ausgangspunkt. Du kannst jederzeit pausieren, alles wird automatisch gespeichert. Lass uns direkt einsteigen.');
+        'Danke, das gibt mir einen guten Ausgangspunkt. Lass uns direkt einsteigen.');
       saveDB();
       renderMessages(getHistory(iv.id), iv);
       updateStatusLine(iv);
@@ -3790,20 +3864,131 @@ function updateStatusLine(iv) {
   statusEl.textContent = `Interview #${iv.id} · ${statusLabel(iv.status)}${counterText}`;
 }
 
-// Markiert jede fällige periodische Hinweis-Sprechblase (nach Frage 5, 10, 15, ...) rein mechanisch
-// anhand der Nachrichtenzahl, kein API-Aufruf nötig. Bewusst NICHT Teil des Prompts/der KI-Antwort:
-// eine reine Prompt-Anweisung wäre in diesem Projekt erfahrungsgemäß nicht zuverlässig genug (siehe
-// die vielen anderen mechanischen Sicherheitsnetze hier). MUSS vor dem nächsten
-// renderMessages(..., iv)-Aufruf laufen, damit die Sprechblase (siehe buildPeriodicHintBubble)
-// direkt im selben Render-Durchlauf inline im Chat erscheint. v2.6.0: löst das frühere einmalige
-// showSteeringHintIfNeeded (v2.1.4) ab - zählt jetzt hoch statt nur einmal umzuschalten, siehe
-// HINT_POOL weiter oben.
+// Markiert jeden fälligen periodischen Hinweis (nach Frage 5, 10, 15, ...) rein mechanisch anhand
+// der Nachrichtenzahl, kein API-Aufruf nötig. Bewusst NICHT Teil des Prompts/der KI-Antwort: eine
+// reine Prompt-Anweisung wäre in diesem Projekt erfahrungsgemäß nicht zuverlässig genug (siehe die
+// vielen anderen mechanischen Sicherheitsnetze hier). MUSS vor dem nächsten renderMessages(...,
+// iv)-Aufruf laufen, damit das Seitenpanel (siehe renderHintsPanel) im selben Durchlauf aktuell
+// ist. v2.6.0: löst das frühere einmalige showSteeringHintIfNeeded (v2.1.4) ab - zählt jetzt hoch
+// statt nur einmal umzuschalten. v2.6.1: der Hinweis erscheint seitdem im Seitenpanel statt als
+// Sprechblase im Chat, siehe HINT_POOL weiter oben.
 function showPeriodicHintIfNeeded(iv) {
   const fragenBisher = getHistory(iv.id).filter(m => m.role === 'ki').length;
   const faellig = Math.floor(fragenBisher / 5); // wie viele 5er-Schwellen (5, 10, 15, ...) sind erreicht?
   if (faellig <= (iv.hintsShown || 0)) return;
   iv.hintsShown = faellig;
   saveDB();
+}
+
+// --- INTERVIEW DURCHLESEN & BEARBEITEN (v2.6.1) --------------------------------------------------
+// Auf Wunsch des Nutzers: "Lies dir alles noch mal gut durch, du kannst alles noch ändern oder
+// einzelne Fragen löschen ... das Interview erscheint in einem klaren Layout, sowohl die Fragen wie
+// auch der Text ist editierbar, das gilt auch für die Reihenfolge der Fragen." Ersetzt die frühere
+// Ja/Nein-Entscheidung (siehe #review-prompt-buttons/btn-review-open-editor). Arbeitet bewusst auf
+// einer LOKALEN Arbeitskopie (qaEditPairs, siehe buildRedactionPairs weiter unten) – das gespeicherte
+// Transkript bleibt unangetastet, bis "Fertig" tatsächlich über replaceHistory() zurückschreibt
+// (finishQaEdit). Ein Schließen über "Später weiterlesen" verwirft alle Änderungen dieser Sitzung.
+let qaEditPairs = null;
+
+function openQaEditModal() {
+  if (!interviewId) return;
+  const iv = getInterview(interviewId);
+  if (!iv) return;
+  const pairs = buildRedactionPairs(getHistory(iv.id));
+  // Startreihenfolge = die aktuell gültige Anzeige-Reihenfolge (berücksichtigt einen zuvor
+  // akzeptierten KI-Reihenfolge-Vorschlag, siehe resolveArchivPairOrder), NICHT zwingend die
+  // ursprüngliche chronologische Reihenfolge des Chats.
+  const order = resolveArchivPairOrder(iv, pairs);
+  const byId = new Map(pairs.map(p => [p.id, p]));
+  qaEditPairs = order.map(id => ({ ...byId.get(id) }));
+  el('qa-edit-ack-checkbox').checked = false;
+  toggleQaEditDoneEnabled();
+  renderQaEditList();
+  el('qa-edit-modal').classList.add('open');
+}
+
+function renderQaEditList() {
+  const list = el('qa-edit-list');
+  if (!qaEditPairs || qaEditPairs.length === 0) {
+    list.innerHTML = '<div class="hint">Keine Fragen vorhanden.</div>';
+    return;
+  }
+  list.innerHTML = qaEditPairs.map((p, idx) => `
+    <div style="border:1px solid var(--border); border-radius:10px; padding:10px 12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);">Frage ${idx + 1}</div>
+        <div style="display:flex; gap:4px;">
+          <button type="button" data-action="up" data-idx="${idx}" ${idx === 0 ? 'disabled' : ''} title="Nach oben">▲</button>
+          <button type="button" data-action="down" data-idx="${idx}" ${idx === qaEditPairs.length - 1 ? 'disabled' : ''} title="Nach unten">▼</button>
+          <button type="button" data-action="delete" data-idx="${idx}" title="Löschen">🗑</button>
+        </div>
+      </div>
+      ${p.question !== null ? `<textarea data-field="question" data-idx="${idx}" style="width:100%; box-sizing:border-box; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-bottom:6px; min-height:36px; resize:vertical;">${escapeHtml(p.question)}</textarea>` : ''}
+      ${p.answer !== null ? `<textarea data-field="answer" data-idx="${idx}" style="width:100%; box-sizing:border-box; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; min-height:60px; resize:vertical;">${escapeHtml(p.answer)}</textarea>` : ''}
+    </div>
+  `).join('');
+}
+
+function moveQaPair(idx, dir) {
+  const target = idx + dir;
+  if (!qaEditPairs || target < 0 || target >= qaEditPairs.length) return;
+  [qaEditPairs[idx], qaEditPairs[target]] = [qaEditPairs[target], qaEditPairs[idx]];
+  renderQaEditList();
+}
+
+function deleteQaPair(idx) {
+  if (!qaEditPairs) return;
+  qaEditPairs.splice(idx, 1);
+  renderQaEditList();
+}
+
+function toggleQaEditDoneEnabled() {
+  const box = el('qa-edit-ack-checkbox');
+  el('btn-qa-edit-done').disabled = !box.checked;
+}
+
+// Fallback für alle, die lieber in normaler Sprache beschreiben, was sich ändern soll, statt direkt
+// im Layout zu editieren – schließt dieses Modal und öffnet den bereits bestehenden Korrektur-Chat
+// (siehe openReviewCorrectionChat weiter unten) im ursprünglichen #review-prompt-Panel.
+function useCorrectionChatInstead() {
+  el('qa-edit-modal').classList.remove('open');
+  openReviewCorrectionChat();
+}
+
+// Schreibt die lokale Arbeitskopie (qaEditPairs) tatsächlich zurück ins gespeicherte Transkript und
+// schließt damit die Überprüfung ab – entspricht funktional dem früheren "Nein, das passt so".  Ein
+// Paar, bei dem die Person eine der beiden Textseiten leer gemacht hat, wird komplett übersprungen
+// (entspricht dem Löschen des ganzen Paares über den Papierkorb-Knopf), statt eine halbe, dann
+// unpassende Frage ohne Antwort im Transkript zu hinterlassen.
+function finishQaEdit() {
+  if (!interviewId || !qaEditPairs) return;
+  const iv = getInterview(interviewId);
+  if (!iv) return;
+  const newMessages = [];
+  for (const p of qaEditPairs) {
+    const q = p.question !== null ? (typeof p.question === 'string' ? p.question.trim() : '') : null;
+    const a = p.answer !== null ? (typeof p.answer === 'string' ? p.answer.trim() : '') : null;
+    if (p.question !== null && p.answer !== null) {
+      if (!q || !a) continue;
+      newMessages.push({ role: 'ki', text: q }, { role: 'nutzer', text: a });
+    } else if (p.question !== null) {
+      if (!q) continue;
+      newMessages.push({ role: 'ki', text: q });
+    } else if (p.answer !== null) {
+      if (!a) continue;
+      newMessages.push({ role: 'nutzer', text: a });
+    }
+  }
+  replaceHistory(iv.id, newMessages);
+  // Eine zuvor akzeptierte Reihenfolge-Vorschlag-Entscheidung bezog sich auf die alte Paar-Menge –
+  // die neue, manuell festgelegte Reihenfolge steckt jetzt direkt im Transkript selbst (siehe oben),
+  // ein zusätzliches iv.qaOrder wird dafür nicht mehr gebraucht.
+  iv.qaOrder = null;
+  saveDB();
+  qaEditPairs = null;
+  el('qa-edit-modal').classList.remove('open');
+  renderMessages(getHistory(iv.id), iv);
+  finalizeReview();
 }
 
 // Zeigt bzw. versteckt den Rohtext-Überprüfungs-Block (siehe #review-prompt) passend zum aktuellen
@@ -3827,6 +4012,7 @@ function maybeShowReviewPrompt(iv) {
   // das normale Öffnen eines bereits bestehenden Interviews.
   if (el('title-confirm-prompt')) el('title-confirm-prompt').style.display = 'none';
   if (el('publish-confirm-prompt')) el('publish-confirm-prompt').style.display = 'none';
+  if (el('qa-edit-modal')) el('qa-edit-modal').classList.remove('open'); // v2.6.1: nicht offen über einen Interview-Wechsel hinweg stehen lassen
   if (!iv || (iv.status !== 'in_pruefung' && iv.status !== 'abgeschlossen')) {
     panel.style.display = 'none';
     if (reorderPanel) reorderPanel.style.display = 'none';
@@ -3862,19 +4048,24 @@ function maybeShowReviewPrompt(iv) {
     const publishStatus = el('publish-already-status');
     if (publishBtn) publishBtn.disabled = !!iv.publishedStoryId;
     if (publishStatus) {
-      // v2.6.0, auf Wunsch des Nutzers ("bitte bewahre den Code immer gut auf, damit du das
-      // Interview löschen oder noch nachträglich verändern kannst"): zeigt die veröffentlichte
-      // Story-ID als Zugangscode an, solange es noch kein eigenes Zugangscode-System gibt (Thema
-      // für eine spätere Sitzung) - bleibt auch beim erneuten Öffnen sichtbar, nicht nur direkt
-      // nach dem Veröffentlichen.
+      // v2.6.1, auf Wunsch des Nutzers ("Zugangscode erscheint groß in roter Farbe, sonst kannst du
+      // nach der Veröffentlichung keine Änderungen mehr machen oder das Interview wieder löschen"):
+      // deutlich auffälligere Darstellung als die kleine Inline-Version aus v2.6.0. Zeigt weiterhin
+      // die veröffentlichte Story-ID als Zugangscode, solange es noch kein eigenes
+      // Zugangscode-System gibt (Thema für eine spätere Sitzung) - bleibt auch beim erneuten Öffnen
+      // sichtbar, nicht nur direkt nach dem Veröffentlichen.
       publishStatus.innerHTML = iv.publishedStoryId
-        ? `🌐 Im öffentlichen Archiv veröffentlicht.<br />Dein Zugangscode (bitte gut aufbewahren): <code style="background:var(--accent-light); padding:2px 6px; border-radius:5px;">${escapeHtml(iv.publishedStoryId)}</code>`
+        ? `🌐 Im öffentlichen Archiv veröffentlicht.
+           <div style="margin-top:8px; padding:10px 12px; background:#fdeceb; border:2px solid #c0392b; border-radius:8px;">
+             <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#c0392b; margin-bottom:4px;">⚠️ Dein Zugangscode – gut aufbewahren!</div>
+             <div style="font-size:19px; font-weight:800; color:#c0392b; letter-spacing:.02em; word-break:break-all;">${escapeHtml(iv.publishedStoryId)}</div>
+           </div>`
         : '';
     }
     return;
   }
   panel.style.display = 'block';
-  el('review-prompt-text').textContent = 'Bitte lies dir das Interview oben noch einmal durch. Möchtest du noch etwas klarstellen oder ändern?';
+  el('review-prompt-text').textContent = 'Das Interview ist fertig. Bitte lies dir noch einmal alles durch, bevor es weitergeht.';
   el('review-prompt-buttons').style.display = 'flex';
   el('review-correction-chat').style.display = 'none';
   el('review-correction-messages').innerHTML = '';
@@ -3996,9 +4187,9 @@ async function startNewInterview() {
     if (el('title-confirm-prompt')) el('title-confirm-prompt').style.display = 'none';
     if (el('publish-confirm-prompt')) el('publish-confirm-prompt').style.display = 'none';
     // v2.6.0: ein evtl. von einer vorherigen Simulation gefülltes Story-Panel (siehe
-    // renderSimulationStoryPanel) gehört nicht zu diesem neuen, echten Interview.
-    const storyCol = el('story-col');
-    if (storyCol) storyCol.innerHTML = '<div class="placeholder" id="story-col-placeholder">Hier erscheint automatisch die interne Test-Geschichte, sobald du eine Simulation startest.</div>';
+    // renderSimulationStoryPanel) gehört nicht zu diesem neuen, echten Interview - kurz auf den
+    // Platzhalter zurücksetzen, bis renderMessages() unten gleich die passende Hinweisliste zeigt.
+    resetStoryColPlaceholder();
 
     await requestAndHandleReply(iv);
   } catch (err) {
@@ -4501,6 +4692,13 @@ function finalizeReview() {
   saveDB();
   maybeShowReviewPrompt(iv);
   updateStatusLine(iv);
+  // v2.6.1: Seit der Entfernung des "Zusammenfassen"-Knopfs aus der Kopfzeile (v2.6.0) gab es keinen
+  // erreichbaren Weg mehr, ein Kapitel zusammenzufassen (siehe summarizeChapter) – dadurch wäre
+  // getLifeStoryContext() (Kontext für die KI über bereits behandelte frühere Kapitel desselben
+  // Projekts) bei mehreren Interviews stillschweigend leer geblieben. Läuft deshalb jetzt automatisch
+  // und unauffällig im Hintergrund, sobald ein Kapitel abgeschlossen wird – bewusst ohne await/Fehler
+  // sichtbar zu machen, damit ein Fehlschlag hier den eigentlichen Abschluss nicht blockiert.
+  summarizeChapter(iv).catch(() => {});
   // MANUELLE STEUERUNG BEIM ABSCHLUSS (v2.2.0, auf Wunsch des Nutzers: "dasselbe gilt für den
   // Abschluss ... kann ich das mit meinen Antworten auch tun"): Bestätigt die Person eine pausierte
   // Simulation über diese ganz normalen Buttons ("Nein, das passt so", ggf. nach eigenen
@@ -4521,8 +4719,29 @@ function finalizeReview() {
 // bedeutet hier ganz bewusst: der tatsächliche Frage/Antwort-Rohtext (siehe getHistory), NICHT die
 // von der KI umformulierte Zusammenfassung (siehe chapterHtml weiter unten).
 
-// v2.6.0: Der frühere per-KI-generierte Titel-Vorschlag (generateArchivTitle) entfällt – die Person
-// gibt den Titel jetzt direkt selbst ein (siehe showTitleConfirmPrompt weiter unten).
+// v2.6.1, auf erneuten Wunsch des Nutzers ("Hier macht die KI einen Vorschlag. Man kann natürlich
+// auch selber eine Titel finden" – nach der kurzzeitigen v2.6.0-Version ganz ohne KI-Vorschlag):
+// Generiert per kurzem KI-Aufruf einen Titel-Vorschlag, der das Eingabefeld nur VORAUSFÜLLT – die
+// Person liest weiterhin die einfache, direkte Frage ("Wie soll dein Interview heißen?") und kann
+// den Vorschlag unverändert übernehmen, anpassen oder komplett durch einen eigenen Titel ersetzen.
+async function generateArchivTitle(iv) {
+  const history = getHistory(iv.id);
+  const transcript = history.map(m => (m.role === 'ki' ? 'Interviewer: ' : 'Erzählperson: ') + m.text).join('\n');
+  const system = `Du liest den Rohtext eines Interviews über eine persönliche Lebensgeschichte und erfindest dafür
+einen kurzen, klaren, WÜRDEVOLLEN Titel – aber vor allem einen KONKRETEN und INFORMATIVEN: Wer den
+Titel liest, muss sofort verstehen, worum es inhaltlich geht (das zentrale Ereignis), nicht nur eine
+Stimmung erahnen.
+
+WICHTIG: KEINE poetische, rätselhafte oder verschleiernde Formulierung, KEINE Metapher, die das
+eigentliche Ereignis verschweigt oder umschreibt (also NICHT "Der Tag, als die Stille begann" oder
+"Eine Narbe, die nach Vergangenheit klingt", SONDERN z. B. "Der Tod meines Sohnes an Heiligabend"
+oder "Ein Spinnenbiss im Weinkeller"). Benenne das Ereignis selbst beim Namen (was ist passiert),
+ergänzt um so viel Kontext wie in der Kürze möglich (wer/wann/wo, falls es natürlich reinpasst).
+Maximal 10 Wörter. Kein Klickbait, keine Anführungszeichen, kein Punkt am Ende, keine Emojis. Gib
+AUSSCHLIESSLICH den Titel selbst zurück, sonst nichts.`;
+  const raw = await callChat(system, [{ role: 'user', content: transcript.slice(0, 14000) }], 60);
+  return raw.trim().replace(/^["'„»]+|["'“«]+$/g, '').replace(/\.$/, '');
+}
 
 // Baut die eigenständige, druckoptimierte HTML-Seite (siehe oben). Serifenschrift für einen
 // warmen, buchartigen Charakter, arkaa-Farbakzent, ein Deckblatt-Bereich, dann Frage/Antwort im
@@ -4665,21 +4884,52 @@ async function openPublishFlow() {
   await showPublishConfirmPrompt(iv);
 }
 
-// v2.6.0, auf Wunsch des Nutzers ("Die Titelfindung finde ich auch ein bisschen kompliziert. Ich
-// würde einfach nur am Schluss fragen wie soll dein Interview heißen"): fragt die Person direkt,
-// statt vorher per KI-Aufruf einen Titel-Vorschlag zu erzeugen (das frühere Verhalten aus v2.4.5).
-// Das Eingabefeld startet leer bzw. mit einem zuvor schon einmal eingegebenen Titel, falls die
-// Person diesen Dialog aus irgendeinem Grund ein zweites Mal sieht.
+// v2.6.1, auf Wunsch des Nutzers ("Wie willst du deinen Text nennen? ... Hier macht die KI einen
+// Vorschlag. Man kann natürlich auch selber eine Titel finden"): fragt weiterhin die einfache,
+// direkte Frage, füllt das Feld aber mit einem KI-Vorschlag vor, den die Person übernehmen,
+// anpassen oder komplett ersetzen kann.
 async function showTitleConfirmPrompt(iv) {
   const donePanel = el('review-done-block');
   const panel = el('title-confirm-prompt');
   if (!panel) return;
   if (donePanel) donePanel.style.display = 'none';
   panel.style.display = 'block';
+  el('title-confirm-loading').style.display = 'block';
+  el('title-confirm-body').style.display = 'none';
+  try {
+    if (!iv.archivTitle) {
+      iv.archivTitle = await generateArchivTitle(iv);
+      saveDB();
+    }
+    if (!interviewId || interviewId !== iv.id) return; // Person hat inzwischen das Interview gewechselt
+    el('title-confirm-loading').style.display = 'none';
+    el('title-confirm-body').style.display = 'block';
+    el('title-confirm-input').value = iv.archivTitle;
+    el('title-confirm-input').focus();
+  } catch (err) {
+    el('title-confirm-loading').style.display = 'none';
+    el('title-confirm-body').style.display = 'block';
+    el('title-confirm-input').value = iv.archivTitle || '';
+    el('title-confirm-input').placeholder = 'Vorschlag konnte nicht erzeugt werden (' + err.message + ') – bitte selbst eingeben.';
+    el('title-confirm-input').focus();
+  }
+}
+
+// Lässt EINEN neuen Titel-Vorschlag generieren (ersetzt den bisherigen in iv.archivTitle), ohne den
+// Bestätigungs-Schritt selbst zu verlassen.
+async function regenerateArchivTitle() {
+  if (!interviewId) return;
+  const iv = getInterview(interviewId);
+  if (!iv) return;
+  el('title-confirm-loading').style.display = 'block';
+  el('title-confirm-body').style.display = 'none';
+  try {
+    iv.archivTitle = await generateArchivTitle(iv);
+    saveDB();
+  } catch (err) { /* alter Titel bleibt erhalten */ }
   el('title-confirm-loading').style.display = 'none';
   el('title-confirm-body').style.display = 'block';
   el('title-confirm-input').value = iv.archivTitle || '';
-  el('title-confirm-input').focus();
 }
 
 // Übernimmt den von Hand eingegebenen Titel aus dem Textfeld als endgültig und baut danach
@@ -4838,6 +5088,14 @@ function addManualPublishTag() {
   input.value = '';
 }
 
+// v2.6.1: schaltet den "Jetzt im Archiv veröffentlichen"-Knopf passend zur AGB-Checkbox (siehe
+// #publish-agb-checkbox) - Gate fürs Wunsch des Nutzers ("bitte ganz durchzulesen").
+function togglePublishConfirmEnabled() {
+  const box = el('publish-agb-checkbox');
+  const btn = el('btn-publish-confirm');
+  if (btn) btn.disabled = !(box && box.checked);
+}
+
 async function showPublishConfirmPrompt(iv) {
   const donePanel = el('review-done-block');
   const panel = el('publish-confirm-prompt');
@@ -4847,6 +5105,9 @@ async function showPublishConfirmPrompt(iv) {
   el('publish-confirm-loading').style.display = 'block';
   el('publish-confirm-body').style.display = 'none';
   el('publish-status').textContent = '';
+  const agbBox = el('publish-agb-checkbox');
+  if (agbBox) agbBox.checked = false; // jedes Mal neu bestätigen, kein Merken über Sitzungen hinweg
+  togglePublishConfirmEnabled();
   try {
     const suggestion = await getOrGeneratePublishSuggestion(iv);
     if (!interviewId || interviewId !== iv.id) return; // Person hat inzwischen gewechselt
@@ -4862,8 +5123,11 @@ async function showPublishConfirmPrompt(iv) {
     const project = getProject(iv.projectId);
     const sourceSelect = el('publish-source-type');
     if (sourceSelect) {
+      // v2.6.1: project.name enthält seit der Umbenennung auf ein neutrales "🎭 Testlauf" (siehe
+      // runSimulation) kein "Simulation:"-Präfix mehr - project.isSimulation ist jetzt die
+      // verlässliche Prüfung dafür.
       sourceSelect.value = iv.archivSourceType
-        || ((project && project.name && project.name.startsWith('Simulation:')) ? 'simulation' : 'selbstbericht');
+        || ((project && project.isSimulation) ? 'simulation' : 'selbstbericht');
     }
     renderPublishTagChips();
   } catch (err) {
@@ -5070,16 +5334,18 @@ function renderCombinedStory(combined) {
   storyColEl.innerHTML = html;
 }
 
-// Aktualisiert die Story-Ansicht basierend auf dem aktuellen Projekt (nach jedem Kapitelabschluss,
-// jeder Bearbeitung oder jedem Projekt-/Interview-Wechsel aufrufen).
+// Aktualisiert NUR noch den internen hasStory-Status, der den privaten Export-Dialog steuert (siehe
+// #export-modal, btn-export-summary/-both) – NICHT mehr die rechte Spalte selbst. Bis v2.6.0 schrieb
+// diese Funktion die Kapitel-Zusammenfassung (oder den Platzhaltertext "Noch keine Zusammenfassung
+// vorhanden ...") direkt in #story-col; seit der v2.6.1-Umstellung dieser Spalte auf die
+// Hinweise/Simulations-Anzeige (siehe renderSidebar) hätte das die dortige Anzeige überschrieben –
+// genau der vom Nutzer gemeldete Fehler ("Noch keine Zusammenfassung vorhanden ... das brauche ich
+// ja auch nicht mehr"). Ruft am Ende deshalb renderSidebar() statt renderCombinedStory() auf.
 function refreshStoryView() {
   const projectId = DB.currentProjectId;
   const combined = projectId ? buildCombinedProjectStory(projectId) : null;
-  if (combined) { renderCombinedStory(combined); }
-  else {
-    hasStory = false;
-    storyColEl.innerHTML = '<div class="placeholder">Noch keine Zusammenfassung vorhanden. Führe zuerst ein Interview, dann klicke oben auf „Zusammenfassen“.</div>';
-  }
+  hasStory = !!combined;
+  renderSidebar(interviewId ? getInterview(interviewId) : null);
 }
 
 // --- "Zusammenfassen"-Modal ----------------
@@ -6159,16 +6425,35 @@ on('btn-pause', 'click', pauseInterview);
 on('btn-send', 'click', sendMessage);
 on('input', 'keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 
-on('btn-review-yes', 'click', openReviewCorrectionChat);
-on('btn-review-no', 'click', finalizeReview);
+on('btn-review-open-editor', 'click', openQaEditModal);
+on('qa-edit-list', 'click', (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const idx = parseInt(btn.dataset.idx, 10);
+  if (btn.dataset.action === 'up') moveQaPair(idx, -1);
+  else if (btn.dataset.action === 'down') moveQaPair(idx, 1);
+  else if (btn.dataset.action === 'delete') deleteQaPair(idx);
+});
+on('qa-edit-list', 'input', (e) => {
+  const field = e.target && e.target.dataset ? e.target.dataset.field : null;
+  if (!field || !qaEditPairs) return;
+  const idx = parseInt(e.target.dataset.idx, 10);
+  if (qaEditPairs[idx]) qaEditPairs[idx][field] = e.target.value;
+});
+on('qa-edit-ack-checkbox', 'change', toggleQaEditDoneEnabled);
+on('btn-qa-edit-use-chat', 'click', useCorrectionChatInstead);
+on('btn-qa-edit-close', 'click', () => el('qa-edit-modal').classList.remove('open'));
+on('btn-qa-edit-done', 'click', finishQaEdit);
 on('btn-reorder-accept', 'click', acceptReorder);
 on('btn-reorder-decline', 'click', declineReorder);
 on('btn-review-correction-send', 'click', sendReviewCorrection);
 on('btn-archiv-pdf', 'click', openArchivPdf);
 on('btn-title-confirm', 'click', confirmArchivTitleAndBuildPdf);
+on('btn-title-regenerate', 'click', regenerateArchivTitle);
 on('btn-publish-story', 'click', openPublishFlow);
 on('btn-publish-tag-add', 'click', addManualPublishTag);
 on('publish-tag-input', 'keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addManualPublishTag(); } });
+on('publish-agb-checkbox', 'change', togglePublishConfirmEnabled);
 on('btn-publish-cancel', 'click', cancelPublishFlow);
 on('btn-publish-confirm', 'click', confirmPublish);
 on('btn-publish-regenerate', 'click', regeneratePublishSuggestion);
