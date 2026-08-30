@@ -149,6 +149,34 @@
   .book-chapter:last-child { border-bottom: none; }
   .book-chapter-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
   .book-chapter h3 { font-size: 16px; margin: 0 0 6px; }
+
+  /* v2.7.4, auf Wunsch des Nutzers ("nach Interview starten kommt eine Seite, ähnlich vom Design wie
+     die Startseite ... Fenster für Fenster, animiert ... alles überspringbar außer die AGBs ... letzte
+     Bestätigung öffnet das Chatfenster"): eigene, bildschirmfüllende Einführung VOR dem eigentlichen
+     Chat, ersetzt die früheren periodischen Hinweis-Sprechblasen während des Interviews (siehe
+     startOnboarding/renderOnboardingPanel weiter unten im Skript). Bewusst mit denselben Design-Tokens
+     wie die öffentliche Startseite (--bg/--accent/--panel/--border), damit es sich wie derselbe Auftritt
+     anfühlt, nicht wie eine separate Technik-Oberfläche. */
+  #onboarding-overlay { display: none; position: fixed; inset: 0; z-index: 9996; background: var(--bg); overflow-y: auto; padding: 40px 18px 56px; }
+  #onboarding-overlay.open { display: block; }
+  .onboarding-wrap { max-width: 540px; margin: 0 auto; }
+  .onboarding-skip { text-align: right; margin-bottom: 16px; min-height: 22px; }
+  .onboarding-skip button { background: none; border: none; color: var(--muted); font-size: 13px; cursor: pointer; text-decoration: underline; padding: 4px; font-family: inherit; }
+  .onboarding-skip button:hover { color: var(--ink); background: none; }
+  .onboarding-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 26px; }
+  .onboarding-dots span { width: 7px; height: 7px; border-radius: 999px; background: var(--border); transition: all 0.2s ease; }
+  .onboarding-dots span.active { background: var(--accent); width: 22px; border-radius: 999px; }
+  .onboarding-card { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; padding: 36px 30px; text-align: center; animation: onboarding-pop-in 0.5s cubic-bezier(.2,.8,.3,1); }
+  .onboarding-icon { width: 58px; height: 58px; border-radius: 16px; background: var(--accent-light); display: flex; align-items: center; justify-content: center; font-size: 27px; margin: 0 auto 18px; }
+  .onboarding-card h2 { font-size: 21px; margin: 0 0 14px; }
+  .onboarding-body { font-size: 15.5px; line-height: 1.65; color: var(--ink); text-align: left; }
+  .onboarding-code-box { margin-top: 16px; padding: 13px 14px; background: #fdeceb; border: 2px solid #c0392b; border-radius: 10px; font-size: 19px; font-weight: 800; color: #c0392b; letter-spacing: .02em; word-break: break-all; text-align: center; }
+  .onboarding-agb-box { margin: 16px 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; max-height: 220px; overflow-y: auto; font-size: 12px; line-height: 1.6; color: var(--muted); text-align: left; }
+  .onboarding-agb-checkbox { display: flex; align-items: flex-start; gap: 8px; font-weight: 600; cursor: pointer; text-align: left; margin-top: 6px; font-size: 14px; }
+  .onboarding-agb-checkbox input { margin-top: 3px; }
+  .onboarding-actions { margin-top: 28px; }
+  .onboarding-actions button.primary { width: 100%; padding: 13px 20px; font-size: 15px; border-radius: 12px; }
+  @keyframes onboarding-pop-in { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 </style>
 </head>
 <body>
@@ -192,6 +220,23 @@
     <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#c0392b;">⚠️ Dein Zugangscode – gut aufbewahren</div>
     <div id="access-code-banner-text" style="font-size:17px; font-weight:800; color:#c0392b; letter-spacing:.02em;"></div>
     <div style="font-size:10.5px; color:#c0392b; margin-top:2px; opacity:0.9;">Es gibt keine klassische Registrierung mit Benutzername/Passwort – nur dieser Code lässt sich später nutzen, um deinen Eintrag zu ändern oder zu löschen.</div>
+  </div>
+</div>
+
+<!-- v2.7.4, auf Wunsch des Nutzers ("nach Interview starten kommt eine Seite ... Fenster für Fenster,
+     animiert, die Bedienungsanleitung der Website ... alles kann man überspringen, außer die AGBs ...
+     letzte Bestätigung öffnet das Chatfenster"): bildschirmfüllende Einführung, die sich VOR dem
+     ersten Chat-Fenster zeigt (siehe startOnboarding/renderOnboardingPanel im Skript) - ersetzt die
+     früheren periodischen Hinweis-Sprechblasen im laufenden Interview. #onboarding-panel-content wird
+     bei jedem Schritt komplett neu befüllt (siehe renderOnboardingPanel), nicht mit einzelnen fest
+     verdrahteten Unter-Elementen, damit Inhalt/Buttons pro Schritt flexibel bleiben. -->
+<div id="onboarding-overlay">
+  <div class="onboarding-wrap">
+    <div class="onboarding-skip" id="onboarding-skip-row">
+      <button id="btn-onboarding-skip" type="button">Einführung überspringen →</button>
+    </div>
+    <div class="onboarding-dots" id="onboarding-dots"></div>
+    <div id="onboarding-panel-content"></div>
   </div>
 </div>
 
@@ -615,8 +660,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.7.3';
-const APP_BUILD = '2026-08-30 11:15 UTC';
+const APP_VERSION = '2.7.4';
+const APP_BUILD = '2026-08-30 13:30 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 
@@ -1941,6 +1986,10 @@ function newInterviewRecord(id, projectId) {
     // was beim Interview passiert, sonst wird pausieren schwierig"). Bleibt dauerhaft oben im
     // #access-code-banner sichtbar (siehe updateAccessCodeBanner).
     accessCode: generateAccessCode(),
+    // v2.7.4: der Banner selbst bleibt aber bis zum Start der Einführung (siehe startOnboarding)
+    // ausgeblendet, damit er nicht schon vor dem allerersten Bildschirm aufblitzt - startOnboarding
+    // schaltet ihn als erste Aktion sofort sichtbar (unabhängig davon, ob/wie weit man dort blättert).
+    accessCodeRevealed: false,
     status: 'laufend',   // laufend | pausiert | in_pruefung | abgeschlossen
     phase: 'interview',  // interview | closing | done
     closingQuestionsAsked: 0,
@@ -3901,13 +3950,15 @@ function lastHintIndexDue(fragenBisher) {
   }
   return 0;
 }
-// Prüft, ob GERADE ein periodischer Hinweis auf Bestätigung wartet (siehe HINT_TIMELINE) - solange
-// das der Fall ist, bleibt das Antwortfeld gesperrt (siehe applyHintGate).
+// v2.7.4, auf Wunsch des Nutzers ("dann natürlich keine Hints mehr im Interview"): die periodischen
+// Hinweise (HINT_TIMELINE) blockieren das Interview nicht mehr - derselbe Inhalt läuft jetzt VOR dem
+// ersten Chat-Fenster als eigene Einführung (siehe startOnboarding/ONBOARDING_PANELS weiter unten).
+// hintGateActive() bleibt als stabiler No-Op-Anschlusspunkt bestehen (u. a. von applyHintGate und
+// sendMessage() abgefragt), damit an diesen Stellen nichts geändert werden musste - lastHintIndexDue/
+// hintIndexForKiCount/HINT_TIMELINE selbst werden nicht mehr aufgerufen, bleiben aber als Textquelle
+// für die Einführungs-Inhalte bestehen (siehe ONBOARDING_PANELS).
 function hintGateActive(iv) {
-  if (!iv) return false;
-  const fragenBisher = getHistory(iv.id).filter(m => m.role === 'ki').length;
-  const idx = lastHintIndexDue(fragenBisher);
-  return idx > 0 && idx <= HINT_TIMELINE.length && idx > (iv.hintsShown || 0);
+  return false;
 }
 
 // Bestätigt den GERADE fälligen periodischen Hinweis (index = die wie-vielte Schwelle, 1-basiert) -
@@ -3935,6 +3986,170 @@ function acknowledgeFinalHint() {
   saveDB();
   renderMessages(getHistory(iv.id), iv);
   maybeShowReviewPrompt(iv);
+}
+
+// --- EINFÜHRUNG VOR DEM INTERVIEW (v2.7.4) --------------------------------------------------------
+// Auf Wunsch des Nutzers: "Nach Interview starten kommt eine Seite, ähnlich vom Design wie die
+// Startseite. Die Seite animiert in unterschiedlichen Fenstern die Bedienungsanleitung der Website.
+// Fenster eins ploppt elegant rein mit animierter Schrift. Wir verzichten auf eine klassische
+// Registrierung, du bekommst von uns einen einmaligen Wort-Code, der wird dann auch generiert. Dann
+// bestätigen, nächster Hint, etc., bis zum Interview. Alles kann man auch überspringen, außer die
+// AGBs. Dann natürlich keine Hints mehr im Interview. Letzte Bestätigung öffnet das Chatfenster. Diese
+// Anfangs-Hints müssen schon groß sein und auch nett gestaltet." Ersetzt die früheren periodischen
+// Hinweis-Sprechblasen WÄHREND des Interviews (siehe hintGateActive/renderMessages) - derselbe Inhalt
+// (Pause-Hinweis, Interview-Richtung, Name/anonym, öffentliches Archiv) läuft jetzt hier vorneweg,
+// Fenster für Fenster, bevor der Chat überhaupt sichtbar wird.
+//
+// WICHTIG FÜR JONAS: ONBOARDING_START_AGB_HTML unten ist ein von Claude verfasster Kurztext (keine
+// geprüfte Rechtsberatung) für den Einstieg - bewusst KÜRZER und ANDERS als die ausführlichen AGBs
+// beim Veröffentlichen (siehe publish-confirm-prompt), weil es hier um etwas anderes geht: die
+// Teilnahme am Interview selbst (Datenspeicherung, Freiwilligkeit, noch nichts ist öffentlich), nicht
+// um die spätere, separate Entscheidung, die fertige Geschichte zu veröffentlichen. Bitte vor dem
+// echten Launch fachlich/rechtlich prüfen (lassen) und den Kontakt-Platzhalter ersetzen.
+const ONBOARDING_START_AGB_HTML =
+  '<p style="margin:0 0 10px;"><strong>1. Worum es hier geht.</strong> Eine KI führt mit dir ein Interview zu deiner Geschichte. Deine Antworten werden gespeichert, damit du das Interview jederzeit unterbrechen und später fortsetzen kannst.</p>' +
+  '<p style="margin:0 0 10px;"><strong>2. Freiwillig, jederzeit änderbar.</strong> Die Teilnahme ist freiwillig. Du kannst jederzeit pausieren, und am Ende noch einmal alles durchlesen, ändern oder Fragen löschen, bevor irgendetwas passiert.</p>' +
+  '<p style="margin:0 0 10px;"><strong>3. Noch nichts ist öffentlich.</strong> Solange du nicht ausdrücklich veröffentlichst, ist deine Geschichte nur über deinen Zugangscode erreichbar. Für die Veröffentlichung selbst gibt es am Ende einen eigenen, separaten Bestätigungsschritt mit eigenen, ausführlichen Bedingungen.</p>' +
+  '<p style="margin:0 0 10px;"><strong>4. Kein Passwort, sondern ein Code.</strong> Es gibt keine klassische Registrierung. Dein Zugangscode (siehe voriger Schritt) ist der einzige Weg, dein Interview später wiederzufinden, zu bearbeiten oder zu löschen - geht er verloren, kann er derzeit nicht wiederhergestellt werden.</p>' +
+  '<p style="margin:0;"><strong>5. Kontakt.</strong> Bei Fragen kannst du dich jederzeit an [Kontakt-E-Mail] wenden.</p>';
+
+// v2.7.4: jeder Eintrag = ein Bildschirm der Einführung. "body(iv)" liefert den Inhalt (darf HTML
+// enthalten, siehe Hinweis bei buildHintBubble weiter oben - ausschließlich fest hinterlegte, selbst
+// geschriebene Texte, nie Nutzer-/KI-Eingaben). Der letzte Eintrag (isAgb:true) ist NICHT überspringbar
+// (siehe onboardingSkipToEnd) und bekommt statt "Weiter" eine Checkbox + "Interview starten".
+const ONBOARDING_PANELS = [
+  { icon: '👋', title: 'Kurz bevor es losgeht', body: () =>
+    'Ein paar Dinge, die du wissen solltest – das dauert nur eine Minute, danach kann es direkt losgehen.' },
+  { icon: '🔑', title: 'Keine Registrierung nötig', body: (iv) =>
+    'Wir verzichten bewusst auf eine klassische Registrierung mit Benutzername und Passwort.<br><br>' +
+    'Stattdessen bekommst du von uns einen <strong>einmaligen Wort-Code</strong> – ab jetzt ist er deiner:' +
+    `<div class="onboarding-code-box">${escapeHtml(iv.accessCode)}</div>` +
+    'Nur damit lässt sich dein Interview später wiederfinden, ändern oder löschen. Bewahre ihn gut auf ' +
+    '(z. B. Screenshot machen oder aufschreiben) – er bleibt während des gesamten Interviews oben rot sichtbar.' },
+  { icon: '⏸️', title: 'Jederzeit pausieren', body: () => START_HINT },
+  { icon: '🧭', title: 'Du bestimmst die Richtung', body: () => HINT_POOL[0] },
+  { icon: '📝', title: 'Name oder anonym', body: () => HINT_POOL[1] },
+  { icon: '📖', title: 'Öffentliches Archiv', body: () =>
+    'Das Archiv ist öffentlich einsehbar – jeder kann veröffentlichte Geschichten lesen. Am Schluss kannst ' +
+    'du aber noch einmal alles ändern – Reihenfolge, Fragen und Inhalte – bevor irgendetwas veröffentlicht wird.' },
+  { icon: '📜', title: 'Kurz zu den Nutzungsbedingungen', isAgb: true, body: () => ONBOARDING_START_AGB_HTML },
+];
+
+let onboardingStep = 0;
+let onboardingIv = null;
+let onboardingOnComplete = null;
+
+// Startet die Einführung für ein frisch angelegtes Interview (echt oder Simulation) - "onComplete"
+// wird nach der letzten Bestätigung (AGB-Checkbox + "Interview starten") aufgerufen und übernimmt ab
+// dann den eigentlichen Interview-Start (siehe startNewInterview/runSimulation). Der Zugangscode wird
+// unabhängig davon, ob die Person bis zu diesem Schritt blättert oder gleich überspringt, SOFORT hier
+// dauerhaft sichtbar geschaltet (siehe updateAccessCodeBanner) - der rote Banner oben soll ab
+// Interview-Start immer da sein, ganz unabhängig davon, welchen Einführungs-Bildschirm man gerade sieht.
+function startOnboarding(iv, onComplete) {
+  onboardingStep = 0;
+  onboardingIv = iv;
+  onboardingOnComplete = onComplete;
+  iv.accessCodeRevealed = true;
+  saveDB();
+  updateAccessCodeBanner(iv);
+  el('onboarding-overlay').classList.add('open');
+  renderOnboardingPanel();
+}
+
+function renderOnboardingDots() {
+  const dots = el('onboarding-dots');
+  dots.innerHTML = '';
+  ONBOARDING_PANELS.forEach((_, i) => {
+    const span = document.createElement('span');
+    if (i === onboardingStep) span.className = 'active';
+    dots.appendChild(span);
+  });
+}
+
+function renderOnboardingPanel() {
+  const panel = ONBOARDING_PANELS[onboardingStep];
+  const isLast = onboardingStep === ONBOARDING_PANELS.length - 1;
+  el('onboarding-skip-row').style.display = isLast ? 'none' : 'block';
+  renderOnboardingDots();
+  const container = el('onboarding-panel-content');
+  container.innerHTML = '';
+  // Neues Element statt nur innerHTML-Austausch im BESTEHENDEN Knoten, damit die CSS-Animation
+  // (.onboarding-card, siehe <style>) bei jedem Schritt zuverlässig neu von vorne abspielt - ein
+  // wiederverwendeter Knoten mit unveränderter Klasse würde die Animation kein zweites Mal auslösen.
+  const card = document.createElement('div');
+  card.className = 'onboarding-card';
+  const iconBadge = document.createElement('div');
+  iconBadge.className = 'onboarding-icon';
+  iconBadge.textContent = panel.icon;
+  card.appendChild(iconBadge);
+  const h2 = document.createElement('h2');
+  h2.textContent = panel.title;
+  card.appendChild(h2);
+  const body = document.createElement('div');
+  body.className = 'onboarding-body';
+  body.innerHTML = panel.body(onboardingIv);
+  card.appendChild(body);
+
+  const actions = document.createElement('div');
+  actions.className = 'onboarding-actions';
+  if (panel.isAgb) {
+    const label = document.createElement('label');
+    label.className = 'onboarding-agb-checkbox';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = 'onboarding-agb-checkbox';
+    label.appendChild(checkbox);
+    const span = document.createElement('span');
+    span.textContent = 'Ich habe das gelesen und verstanden.';
+    label.appendChild(span);
+    actions.appendChild(label);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'primary';
+    btn.textContent = 'Interview starten';
+    btn.disabled = true;
+    btn.style.marginTop = '14px';
+    checkbox.addEventListener('change', () => { btn.disabled = !checkbox.checked; });
+    btn.addEventListener('click', () => finishOnboarding());
+    actions.appendChild(btn);
+  } else {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'primary';
+    btn.textContent = 'Weiter';
+    btn.addEventListener('click', () => onboardingNext());
+    actions.appendChild(btn);
+  }
+  card.appendChild(actions);
+  container.appendChild(card);
+}
+
+function onboardingNext() {
+  if (onboardingStep < ONBOARDING_PANELS.length - 1) {
+    onboardingStep++;
+    renderOnboardingPanel();
+  }
+}
+
+// "Einführung überspringen" springt direkt zum letzten (AGB-)Schritt - der bleibt als einziger
+// Pflicht-Schritt bestehen (siehe ONBOARDING_PANELS, panel.isAgb), alle anderen sind rein informativ
+// und dürfen übersprungen werden.
+function onboardingSkipToEnd() {
+  onboardingStep = ONBOARDING_PANELS.length - 1;
+  renderOnboardingPanel();
+}
+
+function finishOnboarding() {
+  el('onboarding-overlay').classList.remove('open');
+  const cb = onboardingOnComplete;
+  onboardingOnComplete = null;
+  if (cb) cb();
+}
+
+// await-fähige Variante von startOnboarding() für Stellen, die selbst schon eine async-Funktion mit
+// sequenziellem await sind (siehe runSimulation) - funktional identisch, nur als Promise statt Callback.
+function runOnboardingAsync(iv) {
+  return new Promise((resolve) => { startOnboarding(iv, resolve); });
 }
 
 // Sperrt/entsperrt das Antwortfeld passend zum aktuellen Hinweis-Status (siehe hintGateActive) -
@@ -4033,15 +4248,9 @@ function renderMessages(messages, iv) {
         messagesEl.appendChild(buildSimulationHintBubble());
       }
     }
-    // PERIODISCHE HINWEISE (v2.6.3, siehe HINT_TIMELINE/hintIndexForKiCount oben): direkt nach der
-    // jeweils fälligen Interviewer-Frage, mit "OK, verstanden"-Knopf, solange noch unbestätigt.
-    if (m.role === 'ki' && iv) {
-      const hIdx = hintIndexForKiCount(kiCount);
-      if (hIdx !== null && hIdx <= HINT_TIMELINE.length) {
-        const pending = hIdx > (iv.hintsShown || 0);
-        messagesEl.appendChild(buildHintBubble(escapeHtml(HINT_TIMELINE[hIdx - 1]), { pending, onConfirm: () => acknowledgeHint(hIdx) }));
-      }
-    }
+    // v2.7.4: die früheren periodischen Hinweis-Sprechblasen HIER im laufenden Chat (HINT_TIMELINE,
+    // je einer bei Frage 1/4/8) sind auf Wunsch des Nutzers entfallen - derselbe Inhalt läuft jetzt VOR
+    // dem ersten Chat-Fenster als eigene Einführung (siehe startOnboarding/ONBOARDING_PANELS).
   }
   // ABSCHLUSS-HINWEIS (siehe FINAL_HINT_HTML/acknowledgeFinalHint oben): erscheint einmalig am Ende
   // des Chats, sobald das Interview zur Überprüfung ansteht, und blockiert dort das Öffnen von
@@ -4318,14 +4527,12 @@ function updateStatusLine(iv) {
 // HTML weiter oben) - läuft über updateStatusLine() bei jedem "dieses Interview ist jetzt aktiv"-
 // Zeitpunkt mit, und wird explizit mit null aufgerufen, wenn kein Interview mehr ausgewählt ist
 // (siehe deleteInterview/switchToProject).
-// v2.7.2, auf Wunsch des Nutzers ("KI denkt nach ... wenn fertig kommt die Story automatisch auf den
-// Screen, KI denkt dann nicht mehr, dann der Button zum Interview, dann der Zugangscode"): der Code
-// selbst wird weiterhin als ALLERERSTES beim Anlegen des Interviews erzeugt (unverändert, siehe
-// newInterviewRecord/generateAccessCode) - nur die BANNER-ANZEIGE kann jetzt bewusst zurückgehalten
-// werden (iv.accessCodeRevealed === false), damit der Zugangscode bei einer Simulation erst nach dem
-// "▶ Weiter zum Interview"-Klick eingeblendet wird, statt gleichzeitig mit Spinner/Story auf einen
-// Schlag zu erscheinen. Fehlt das Feld (normale, echte Interviews), gilt weiterhin die alte Regel:
-// sofort sichtbar, sobald ein accessCode existiert.
+// v2.7.2/v2.7.4: der Code selbst wird weiterhin als ALLERERSTES beim Anlegen des Interviews erzeugt
+// (unverändert, siehe newInterviewRecord/generateAccessCode) - nur die BANNER-ANZEIGE wird bewusst
+// zurückgehalten (iv.accessCodeRevealed startet als false, siehe newInterviewRecord), bis die
+// Einführung (siehe startOnboarding) läuft. Das gilt jetzt einheitlich für echte Interviews UND
+// Simulationen. Ältere, bereits laufende Interviews ohne dieses Feld (undefined) zeigen den Banner
+// weiterhin sofort - die neue Einführung greift nur bei frisch gestarteten Interviews.
 function updateAccessCodeBanner(iv) {
   const banner = el('access-code-banner');
   if (!banner) return;
@@ -4658,10 +4865,23 @@ async function startNewInterview() {
     if (el('title-confirm-prompt')) el('title-confirm-prompt').style.display = 'none';
     if (el('publish-confirm-prompt')) el('publish-confirm-prompt').style.display = 'none';
 
-    await requestAndHandleReply(iv);
+    // v2.7.4, auf Wunsch des Nutzers ("nach Interview starten kommt eine Seite ... letzte Bestätigung
+    // öffnet das Chatfenster"): statt sofort die erste Frage zu holen, zeigt sich zuerst die
+    // bildschirmfüllende Einführung (siehe startOnboarding) - die eigentliche erste Frage kommt erst
+    // danach, als onComplete-Callback.
+    setBusy(false); // Einführung ist kein Warten auf die KI, siehe Kommentar in waitForSimulationStep
+    startOnboarding(iv, async () => {
+      setBusy(true);
+      try {
+        await requestAndHandleReply(iv);
+      } catch (err) {
+        alert('Fehler beim Starten: ' + err.message);
+      } finally { setBusy(false); }
+    });
   } catch (err) {
     alert('Fehler beim Starten: ' + err.message);
-  } finally { setBusy(false); }
+    setBusy(false);
+  }
 }
 
 // ============================================================================================
@@ -4991,13 +5211,10 @@ async function runSimulation(genreDescription, mode) {
     updateProjectDisplay();
     const iv = newInterviewRecord(nextId(), projectId);
     iv.simulationStory = story;
-    // v2.7.2, auf Wunsch des Nutzers ("ki denkt nach ... wenn fertig kommt die Story automatisch auf
-    // den Screen, KI denkt dann nicht mehr, dann der Button zum Interview, dann der Zugangscode"):
-    // der Code selbst existiert unverändert ab der allerersten Sekunde (siehe newInterviewRecord),
-    // der rote Banner wird für Simulationen aber bewusst erst NACH dem "▶ Weiter zum Interview"-Klick
-    // eingeblendet (siehe updateAccessCodeBanner, und die neue 'begin'-Pause weiter unten) - echte
-    // Interviews sind davon nicht betroffen (dort bleibt accessCodeRevealed unbesetzt = sofort sichtbar).
-    iv.accessCodeRevealed = false;
+    // v2.7.2/v2.7.4: der Code selbst existiert unverändert ab der allerersten Sekunde (siehe
+    // newInterviewRecord), der rote Banner bleibt aber erstmal ausgeblendet (accessCodeRevealed:
+    // false, siehe newInterviewRecord) - für Simulationen UND echte Interviews gleichermaßen wird er
+    // erst mit startOnboarding() sichtbar geschaltet (siehe runOnboardingAsync weiter unten).
     DB.interviews.push(iv); saveDB();
     interviewId = iv.id;
     hasStory = false;
@@ -5019,8 +5236,8 @@ async function runSimulation(genreDescription, mode) {
     // Frage - anders als 2.6.2 aber ohne Modal-Zwang: die geheime Story öffnet sich automatisch zum
     // Lesen (openSimulationStoryModal), bleibt über "📖 Simulation lesen" weiterhin jederzeit
     // erreichbar, und erst der Klick auf "▶ Zum Interview" (neuer Pause-Typ 'begin', siehe
-    // waitForSimulationStep) startet die eigentliche Fragengenerierung. Der rote Zugangscode-Banner
-    // erscheint bewusst erst in diesem Moment, nicht schon beim bloßen Anlegen des Interviews.
+    // waitForSimulationStep) führt weiter zur Einführung (siehe runOnboardingAsync weiter unten) und
+    // danach erst zur eigentlichen Fragengenerierung.
     showSimulationReadStoryButton(story);
     openSimulationStoryModal(story);
     setSimulationStatus('🎭 Story fertig – lies sie dir in Ruhe durch und klicke „▶ Zum Interview" ...', true);
@@ -5030,9 +5247,17 @@ async function runSimulation(genreDescription, mode) {
       return;
     }
     closeSimulationStoryModal(); // falls noch offen - Chat soll ab jetzt wieder frei sichtbar sein
-    iv.accessCodeRevealed = true;
-    saveDB();
-    updateAccessCodeBanner(iv);
+
+    // v2.7.4, auf Wunsch des Nutzers ("nach Interview starten kommt eine Seite ... letzte Bestätigung
+    // öffnet das Chatfenster"): dieselbe Einführung wie bei einem echten Interview (siehe
+    // startNewInterview/startOnboarding) - eine Simulation soll schließlich genau das zeigen, was ein
+    // echter Interviewpartner auch sieht. Setzt u. a. iv.accessCodeRevealed selbst (siehe dort).
+    setSimulationStatus('🎭 Story gelesen – Einführung wird gezeigt ...', true);
+    await runOnboardingAsync(iv);
+    if (simulationAbortRequested) {
+      setSimulationStatus('🎭 Simulation von dir gestoppt. Das bisherige Interview bleibt erhalten.', false);
+      return;
+    }
 
     setBusy(true);
     setSimulationStatus('🎭 Simulation läuft – Eröffnungsfrage wird generiert ...', true);
@@ -7076,10 +7301,15 @@ on('btn-sim-bar-stop', 'click', () => {
   // Falls die Simulation gerade pausiert (siehe waitForSimulationStep) auf ein Ergebnis wartet,
   // würde sie sonst für immer hängen bleiben – das Promise muss auch beim Stoppen aufgelöst werden.
   if (simulationPaused) resolveSimulationStep('abort');
+  // v2.7.4: dieselbe Absicherung für die neue Einführung (siehe runOnboardingAsync) - die ist KEINE
+  // waitForSimulationStep()-Pause (läuft auch außerhalb von Simulationen), bräuchte sonst ebenfalls
+  // ewig auf einen Klick, den es beim Stoppen nie geben wird.
+  if (el('onboarding-overlay').classList.contains('open')) finishOnboarding();
 });
 on('btn-sim-bar-close', 'click', () => { el('simulation-status-bar').style.display = 'none'; hideSimulationReadStoryButton(); });
 on('btn-sim-bar-read-story', 'click', () => openSimulationStoryModal(currentSimulationStoryForModal));
 on('btn-sim-story-continue', 'click', closeSimulationStoryModal);
+on('btn-onboarding-skip', 'click', onboardingSkipToEnd);
 on('btn-sim-bar-continue', 'click', () => {
   if (!simulationPaused || !simulationStepResolver) return;
   // v2.4.2/v2.6.2/v2.6.3: kein Automatik-Shortcut für den Reihenfolge-, Abschluss- ODER
