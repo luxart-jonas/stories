@@ -327,14 +327,22 @@
            es ins Archiv. Als schön gestaltetes PDF ... nimm hierzu den Originaltext ... generiere
            auch einen Titel"). Erscheint anstelle der Ja/Nein-Buttons, sobald der Status
            "abgeschlossen" ist (siehe maybeShowReviewPrompt) – sowohl direkt nach dem Absegnen als
-           auch beim späteren erneuten Öffnen eines bereits abgeschlossenen Interviews. -->
+           auch beim späteren erneuten Öffnen eines bereits abgeschlossenen Interviews.
+           v2.7.6, auf Wunsch des Nutzers ("ganz am Schluss sollte stehen Vorschau und
+           Veröffentlichung ... hier muss auch ein großer Veröffentlichung-Button sein ... hashtags
+           werden automatisch generiert, bitte keine Abfrage mehr, die AGBs haben wir ja schon am
+           Anfang"): nur noch genau zwei Aktionen - "Vorschau" (unverändert das schön gestaltete,
+           herunterladbare Layout, siehe openArchivPdf/buildAndOpenArchivPdf) und ein großer,
+           prominenter "Veröffentlichen"-Button (siehe openPublishFlow/publishDirectly weiter unten),
+           der jetzt direkt veröffentlicht - Kategorie/Hashtags kommen automatisch von der KI
+           (unverändert dieselbe Vorschlags-Logik wie vorher, nur ohne Zwischenschritt zum
+           Nachbearbeiten), die frühere separate AGB-Checkbox entfällt (siehe ONBOARDING_START_AGB_HTML,
+           bereits ganz am Anfang des Interviews bestätigt). -->
       <div id="review-done-block" style="display:none;">
-        <div style="margin-bottom:10px; font-size:13.5px;">🎉 Danke, diese Geschichte ist jetzt abgeschlossen. Du kannst sie dir als schön gestaltetes PDF fürs Archiv erstellen lassen – auf Basis des Originaltexts, mit automatisch generiertem Titel.</div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button id="btn-archiv-pdf" type="button" class="primary">📄 Archiv-PDF erstellen</button>
-          <!-- v2.5.0: getrennt vom privaten PDF-Export - schickt die Geschichte NUR nach explizitem
-               Klick + Kategorie/Hashtag-Bestätigung ins öffentliche Web-Archiv (siehe openPublishFlow). -->
-          <button id="btn-publish-story" type="button">🌐 Im Archiv veröffentlichen</button>
+        <div style="margin-bottom:10px; font-size:13.5px;">🎉 Danke, diese Geschichte ist jetzt abgeschlossen.</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <button id="btn-archiv-pdf" type="button">👁️ Vorschau</button>
+          <button id="btn-publish-story" type="button" class="primary" style="font-size:15px; padding:11px 22px;">🌐 Jetzt im Archiv veröffentlichen</button>
         </div>
         <div class="hint" id="archiv-pdf-status" style="margin-top:8px;"></div>
         <div class="hint" id="publish-already-status" style="margin-top:4px;"></div>
@@ -660,8 +668,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.7.5';
-const APP_BUILD = '2026-08-30 14:45 UTC';
+const APP_VERSION = '2.7.6';
+const APP_BUILD = '2026-08-30 16:00 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 
@@ -4269,12 +4277,10 @@ function renderMessages(messages, iv) {
     // je einer bei Frage 1/4/8) sind auf Wunsch des Nutzers entfallen - derselbe Inhalt läuft jetzt VOR
     // dem ersten Chat-Fenster als eigene Einführung (siehe startOnboarding/ONBOARDING_PANELS).
   }
-  // ABSCHLUSS-HINWEIS (siehe FINAL_HINT_HTML/acknowledgeFinalHint oben): erscheint einmalig am Ende
-  // des Chats, sobald das Interview zur Überprüfung ansteht, und blockiert dort das Öffnen von
-  // "📖 Interview durchlesen & bearbeiten" (siehe maybeShowReviewPrompt), bis er bestätigt wurde.
-  if (iv && (iv.status === 'in_pruefung' || iv.status === 'abgeschlossen')) {
-    messagesEl.appendChild(buildHintBubble(FINAL_HINT_HTML, { pending: !iv.finalHintAcked, onConfirm: acknowledgeFinalHint }));
-  }
+  // v2.7.6, auf Wunsch des Nutzers ("keinen Hint mehr"): der frühere Abschluss-Hinweis (FINAL_HINT_HTML,
+  // erschien einmalig am Ende des Chats vor der Überprüfung) entfällt - sein Inhalt (Zugangscode,
+  // Änderbarkeit, öffentliches Archiv) steht ohnehin schon in der Einführung ganz am Anfang (siehe
+  // ONBOARDING_PANELS/startOnboarding).
   messagesEl.scrollTop = messagesEl.scrollHeight;
   applyHintGate(iv);
 }
@@ -4749,11 +4755,19 @@ function maybeShowReviewPrompt(iv) {
       // Behelfslösung über die veröffentlichte Story-ID - der Code existiert ohnehin schon seit
       // Interview-Beginn und steht bereits dauerhaft oben im #access-code-banner, diese Box hier
       // bestätigt zusätzlich noch einmal genau in dem Moment, in dem er wirklich gebraucht wird.
+      // v2.7.6, auf Wunsch des Nutzers ("dann veröffentlichen und einen button im archiv
+      // anschauen"): zusätzlich ein Link zur soeben veröffentlichten Geschichte im öffentlichen
+      // Archiv - selber Deep-Link-Mechanismus wie in archiv/index.html (location.hash = '#story-'+id,
+      // dort automatisch per openDetail() geöffnet). Relativer Pfad, weil /interview/ und /archiv/
+      // Geschwister-Ordner auf GitHub Pages sind.
       publishStatus.innerHTML = iv.publishedStoryId
         ? `🌐 Im öffentlichen Archiv veröffentlicht.
            <div style="margin-top:8px; padding:10px 12px; background:#fdeceb; border:2px solid #c0392b; border-radius:8px;">
              <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#c0392b; margin-bottom:4px;">⚠️ Dein Zugangscode – gut aufbewahren!</div>
              <div style="font-size:19px; font-weight:800; color:#c0392b; letter-spacing:.02em; word-break:break-all;">${escapeHtml(iv.accessCode || '')}</div>
+           </div>
+           <div style="margin-top:10px;">
+             <a href="../archiv/index.html#story-${encodeURIComponent(iv.publishedStoryId)}" target="_blank" rel="noopener" style="display:inline-block; text-decoration:none; font-family:inherit; font-size:12.5px; padding:7px 12px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--ink);">🔍 Im Archiv anschauen</a>
            </div>`
         : '';
     }
@@ -5685,8 +5699,10 @@ async function openArchivPdf() {
 // Interviews ... go for it"): Startet die Veröffentlichung im öffentlichen Web-Archiv, komplett
 // unabhängig vom privaten PDF-Export. Braucht ebenfalls zuerst einen bestätigten Titel (Titel ist
 // Pflichtfeld der stories-Tabelle) – ist der noch nicht bestätigt, läuft zuerst derselbe
-// Titel-Dialog wie beim PDF-Export, biegt danach aber zur Kategorie/Hashtag-Bestätigung ab statt
-// direkt das PDF zu bauen.
+// Titel-Dialog wie beim PDF-Export. v2.7.6, auf Wunsch des Nutzers ("hashtags werden automatisch
+// generiert, bitte keine Abfrage mehr, die AGBs haben wir ja schon am Anfang"): biegt danach NICHT
+// mehr zur Kategorie/Hashtag/AGB-Bestätigung ab (siehe showPublishConfirmPrompt, nicht mehr
+// aufgerufen), sondern veröffentlicht direkt (siehe publishDirectly).
 async function openPublishFlow() {
   if (!interviewId) return;
   const iv = getInterview(interviewId);
@@ -5697,7 +5713,7 @@ async function openPublishFlow() {
     await showTitleConfirmPrompt(iv);
     return;
   }
-  await showPublishConfirmPrompt(iv);
+  await publishDirectly(iv);
 }
 
 // v2.6.1, auf Wunsch des Nutzers ("Wie willst du deinen Text nennen? ... Hier macht die KI einen
@@ -5763,7 +5779,9 @@ async function confirmArchivTitleAndBuildPdf() {
   saveDB();
   el('title-confirm-prompt').style.display = 'none';
   if (titleConfirmPurpose === 'publish') {
-    await showPublishConfirmPrompt(iv);
+    // v2.7.6: direkt veröffentlichen statt zur (jetzt entfallenen) Kategorie/Hashtag/AGB-Abfrage
+    // abzubiegen - siehe publishDirectly.
+    await publishDirectly(iv);
     return;
   }
   await buildAndOpenArchivPdf(iv);
@@ -5910,6 +5928,63 @@ function togglePublishConfirmEnabled() {
   const box = el('publish-agb-checkbox');
   const btn = el('btn-publish-confirm');
   if (btn) btn.disabled = !(box && box.checked);
+}
+
+// v2.7.6, auf Wunsch des Nutzers ("hash tags werden einfach autonamtisch generiert. bitte keine
+// abfrage mehr. dann veröffentlichen"): ersetzt den alten zweistufigen Weg (Kategorie/Hashtags/
+// Quellentyp/AGB-Häkchen erst vorschlagen, dann von Hand bestätigen über showPublishConfirmPrompt/
+// confirmPublish) durch einen einzigen Klick - Kategorie und Hashtags kommen automatisch von der KI
+// (getOrGeneratePublishSuggestion, dieselbe Logik wie vorher), der Quellentyp automatisch aus
+// project.isSimulation, und die AGBs wurden bereits ganz am Anfang des Interviews in der Einführung
+// bestätigt (siehe ONBOARDING_START_AGB_HTML/startOnboarding), müssen hier also nicht noch einmal
+// abgefragt werden. showPublishConfirmPrompt/confirmPublish bleiben unverändert im Code stehen,
+// werden aber nicht mehr aufgerufen.
+async function publishDirectly(iv) {
+  if (!interviewId || interviewId !== iv.id) return;
+  const btn = el('btn-publish-story');
+  const statusLine = el('publish-already-status');
+  if (btn) btn.disabled = true;
+  if (statusLine) statusLine.textContent = 'Wird veröffentlicht …';
+  try {
+    const suggestion = await getOrGeneratePublishSuggestion(iv);
+    const project = getProject(iv.projectId);
+    const sourceType = iv.archivSourceType
+      || ((project && project.isSimulation) ? 'simulation' : 'selbstbericht');
+    const allPairs = buildRedactionPairs(getHistory(iv.id));
+    const orderedIds = resolveArchivPairOrder(iv, allPairs);
+    const pairs = orderedIds
+      .map(id => allPairs.find(p => p.id === id))
+      .filter(Boolean)
+      .map(p => ({ question: p.question, answer: p.answer }));
+    const res = await fetch(SUPABASE_URL + '/functions/v1/publish-story', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        title: iv.archivTitle,
+        category_id: suggestion.category_id,
+        source_type: sourceType,
+        narrated_at: (iv.created_at || '').slice(0, 10) || null,
+        qa_pairs: pairs,
+        tags: suggestion.tags,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Fehler ${res.status}`);
+    iv.archivCategoryId = suggestion.category_id;
+    iv.archivTags = suggestion.tags;
+    iv.archivSourceType = sourceType;
+    iv.publishedStoryId = data.id;
+    iv.publishedAt = new Date().toISOString();
+    saveDB();
+    maybeShowReviewPrompt(iv); // baut #review-done-block neu auf, inkl. "Im Archiv anschauen"-Link
+  } catch (err) {
+    if (statusLine) statusLine.textContent = 'Fehler beim Veröffentlichen: ' + err.message;
+    if (btn) btn.disabled = false;
+  }
 }
 
 async function showPublishConfirmPrompt(iv) {
