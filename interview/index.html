@@ -615,8 +615,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.7.2';
-const APP_BUILD = '2026-08-30 10:00 UTC';
+const APP_VERSION = '2.7.3';
+const APP_BUILD = '2026-08-30 11:15 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 
@@ -4881,6 +4881,17 @@ function waitForSimulationStep(kind, iv) {
   simulationPaused = true;
   simulationPauseKind = kind;
   simulationPausedIv = iv;
+  // v2.7.2, WICHTIGER BUGFIX (auf Wunsch des Nutzers gemeldet: "kommt die erste Frage und Hint, und
+  // dann geht es gar nicht mehr weiter"): JEDE Pause hier bedeutet per Definition "die App wartet auf
+  // dich", nie "die KI denkt gerade nach" - busy muss deshalb IMMER aus sein, sobald pausiert wird.
+  // Vorher blieb busy in bestimmten Fällen (v. a. beim automatischen Durchlauf, der busy sonst
+  // durchgängig hält) während einer Pause fälschlich an, und der seit v2.7.2 groß und zentriert über
+  // dem ganzen Bildschirm liegende "KI denkt nach"-Kasten (siehe .spinner.sim-big) hat dann buchstäblich
+  // über den Buttons gelegen, die eigentlich geklickt werden mussten (z. B. "OK, verstanden" beim
+  // Hinweis) - die App wirkte dadurch komplett eingefroren, obwohl sie nur auf einen inzwischen
+  // unsichtbaren Klick wartete. setBusy(true) wird an den jeweiligen Stellen NACH dem Auflösen der
+  // Pause wieder gesetzt, bevor der nächste echte KI-Aufruf läuft.
+  setBusy(false);
   // v2.4.2, auf Wunsch des Nutzers ("ich möchte aber manuell ändern und sage ob ich zufrieden mit
   // der neuen anordnung bin"): Für den Reihenfolge-Schritt gibt es BEWUSST keinen "▶ Weiter"-
   // Automatik-Shortcut in der Statusleiste – die Person muss den Vorschlag oben im Chat wirklich
@@ -4928,10 +4939,16 @@ function hideSimulationContinueButton() {
 // gedrückt habe."): pausiert die Simulationsschleife genau wie bei 'reorder'/'review', solange ein
 // periodischer Hinweis im Chat auf Bestätigung wartet (siehe hintGateActive) - wird nach JEDER
 // requestAndHandleReply()-Antwort geprüft, egal ob im automatischen oder manuellen Modus.
-async function pauseForHintIfNeeded(iv) {
+// v2.7.2: "isManualMode" NEU - seit waitForSimulationStep() bei JEDER Pause busy zuverlässig ausschaltet
+// (siehe dortiger Bugfix-Kommentar), muss es hier nach einer tatsächlichen Hinweis-Pause für den
+// automatischen Durchlauf explizit wiederhergestellt werden - der läuft sonst ohne den großen
+// "KI denkt nach"-Hinweis weiter, obwohl er wieder mit KI-Aufrufen beschäftigt ist. Der manuelle Modus
+// regelt busy ohnehin selbst an jeder Stelle, braucht diese Wiederherstellung also nicht.
+async function pauseForHintIfNeeded(iv, isManualMode) {
   if (!hintGateActive(iv)) return;
   setSimulationStatus('🎭 Pausiert: Bitte lies den Hinweis oben im Chat und bestätige mit „OK, verstanden" ...', true);
   await waitForSimulationStep('hint', iv);
+  if (!isManualMode && !simulationAbortRequested) setBusy(true);
 }
 
 async function runSimulation(genreDescription, mode) {
@@ -4995,46 +5012,40 @@ async function runSimulation(genreDescription, mode) {
     if (el('publish-confirm-prompt')) el('publish-confirm-prompt').style.display = 'none';
 
     // v2.6.2 hatte hier eine PFLICHT-Pause ("Geschichte erst lesen, dann los" - erst nach Klick auf
-    // "Weiter zum Interview" ging es weiter, siehe waitForSimulationStep('story', ...)). v2.7.0, auf
-    // erneuten Wunsch des Nutzers ("wenn fertig kommt die Story, ohne dass ich Simulation lesen
-    // klicken muss"): diese Pflicht-Pause entfällt - sobald die geheime Story fertig ist, geht es
-    // automatisch mit der ersten Frage weiter. Der Knopf "📖 Simulation lesen" bleibt trotzdem die
-    // GESAMTE Simulation über sichtbar/klickbar, zum freiwilligen Nachlesen (siehe
-    // showSimulationReadStoryButton, btn-sim-bar-close für das einzige "Ausblenden").
+    // "Weiter zum Interview" ging es weiter, siehe waitForSimulationStep('story', ...)), die v2.7.0
+    // wieder entfernt hatte. v2.7.2, auf erneuten Wunsch des Nutzers ("nachdem die Simulations-
+    // geschichte kreiert ist, will ich die Geschichte SEHEN und dann auf 'Zum Interview' klicken, und
+    // DANN läuft das Interview ab"): jetzt wieder eine bewusste Pause GENAU HIER, vor der ersten
+    // Frage - anders als 2.6.2 aber ohne Modal-Zwang: die geheime Story öffnet sich automatisch zum
+    // Lesen (openSimulationStoryModal), bleibt über "📖 Simulation lesen" weiterhin jederzeit
+    // erreichbar, und erst der Klick auf "▶ Zum Interview" (neuer Pause-Typ 'begin', siehe
+    // waitForSimulationStep) startet die eigentliche Fragengenerierung. Der rote Zugangscode-Banner
+    // erscheint bewusst erst in diesem Moment, nicht schon beim bloßen Anlegen des Interviews.
     showSimulationReadStoryButton(story);
-    setSimulationStatus('🎭 Simulation läuft – Eröffnungsfrage wird generiert ...', true);
-    await requestAndHandleReply(iv);
-    await pauseForHintIfNeeded(iv);
-    if (simulationAbortRequested) {
-      setSimulationStatus('🎭 Simulation von dir gestoppt. Das bisherige Interview bleibt erhalten.', false);
-      return;
-    }
-
-    // v2.7.2, auf Wunsch des Nutzers ("wenn fertig kommt die Story automatisch auf den Screen, KI
-    // denkt dann nicht mehr, dann der Button zum Interview, dann der Zugangscode"): neue, kurze Pause
-    // GENAU an dieser Stelle - Eröffnungsfrage steht bereits sichtbar im Chat, der große zentrierte
-    // Spinner geht jetzt aus (setBusy(false)), und erst nach bewusstem Klick auf "▶ Zum Interview"
-    // (derselbe Knopf/Mechanismus wie bei der 'step'-Pause, siehe waitForSimulationStep) geht es
-    // weiter - und GENAU DANN, nicht früher, wird auch der rote Zugangscode-Banner eingeblendet.
-    setBusy(false);
-    setSimulationStatus('🎭 Bereit – klicke „▶ Zum Interview", um die Simulation zu starten ...', true);
+    openSimulationStoryModal(story);
+    setSimulationStatus('🎭 Story fertig – lies sie dir in Ruhe durch und klicke „▶ Zum Interview" ...', true);
     await waitForSimulationStep('begin', iv);
     if (simulationAbortRequested) {
       setSimulationStatus('🎭 Simulation von dir gestoppt. Das bisherige Interview bleibt erhalten.', false);
       return;
     }
+    closeSimulationStoryModal(); // falls noch offen - Chat soll ab jetzt wieder frei sichtbar sein
     iv.accessCodeRevealed = true;
     saveDB();
     updateAccessCodeBanner(iv);
-    // AUTOMATISCHER Durchlauf lief vor dieser neuen Pause ohne Unterbrechung durchgängig als "busy"
-    // (siehe Kommentar weiter unten bei "AUTOMATISCHER DURCHLAUF") - das wird hier bewusst
-    // wiederhergestellt, sonst bliebe der große Spinner für den gesamten Rest der automatischen
-    // Simulation fälschlich aus. Der manuelle Modus regelt setBusy() weiterhin selbst pro Runde.
-    if (!isManualMode) setBusy(true);
+
+    setBusy(true);
+    setSimulationStatus('🎭 Simulation läuft – Eröffnungsfrage wird generiert ...', true);
+    await requestAndHandleReply(iv);
+    await pauseForHintIfNeeded(iv, isManualMode);
+    if (simulationAbortRequested) {
+      setSimulationStatus('🎭 Simulation von dir gestoppt. Das bisherige Interview bleibt erhalten.', false);
+      return;
+    }
 
     let round = 0;
     if (isManualMode) {
-      setBusy(false); // war durch die neue 'begin'-Pause bereits aus - Eingabefeld bleibt frei
+      setBusy(false); // Eingabefeld für die gleich folgende erste Pause wieder freigeben
 
       // Einmaliger grüner Hinweis direkt nach der Eröffnungsfrage (siehe buildSimulationHintBubble):
       // erklärt, dass ab jetzt nach jeder Frage pausiert wird und wie man selbst eingreifen kann.
@@ -5069,7 +5080,7 @@ async function runSimulation(genreDescription, mode) {
         setSimulationStatus(`🎭 Simulation läuft – Runde ${round}: Interviewer antwortet ...`, true);
         await requestAndHandleReply(iv);
         setBusy(false);
-        await pauseForHintIfNeeded(iv);
+        await pauseForHintIfNeeded(iv, true);
         if (simulationAbortRequested) break;
       }
     } else {
@@ -5087,7 +5098,7 @@ async function runSimulation(genreDescription, mode) {
         renderMessages(getHistory(iv.id), iv);
         setSimulationStatus(`🎭 Simulation läuft – Runde ${round}: Interviewer antwortet ...`, true);
         await requestAndHandleReply(iv);
-        await pauseForHintIfNeeded(iv);
+        await pauseForHintIfNeeded(iv, false);
         if (simulationAbortRequested) break;
       }
     }
