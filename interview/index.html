@@ -660,8 +660,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.7.4';
-const APP_BUILD = '2026-08-30 13:30 UTC';
+const APP_VERSION = '2.7.5';
+const APP_BUILD = '2026-08-30 14:45 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 
@@ -4000,18 +4000,35 @@ function acknowledgeFinalHint() {
 // (Pause-Hinweis, Interview-Richtung, Name/anonym, öffentliches Archiv) läuft jetzt hier vorneweg,
 // Fenster für Fenster, bevor der Chat überhaupt sichtbar wird.
 //
-// WICHTIG FÜR JONAS: ONBOARDING_START_AGB_HTML unten ist ein von Claude verfasster Kurztext (keine
-// geprüfte Rechtsberatung) für den Einstieg - bewusst KÜRZER und ANDERS als die ausführlichen AGBs
-// beim Veröffentlichen (siehe publish-confirm-prompt), weil es hier um etwas anderes geht: die
+// WICHTIG FÜR JONAS: ONBOARDING_START_AGB_HTML unten ist ein von Claude frei erfundener Entwurf (auf
+// Wunsch des Nutzers: "AGBs sind im Moment noch nicht so wichtig, denke dir einfach was aus"), KEINE
+// geprüfte Rechtsberatung - bitte vor dem echten Launch fachlich/rechtlich prüfen (lassen) und den
+// Kontakt-Platzhalter ersetzen. v2.7.5, auf erneuten Wunsch des Nutzers ("der letzte Hint am Anfang
+// ist die AGBs - wieder mit den 3 wichtigsten Sachen vereinfacht, mit der Erklärung '99% lesen keine
+// AGBs', und die gesamten AGBs"): folgt jetzt bewusst demselben, bereits bei den Veröffentlichungs-
+// AGBs etablierten Muster (siehe publish-confirm-prompt weiter oben: kurze "99%..."-Box mit 3 Punkten,
+// darunter die ausführliche Fassung in einem eigenen Scroll-Kasten, siehe .onboarding-agb-box) statt
+// eines eigenen, abweichenden Formats - inhaltlich geht es hier aber um etwas anderes als dort: um die
 // Teilnahme am Interview selbst (Datenspeicherung, Freiwilligkeit, noch nichts ist öffentlich), nicht
-// um die spätere, separate Entscheidung, die fertige Geschichte zu veröffentlichen. Bitte vor dem
-// echten Launch fachlich/rechtlich prüfen (lassen) und den Kontakt-Platzhalter ersetzen.
+// um die spätere, separate Entscheidung, die fertige Geschichte zu veröffentlichen (dafür gibt es am
+// Ende einen eigenen, zweiten Bestätigungsschritt mit eigenen, ausführlichen Bedingungen).
 const ONBOARDING_START_AGB_HTML =
-  '<p style="margin:0 0 10px;"><strong>1. Worum es hier geht.</strong> Eine KI führt mit dir ein Interview zu deiner Geschichte. Deine Antworten werden gespeichert, damit du das Interview jederzeit unterbrechen und später fortsetzen kannst.</p>' +
-  '<p style="margin:0 0 10px;"><strong>2. Freiwillig, jederzeit änderbar.</strong> Die Teilnahme ist freiwillig. Du kannst jederzeit pausieren, und am Ende noch einmal alles durchlesen, ändern oder Fragen löschen, bevor irgendetwas passiert.</p>' +
-  '<p style="margin:0 0 10px;"><strong>3. Noch nichts ist öffentlich.</strong> Solange du nicht ausdrücklich veröffentlichst, ist deine Geschichte nur über deinen Zugangscode erreichbar. Für die Veröffentlichung selbst gibt es am Ende einen eigenen, separaten Bestätigungsschritt mit eigenen, ausführlichen Bedingungen.</p>' +
-  '<p style="margin:0 0 10px;"><strong>4. Kein Passwort, sondern ein Code.</strong> Es gibt keine klassische Registrierung. Dein Zugangscode (siehe voriger Schritt) ist der einzige Weg, dein Interview später wiederzufinden, zu bearbeiten oder zu löschen - geht er verloren, kann er derzeit nicht wiederhergestellt werden.</p>' +
-  '<p style="margin:0;"><strong>5. Kontakt.</strong> Bei Fragen kannst du dich jederzeit an [Kontakt-E-Mail] wenden.</p>';
+  '<div style="font-size:12.5px; background:#fdf3ec; border:1px solid #eddccb; padding:10px 12px; border-radius:8px; margin-bottom:14px; color:#8a5a2e; text-align:left;">' +
+    '<div style="margin-bottom:8px; font-style:italic; opacity:0.85;">99% der Menschen bestätigen Nutzungsbedingungen, ohne sie gelesen zu haben. Diese drei Dinge solltest du dir trotzdem bewusst machen:</div>' +
+    '<div style="font-weight:700; margin-bottom:6px;">📋 Bevor es losgeht:</div>' +
+    '<div style="margin-bottom:4px;">1. Deine Antworten werden gespeichert, damit du jederzeit pausieren und später genau dort weitermachen kannst.</div>' +
+    '<div style="margin-bottom:4px;">2. Es gibt keine klassische Registrierung – nur dein Zugangscode (siehe voriger Schritt) ermöglicht dir später, deinen Eintrag zu bearbeiten oder zu löschen.</div>' +
+    '<div>3. Noch ist nichts öffentlich. Ob und wann deine Geschichte veröffentlicht wird, entscheidest du ganz am Schluss ausdrücklich selbst, mit einer eigenen, separaten Bestätigung.</div>' +
+  '</div>' +
+  '<div class="onboarding-agb-box">' +
+    '<div style="font-weight:700; margin-bottom:8px; color:inherit;">Ausführliche Nutzungsbedingungen für die Teilnahme</div>' +
+    '<p><strong>1. Worum es hier geht.</strong> Eine KI führt mit dir ein Interview zu deiner Geschichte. Deine Antworten werden gespeichert, damit du das Interview jederzeit unterbrechen und später an derselben Stelle fortsetzen kannst.</p>' +
+    '<p><strong>2. Freiwillig und jederzeit änderbar.</strong> Die Teilnahme ist freiwillig und du kannst jederzeit pausieren oder abbrechen. Am Ende kannst du außerdem noch einmal alles durchlesen, ändern oder einzelne Fragen löschen, bevor irgendetwas weiter passiert.</p>' +
+    '<p><strong>3. Noch nichts ist öffentlich.</strong> Solange du nicht ausdrücklich veröffentlichst, ist deine Geschichte nur über deinen eigenen Zugangscode erreichbar. Für die Veröffentlichung selbst gibt es am Ende einen eigenen, separaten Bestätigungsschritt mit eigenen, ausführlichen Bedingungen.</p>' +
+    '<p><strong>4. Kein Passwort, sondern ein Code.</strong> Es gibt keine klassische Registrierung. Dein Zugangscode ist der einzige Weg, dein Interview später wiederzufinden, zu bearbeiten oder zu löschen - geht er verloren, kann er derzeit nicht wiederhergestellt werden.</p>' +
+    '<p><strong>5. Speicherung.</strong> Deine Angaben werden auf der technischen Infrastruktur unseres Hosting-Partners gespeichert. Eine Weitergabe an Dritte erfolgt nur, soweit das für den technischen Betrieb notwendig ist.</p>' +
+    '<p style="margin-bottom:0;"><strong>6. Kontakt.</strong> Bei Fragen kannst du dich jederzeit an [Kontakt-E-Mail] wenden.</p>' +
+  '</div>';
 
 // v2.7.4: jeder Eintrag = ein Bildschirm der Einführung. "body(iv)" liefert den Inhalt (darf HTML
 // enthalten, siehe Hinweis bei buildHintBubble weiter oben - ausschließlich fest hinterlegte, selbst
@@ -4911,6 +4928,14 @@ const SIMULATION_HARD_ROUND_LIMIT = 50; // Notaus – unabhängig vom Zustand wi
 
 let simulationRunning = false;
 let simulationAbortRequested = false;
+// v2.7.5, auf Wunsch des Nutzers ("bitte während des eigentlichen Interviews kein KI denkt nach"):
+// der große, blinkende "KI denkt nach"-Kasten war ursprünglich EXPLIZIT nur für die unbekannt lange
+// Wartezeit gedacht, bis die geheime Simulations-Story fertig generiert ist (siehe generateSimulationStory
+// in runSimulation) - bevor überhaupt irgendetwas auf dem Bildschirm steht. Sobald das eigentliche
+// Interview läuft (egal ob echt oder simuliert - Fragen/Antworten werden ausgetauscht), soll GAR KEIN
+// Spinner mehr zu sehen sein, siehe setBusy() weiter unten. Dieses Flag markiert genau dieses eine
+// Zeitfenster (gesetzt/zurückgesetzt ausschließlich in runSimulation rund um generateSimulationStory).
+let simulationSpinnerAllowed = false;
 // PAUSE/MANUELLE STEUERUNG (v2.2.0, auf Wunsch des Nutzers: "nach jeder Frage eine Pause ... ich
 // kann aber auch selber eine Antwort geben"): simulationPaused/-PauseKind/-StepResolver/-PausedIv
 // bilden zusammen einen einzigen offenen "Warte auf die nächste Aktion"-Punkt in runSimulation ab –
@@ -5180,6 +5205,9 @@ async function runSimulation(genreDescription, mode) {
   const isManualMode = mode === 'manuell';
   simulationRunning = true;
   simulationAbortRequested = false;
+  // v2.7.5: siehe Kommentar bei simulationSpinnerAllowed weiter oben - der große Spinner darf NUR für
+  // das gleich folgende Warten auf generateSimulationStory() erscheinen, sonst gar nicht mehr.
+  simulationSpinnerAllowed = true;
   setBusy(true);
   el('btn-simulation').disabled = true;
   // Modal SOFORT schließen: der ganze Sinn der Statusleiste ist, dass der Chat dahinter sichtbar
@@ -5188,6 +5216,7 @@ async function runSimulation(genreDescription, mode) {
   try {
     setSimulationStatus('🎭 Generiere geheime interne Story ...', true);
     const story = await generateSimulationStory(genreDescription);
+    simulationSpinnerAllowed = false; // Story ist da - ab jetzt nie mehr ein sichtbarer Spinner in dieser Simulation
 
     // WICHTIG (v1.19.0, Testinterview #981): Jede Simulation erzeugt eine komplett neue, fiktive
     // Testperson und darf deshalb NIEMALS ein bereits bestehendes Projekt wiederverwenden. Vorher
@@ -5362,6 +5391,7 @@ async function runSimulation(genreDescription, mode) {
     setSimulationStatus('🎭 Fehler: ' + err.message, false);
   } finally {
     simulationRunning = false;
+    simulationSpinnerAllowed = false; // Absicherung, falls ein Fehler vor der Story-Generierung auftrat
     if (simulationPaused) resolveSimulationStep('abort'); // falls der Fehlerfall mitten in einer Pause auftrat
     setBusy(false);
     el('btn-simulation').disabled = false;
@@ -6131,10 +6161,15 @@ function openEditModal() {
 
 function setBusy(busy) {
   appBusy = busy;
-  spinnerEl.style.display = busy ? 'block' : 'none';
-  // v2.7.0: während einer laufenden Simulation deutlich größer und blinkend (siehe .spinner.sim-big
-  // oben) - sonst weiß man als Tester nicht, ob gerade noch etwas passiert oder die App hängt.
-  spinnerEl.classList.toggle('sim-big', busy && simulationRunning);
+  // v2.7.5, auf Wunsch des Nutzers ("bitte während des eigentlichen Interviews kein KI denkt nach"):
+  // der Spinner (in jeder Form, auch die kleine Standardfassung) erscheint nur noch während des
+  // einen Zeitfensters, für das er ursprünglich gedacht war - dem Warten auf die geheime
+  // Simulations-Story, bevor überhaupt etwas im Chat steht (siehe simulationSpinnerAllowed weiter
+  // oben). appBusy selbst bleibt unabhängig davon korrekt gesetzt (sperrt weiterhin Eingabefeld/
+  // "Neues Interview" während einer laufenden Anfrage) - nur die sichtbare Anzeige entfällt.
+  const showSpinner = busy && simulationSpinnerAllowed;
+  spinnerEl.style.display = showSpinner ? 'block' : 'none';
+  spinnerEl.classList.toggle('sim-big', showSpinner);
   el('btn-new').disabled = busy;
   // v2.6.3: btn-send/input werden zusätzlich vom Hinweis-Gate gesperrt gehalten (siehe
   // applyHintGate/hintGateActive) - beide Bedingungen (busy, Hinweis unbestätigt) wirken
