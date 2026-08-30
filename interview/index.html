@@ -267,6 +267,14 @@
          Test-Interviewpartner unnötige, verwirrende Zusatzfunktion. -->
     <button id="btn-new" class="primary">Neues Interview</button>
     <button id="btn-list">Meine Interviews</button>
+    <!-- v2.7.7, auf Wunsch des Nutzers ("ich habe den code und will mein geschicht wieder
+         bearbeiten ... zum interview dann ein button mein interview dann code eingeben"): Zugang zu
+         einer BEREITS VERÖFFENTLICHTEN Geschichte über den privaten Zugangscode - funktioniert auch
+         auf einem anderen Gerät/Browser als dem, auf dem sie ursprünglich entstanden ist, weil die
+         Prüfung serverseitig läuft (siehe manage-story Edge Function), anders als "Meine Interviews"
+         oben, das nur lokal in diesem Browser gespeicherte, noch nicht zwingend veröffentlichte
+         Interviews auflistet. Siehe #mystory-modal/openMyStoryModal weiter unten. -->
+    <button id="btn-my-story">🔑 Mein Interview</button>
     <button id="btn-pause">⏸ Pause</button>
     <!-- v2.6.2: standardmäßig verborgen, bis ein Archiv-PDF erstellt oder veröffentlicht wurde
          (siehe maybeShowReviewPrompt) - vorher gibt es ohnehin nichts sinnvoll zu exportieren. -->
@@ -373,6 +381,60 @@
           <div style="display:flex; gap:8px;">
             <button id="btn-qa-edit-close" type="button">Später weiterlesen</button>
             <button id="btn-qa-edit-done" type="button" class="primary" disabled>Fertig, Interview abschließen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- "MEIN INTERVIEW" ÜBER DEN ZUGANGSCODE (v2.7.7, auf Wunsch des Nutzers: "ich habe den code
+         und will mein geschicht wieder bearbeiten. wo und wie gebe ich den code ein. also 'zum
+         interview' dann ein button 'mein interview' dann code eingeben"). Bezieht sich bewusst NUR
+         auf bereits VERÖFFENTLICHTE Geschichten (siehe manage-story Edge Function) - genau das, was
+         der Zugangscode seit Anfang an verspricht ("...ermöglicht dir später, deinen Eintrag NACH
+         DER VERÖFFENTLICHUNG zu bearbeiten oder zu löschen", siehe ONBOARDING_START_AGB_HTML). Ein
+         noch nicht veröffentlichtes, laufendes Interview bleibt weiterhin nur über "Meine
+         Interviews" (rein lokal in diesem Browser) erreichbar - das war schon immer so und ändert
+         sich hier nicht. -->
+    <div class="modal-backdrop" id="mystory-modal">
+      <div class="modal" style="max-width:760px;">
+        <h2>🔑 Mein Interview</h2>
+
+        <div id="mystory-code-section">
+          <div class="hint" style="margin-top:0;">Gib deinen Zugangscode ein (die 5 Wörter, die du bei der Veröffentlichung erhalten hast) – damit findest du deine bereits veröffentlichte Geschichte wieder und kannst sie bearbeiten oder löschen. Funktioniert von jedem Gerät aus, nicht nur von dem, auf dem sie entstanden ist.</div>
+          <label for="mystory-code-input">Zugangscode</label>
+          <input type="text" id="mystory-code-input" placeholder="z. B. wort-wort-wort-wort-wort" autocapitalize="off" autocorrect="off" spellcheck="false" />
+          <div class="hint" id="mystory-code-status" style="min-height:1.2em;"></div>
+          <div class="row">
+            <button id="btn-mystory-close" type="button">Abbrechen</button>
+            <button id="btn-mystory-search" type="button" class="primary">Suchen</button>
+          </div>
+        </div>
+
+        <div id="mystory-edit-section" style="display:none;">
+          <label for="mystory-title-input">Titel</label>
+          <input type="text" id="mystory-title-input" />
+
+          <label for="mystory-category-select">Kategorie</label>
+          <select id="mystory-category-select"></select>
+
+          <label>Hashtags</label>
+          <div id="mystory-tags-chips" style="margin-bottom:6px;"></div>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="mystory-tag-input" placeholder="Neuer Hashtag …" style="flex:1;" />
+            <button id="btn-mystory-add-tag" type="button">+ Hinzufügen</button>
+          </div>
+
+          <label>Fragen &amp; Antworten</label>
+          <div class="hint" style="margin-top:0;">Du kannst Fragen und Antworten direkt bearbeiten oder einzelne Fragen löschen (🗑).</div>
+          <div id="mystory-qa-list" style="display:flex; flex-direction:column; gap:12px; margin:12px 0;"></div>
+
+          <div class="hint" id="mystory-save-status" style="min-height:1.2em;"></div>
+          <div class="row" style="justify-content:space-between;">
+            <button id="btn-mystory-delete" type="button" style="color:#c0392b; border-color:#c0392b;">🗑️ Diesen Eintrag endgültig löschen</button>
+            <div style="display:flex; gap:8px;">
+              <button id="btn-mystory-close-2" type="button">Schließen</button>
+              <button id="btn-mystory-save" type="button" class="primary">Änderungen speichern</button>
+            </div>
           </div>
         </div>
       </div>
@@ -668,8 +730,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.7.6';
-const APP_BUILD = '2026-08-30 16:00 UTC';
+const APP_VERSION = '2.7.7';
+const APP_BUILD = '2026-08-30 18:30 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 
@@ -5970,6 +6032,10 @@ async function publishDirectly(iv) {
         narrated_at: (iv.created_at || '').slice(0, 10) || null,
         qa_pairs: pairs,
         tags: suggestion.tags,
+        // v2.7.7: der Zugangscode geht mit auf den Server (dort nur als Hash gespeichert, siehe
+        // publish-story) - erst dadurch kann die neue Funktion "manage-story" diesen Eintrag später
+        // anhand des Codes wiederfinden, bearbeiten oder löschen lassen (siehe "Mein Interview").
+        access_code: iv.accessCode,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -6052,6 +6118,190 @@ function cancelPublishFlow() {
   const iv = getInterview(interviewId);
   el('publish-confirm-prompt').style.display = 'none';
   if (iv) maybeShowReviewPrompt(iv);
+}
+
+// --- "MEIN INTERVIEW": BEREITS VERÖFFENTLICHTE GESCHICHTE ÜBER DEN ZUGANGSCODE WIEDERFINDEN,
+// BEARBEITEN ODER LÖSCHEN (v2.7.7) ----------------------------------------------------------
+// Läuft komplett unabhängig vom lokalen DB-Objekt dieses Browsers - der Code wird server-seitig
+// gegen manage-story geprüft (siehe dortige Edge Function, Supabase-Projekt "arkaa-archiv"), damit
+// das auch von einem ganz anderen Gerät als dem ursprünglichen funktioniert. myStoryState hält
+// währenddessen die Arbeitskopie der gefundenen Geschichte.
+let myStoryState = null; // { id, accessCode, tags: [{slug,label}], qaPairs: [{question,answer}] }
+
+function openMyStoryModal() {
+  myStoryState = null;
+  el('mystory-code-input').value = '';
+  el('mystory-code-status').textContent = '';
+  el('mystory-code-section').style.display = 'block';
+  el('mystory-edit-section').style.display = 'none';
+  el('mystory-modal').classList.add('open');
+  el('mystory-code-input').focus();
+}
+
+function closeMyStoryModal() {
+  el('mystory-modal').classList.remove('open');
+  myStoryState = null;
+}
+
+async function callManageStory(payload) {
+  const res = await fetch(SUPABASE_URL + '/functions/v1/manage-story', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Fehler ${res.status}`);
+  return data;
+}
+
+async function searchMyStory() {
+  const code = (el('mystory-code-input').value || '').trim();
+  if (!code) { el('mystory-code-status').textContent = 'Bitte gib deinen Zugangscode ein.'; return; }
+  const btn = el('btn-mystory-search');
+  btn.disabled = true;
+  el('mystory-code-status').textContent = 'Wird gesucht …';
+  try {
+    const data = await callManageStory({ action: 'find', access_code: code });
+    myStoryState = {
+      id: data.story.id,
+      accessCode: code,
+      categoryId: data.story.category_id,
+      title: data.story.title,
+      tags: (data.story.tags || []).map(t => ({ slug: t.slug, label: t.label })),
+      qaPairs: (data.story.qa_pairs || []).map(p => ({ question: p.question || '', answer: p.answer || '' })),
+    };
+    renderMyStoryEdit();
+    el('mystory-code-section').style.display = 'none';
+    el('mystory-edit-section').style.display = 'block';
+  } catch (err) {
+    el('mystory-code-status').textContent = 'Fehler: ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderMyStoryEdit() {
+  if (!myStoryState) return;
+  el('mystory-title-input').value = myStoryState.title;
+  const select = el('mystory-category-select');
+  if (!select.dataset.filled) {
+    select.innerHTML = ARCHIV_CATEGORIES.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+    select.dataset.filled = '1';
+  }
+  select.value = myStoryState.categoryId;
+  el('mystory-save-status').textContent = '';
+  renderMyStoryTagChips();
+  renderMyStoryQaList();
+}
+
+function renderMyStoryTagChips() {
+  const container = el('mystory-tags-chips');
+  container.innerHTML = '';
+  if (!myStoryState) return;
+  myStoryState.tags.forEach((tag, idx) => {
+    const chip = document.createElement('span');
+    chip.style.cssText = 'display:inline-flex; align-items:center; gap:6px; padding:4px 10px; margin:0 6px 6px 0; border-radius:999px; background:var(--accent-light); border:1px solid var(--border); font-size:13px;';
+    chip.textContent = '#' + tag.label;
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = '×';
+    removeBtn.setAttribute('aria-label', 'Hashtag "' + tag.label + '" entfernen');
+    removeBtn.style.cssText = 'border:none; background:transparent; cursor:pointer; font-size:14px; line-height:1; padding:0;';
+    removeBtn.onclick = () => { myStoryState.tags.splice(idx, 1); renderMyStoryTagChips(); };
+    chip.appendChild(removeBtn);
+    container.appendChild(chip);
+  });
+}
+
+function addMyStoryTag() {
+  if (!myStoryState) return;
+  const input = el('mystory-tag-input');
+  const label = (input.value || '').trim();
+  const slug = slugifyTag(label);
+  if (!slug || !label) return;
+  if (myStoryState.tags.length >= 8) { input.value = ''; return; }
+  if (!myStoryState.tags.some(t => t.slug === slug)) {
+    myStoryState.tags.push({ slug, label });
+    renderMyStoryTagChips();
+  }
+  input.value = '';
+}
+
+function renderMyStoryQaList() {
+  const list = el('mystory-qa-list');
+  if (!myStoryState || myStoryState.qaPairs.length === 0) {
+    list.innerHTML = '<div class="hint">Keine Fragen vorhanden.</div>';
+    return;
+  }
+  list.innerHTML = myStoryState.qaPairs.map((p, idx) => `
+    <div style="border:1px solid var(--border); border-radius:10px; padding:10px 12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);">Frage ${idx + 1}</div>
+        <button type="button" data-action="delete" data-idx="${idx}" title="Löschen">🗑</button>
+      </div>
+      <textarea data-field="question" data-idx="${idx}" style="width:100%; box-sizing:border-box; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-bottom:6px; min-height:36px; resize:vertical;">${escapeHtml(p.question)}</textarea>
+      <textarea data-field="answer" data-idx="${idx}" style="width:100%; box-sizing:border-box; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; min-height:60px; resize:vertical;">${escapeHtml(p.answer)}</textarea>
+    </div>
+  `).join('');
+  // v2.7.7: Klick-/Eingabe-Listener bewusst EINMAL delegiert auf den Container (siehe weiter unten
+  // on('mystory-qa-list', ...)) statt bei jedem Neu-Rendern einzeln pro Element per querySelectorAll
+  // neu angehängt - identisches, bereits bestehendes Muster wie bei #qa-edit-list (siehe dort).
+}
+
+async function saveMyStory() {
+  if (!myStoryState) return;
+  const title = (el('mystory-title-input').value || '').trim();
+  if (!title) { el('mystory-save-status').textContent = 'Bitte gib einen Titel ein.'; return; }
+  const categoryId = el('mystory-category-select').value;
+  const qaPairs = myStoryState.qaPairs
+    .map(p => ({ question: (p.question || '').trim(), answer: (p.answer || '').trim() }))
+    .filter(p => p.question && p.answer);
+  if (qaPairs.length === 0) { el('mystory-save-status').textContent = 'Es muss mindestens eine Frage mit Antwort übrig bleiben.'; return; }
+  const btn = el('btn-mystory-save');
+  btn.disabled = true;
+  el('mystory-save-status').textContent = 'Wird gespeichert …';
+  try {
+    await callManageStory({
+      action: 'update',
+      access_code: myStoryState.accessCode,
+      id: myStoryState.id,
+      title,
+      category_id: categoryId,
+      qa_pairs: qaPairs,
+      tags: myStoryState.tags,
+    });
+    myStoryState.title = title;
+    myStoryState.categoryId = categoryId;
+    myStoryState.qaPairs = qaPairs;
+    el('mystory-save-status').textContent = '✅ Gespeichert.';
+  } catch (err) {
+    el('mystory-save-status').textContent = 'Fehler beim Speichern: ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Löschen läuft wie die bereits bestehenden lokalen Lösch-Aktionen (siehe deleteInterviewFromList/
+// deleteProjectFromList weiter unten) über ein einfaches confirm() statt einer eigenen zweiten
+// Bestätigungsseite - reicht für eine so seltene, klar benannte Aktion.
+async function deleteMyStory() {
+  if (!myStoryState) return;
+  if (!confirm('Diese Geschichte wirklich endgültig aus dem öffentlichen Archiv löschen? Das kann nicht rückgängig gemacht werden.')) return;
+  const btn = el('btn-mystory-delete');
+  btn.disabled = true;
+  el('mystory-save-status').textContent = 'Wird gelöscht …';
+  try {
+    await callManageStory({ action: 'delete', access_code: myStoryState.accessCode, id: myStoryState.id });
+    closeMyStoryModal();
+    alert('Die Geschichte wurde gelöscht.');
+  } catch (err) {
+    el('mystory-save-status').textContent = 'Fehler beim Löschen: ' + err.message;
+    btn.disabled = false;
+  }
 }
 
 // Übernimmt Kategorie/Hashtags/Quellentyp als endgültig und ruft die publish-story Edge Function
@@ -7334,6 +7584,27 @@ on('qa-edit-ack-checkbox', 'change', toggleQaEditDoneEnabled);
 on('btn-qa-edit-use-chat', 'click', useCorrectionChatInstead);
 on('btn-qa-edit-close', 'click', () => el('qa-edit-modal').classList.remove('open'));
 on('btn-qa-edit-done', 'click', finishQaEdit);
+on('btn-my-story', 'click', openMyStoryModal);
+on('btn-mystory-close', 'click', closeMyStoryModal);
+on('btn-mystory-close-2', 'click', closeMyStoryModal);
+on('btn-mystory-search', 'click', searchMyStory);
+on('mystory-code-input', 'keydown', (e) => { if (e.key === 'Enter') searchMyStory(); });
+on('btn-mystory-add-tag', 'click', addMyStoryTag);
+on('mystory-tag-input', 'keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addMyStoryTag(); } });
+on('btn-mystory-save', 'click', saveMyStory);
+on('btn-mystory-delete', 'click', deleteMyStory);
+on('mystory-qa-list', 'click', (e) => {
+  const btn = e.target.closest('button[data-action="delete"]');
+  if (!btn || !myStoryState) return;
+  myStoryState.qaPairs.splice(parseInt(btn.dataset.idx, 10), 1);
+  renderMyStoryQaList();
+});
+on('mystory-qa-list', 'input', (e) => {
+  const field = e.target && e.target.dataset ? e.target.dataset.field : null;
+  if (!field || !myStoryState) return;
+  const idx = parseInt(e.target.dataset.idx, 10);
+  if (myStoryState.qaPairs[idx]) myStoryState.qaPairs[idx][field] = e.target.value;
+});
 on('btn-reorder-accept', 'click', acceptReorder);
 on('btn-reorder-decline', 'click', declineReorder);
 on('btn-review-correction-send', 'click', sendReviewCorrection);
