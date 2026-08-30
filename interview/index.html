@@ -108,8 +108,21 @@
   /* v2.7.0, auf Wunsch des Nutzers ("man weiß nicht, wie lange es dauert, bis die Simulation fertig
      ist - deshalb ganz groß 'KI denkt nach', vielleicht blinkt es - das ist für die Tester"): nur
      während einer laufenden Simulation bekommt der Spinner diese auffällige Fassung statt der
-     kleinen, leicht zu übersehenden Standardvariante (siehe setBusy). */
-  .spinner.sim-big { font-size: 22px; font-weight: 800; color: #2e5f8a; text-align: center; padding: 16px; animation: sim-thinking-blink 1.1s ease-in-out infinite; }
+     kleinen, leicht zu übersehenden Standardvariante (siehe setBusy).
+     v2.7.2, auf Wunsch des Nutzers ("KI denkt nach in die Mitte setzen"): statt nur im normalen
+     Text-Fluss (unten im Chat) zentriert zu sein, hängt sich der Hinweis jetzt als fest positioniertes
+     Feld GENAU IN DIE MITTE des sichtbaren Bildschirms (position: fixed, 50%/50% + Verschiebung um die
+     eigene halbe Größe), mit eigenem weißen Kasten samt Rahmen/Schatten, damit er über dem Chat gut
+     lesbar bleibt. z-index bewusst unter der Kopfzeile (9997), damit Statusleiste/Zugangscode-Banner
+     nie verdeckt werden. */
+  .spinner.sim-big {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9990;
+    font-size: 24px; font-weight: 800; color: #2e5f8a; text-align: center;
+    padding: 22px 30px; max-width: 86vw;
+    background: #fff; border: 2px solid #2e5f8a; border-radius: 14px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.28);
+    animation: sim-thinking-blink 1.1s ease-in-out infinite;
+  }
   @keyframes sim-thinking-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   .badge { display: inline-block; font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: var(--accent-light); color: var(--accent); margin-left: 6px; }
 
@@ -172,10 +185,13 @@
   <!-- v2.7.0, auf Wunsch des Nutzers ("der Code sollte das erste sein, was beim Interview passiert
        ... bleibt die ganze Zeit während des Interviews sichtbar und ist rot abgesetzt"): zeigt
        iv.accessCode durchgehend an, solange irgendein Interview (echt oder Simulation) offen ist
-       (siehe updateAccessCodeBanner, aufgerufen aus updateStatusLine). -->
+       (siehe updateAccessCodeBanner, aufgerufen aus updateStatusLine). v2.7.2, auf Wunsch des Nutzers
+       ("hier muss ein Hinweis sein, dass es keine klassische Registrierung gibt, nur den Code, um die
+       Geschichte wieder zu löschen oder zu bearbeiten"): zusätzliche kurze Erklärzeile darunter. -->
   <div id="access-code-banner" style="display:none; background:#fdeceb; border-bottom:2px solid #c0392b; padding:7px 14px; text-align:center;">
     <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#c0392b;">⚠️ Dein Zugangscode – gut aufbewahren</div>
     <div id="access-code-banner-text" style="font-size:17px; font-weight:800; color:#c0392b; letter-spacing:.02em;"></div>
+    <div style="font-size:10.5px; color:#c0392b; margin-top:2px; opacity:0.9;">Es gibt keine klassische Registrierung mit Benutzername/Passwort – nur dieser Code lässt sich später nutzen, um deinen Eintrag zu ändern oder zu löschen.</div>
   </div>
 </div>
 
@@ -599,8 +615,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.7.1';
-const APP_BUILD = '2026-08-30 06:10 UTC';
+const APP_VERSION = '2.7.2';
+const APP_BUILD = '2026-08-30 10:00 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 
@@ -613,23 +629,32 @@ const DB_KEY = 'interviewAI_db_v1';
 // vergeben, noch vor der ersten Frage, und dauerhaft oben im #access-code-banner angezeigt, siehe
 // updateAccessCodeBanner()).
 //
-// WORTPOOL (ACCESS_CODE_WORDS weiter unten, ~2659 Wörter): automatisiert aus einer
-// Häufigkeitsliste (gebräuchliche deutsche Wörter) erzeugt, gegen die Wortliste "wngerman" auf
-// echte, geläufige deutsche Substantive geprüft, auf 4-9 Buchstaben ohne Umlaute/ß beschränkt (damit
-// der Code auf jeder Tastatur gleich eingegeben werden kann) und danach von Hand um Vor-/Nachnamen,
-// Orts-/Länder-/Markennamen, vulgäre/sexuelle Begriffe sowie - besonders wichtig bei einem Archiv für
-// schwere Erlebnisse - Wörter mit Bezug zu Tod, Krankheit, Unfall, Gewalt, Missbrauch, Sucht, Krieg
-// o.Ä. bereinigt (niemand soll ausgerechnet einen Code bekommen, der an das eigene Thema erinnert).
-// WICHTIG FÜR JONAS: Das ist eine automatisiert erstellte erste Fassung, kein professionell
-// kuratiertes Wortbuch - vor dem echten Launch lohnt sich noch ein zusätzlicher menschlicher
-// Blick darüber. Die eigentliche Prüf-/Speicher-Logik gegen einen eingegebenen Code (inkl. der vom
-// Nutzer gewünschten Verzögerung bei falscher Eingabe) ist wie besprochen Thema einer späteren
+// WORTPOOL (ACCESS_CODE_WORDS weiter unten): v2.7.2, auf Wunsch des Nutzers ("kannst du nicht die
+// Wörter aus einer Wallet-Codierung nehmen, in Englisch, die sind kürzer - da gibt es ja Listen"):
+// die bisherige, selbst zusammengestellte deutsche ~2659-Wort-Liste wurde ersetzt durch die
+// offizielle, öffentlich standardisierte BIP-39-Wortliste (Englisch, https://github.com/bitcoin/bips
+// -> bip-0039/english.txt) - genau die Liste, die auch echte Hardware-/Software-Krypto-Wallets für
+// ihre Seed-Phrasen verwenden. 2048 Wörter, alle kurz (3-8 Buchstaben), rein englische Kleinbuchstaben
+// ohne Sonderzeichen (auf jeder Tastatur gleich eingebbar), bewusst so gewählt, dass sich jedes Wort
+// bereits an seinen ersten vier Buchstaben eindeutig erkennen lässt (auch bei Tippfehlern am Wortende
+// noch gut unterscheidbar) - ein etablierter, seit Jahren geprüfter Standard statt einer selbst
+// gebauten Liste. Die Datei wurde direkt von der offiziellen Quelle geladen und die Prüfsumme
+// (SHA-256) gegen den bekannten offiziellen Wert verifiziert.
+// Genau wie bei der vorherigen deutschen Liste gilt aber weiterhin: bei einem Archiv für teils
+// schwere, persönliche Erlebnisse soll niemand ausgerechnet einen Zugangscode bekommen, der an das
+// eigene Thema erinnert. Deshalb wurden aus der offiziellen 2048-Wort-Liste 33 Wörter mit direktem
+// Bezug zu Tod, Krankheit, Unfall, Gewalt oder Missbrauch von Hand entfernt (u.a. "abuse", "accident",
+// "assault", "attack", "crash", "grief", "injury", "panic", "shock", "suffer", "weapon", "wreck") -
+// übrig bleiben 2015 Wörter, was die Sicherheit praktisch nicht verändert (siehe unten).
+// WICHTIG FÜR JONAS: Die eigentliche Prüf-/Speicher-Logik gegen einen eingegebenen Code (inkl. der
+// vom Nutzer gewünschten Verzögerung bei falscher Eingabe) ist wie besprochen Thema einer späteren
 // Sitzung - hier geht es nur um die Erzeugung und permanente Anzeige des echten Codes.
 //
-// SICHERHEIT: bei ~2659 Wörtern ergeben 4 Wörter ca. 45,5 Bit Entropie (≈5,1 · 10^13 Kombinationen),
-// 5 Wörter ca. 56,9 Bit (≈1,4 · 10^17 Kombinationen) - siehe ACCESS_CODE_WORD_COUNT. Das liegt klar
-// unter dem, was eine Krypto-Wallet für echtes Geld braucht (dort üblich: 128+ Bit, siehe BIP39 mit
-// 12-24 Wörtern aus einer 2048-Wort-Liste), ist aber für einen "eigenen Eintrag später ändern"-Code
+// SICHERHEIT: bei 2015 Wörtern ergeben 4 Wörter ca. 43,9 Bit Entropie (≈3,1 · 10^13 Kombinationen),
+// 5 Wörter ca. 54,9 Bit (≈6,3 · 10^16 Kombinationen) - siehe ACCESS_CODE_WORD_COUNT, praktisch
+// gleichwertig zur vorherigen deutschen Liste (56,9 Bit). Das liegt klar unter dem, was eine
+// Krypto-Wallet für echtes Geld braucht (dort üblich: 128+ Bit, echtes BIP39 mit 12-24 Wörtern aus
+// der vollen 2048-Wort-Liste statt nur 4-5), ist aber für einen "eigenen Eintrag später ändern"-Code
 // (kein Geld, kein Fremdzugriff auf andere Konten) mehr als ausreichend gegen ONLINE-Raten, selbst
 // ohne die oben erwähnte Verzögerung. Der einzig relevante Rest-Risikofall ist ein OFFLINE-Angriff
 // nach einem Datenleck (falls Codes dort schlecht gehashed gespeichert würden) - genau deshalb 5 statt
@@ -637,272 +662,208 @@ const DB_KEY = 'interviewAI_db_v1';
 // einem langsamen Hashverfahren (z.B. bcrypt/argon2) plus Salt ablegen, nicht im Klartext.
 const ACCESS_CODE_WORD_COUNT = 5;
 const ACCESS_CODE_WORDS = [
-  'aachener', 'abbau', 'abbildung', 'abbruch', 'abend', 'abende', 'abenteuer', 'abfall', 'abgabe', 'abgang',
-  'abgrund', 'abitur', 'ablauf', 'ablehnung', 'ablenkung', 'abnahme', 'absatz', 'abschluss', 'absicht', 'absichten',
-  'absprache', 'abstand', 'abteilung', 'abwehr', 'abzug', 'account', 'accounts', 'achse', 'achtung', 'action',
-  'adler', 'admiral', 'adresse', 'adressen', 'affe', 'affen', 'afrikaner', 'afrikas', 'agenda', 'agent',
-  'agenten', 'agentur', 'ahnung', 'airlines', 'akademie', 'akku', 'akte', 'akten', 'akteure', 'aktie',
-  'aktien', 'aktion', 'aktionen', 'akzent', 'akzente', 'akzeptanz', 'alarm', 'alba', 'alben', 'album',
-  'aldi', 'alex', 'alkohol', 'allee', 'alltag', 'alltags', 'alters', 'altstadt', 'aluminium', 'amateur',
-  'amateure', 'ampel', 'amtes', 'amtszeit', 'analyse', 'analysen', 'analysten', 'anatomie', 'anbau', 'anbieter',
-  'anbietern', 'anbindung', 'anblick', 'andenken', 'android', 'anfang', 'angabe', 'angebot', 'angebote', 'angesicht',
-  'angreifer', 'anhang', 'anhieb', 'animation', 'anker', 'ankunft', 'anlage', 'anlagen', 'anlass', 'anlauf',
-  'anleger', 'anlehnung', 'anleihen', 'anleitung', 'anmeldung', 'anmerkung', 'annahme', 'anordnung', 'anpassung', 'anregung',
-  'anruf', 'ansatz', 'anschein', 'anschluss', 'ansicht', 'ansichten', 'ansprache', 'anspruch', 'anstalt', 'anteil',
-  'anteile', 'antifa', 'antrag', 'antwort', 'anwalt', 'anweisung', 'anwendung', 'anwesen', 'anwohner', 'anzahl',
-  'anzeichen', 'anzeiger', 'anzug', 'apartment', 'apfel', 'apotheke', 'apotheken', 'apotheker', 'apparat', 'appell',
-  'appetit', 'applaus', 'april', 'arbeit', 'arbeiter', 'architekt', 'archiv', 'archive', 'areal', 'arena',
-  'argument', 'argumente', 'armee', 'artikel', 'artikeln', 'artikels', 'aspekt', 'aspekte', 'aspekten', 'assistent',
-  'atelier', 'atem', 'athleten', 'atlas', 'atom', 'attacken', 'aufbau', 'aufbruch', 'aufgabe', 'aufhebung',
-  'aufkleber', 'aufl', 'auflage', 'auflagen', 'aufnahme', 'aufregung', 'aufruf', 'aufsatz', 'aufschrei', 'aufsicht',
-  'auftakt', 'auftrag', 'auftritte', 'aufwand', 'aufzug', 'auge', 'augen', 'august', 'auktion', 'ausbau',
-  'ausblick', 'ausbruch', 'ausdauer', 'ausdruck', 'ausfall', 'ausflug', 'ausgabe', 'ausgang', 'ausgleich', 'auskunft',
-  'ausland', 'auslegung', 'ausnahme', 'ausschuss', 'aussicht', 'austausch', 'auswahl', 'ausweg', 'ausweis', 'auszeit',
-  'auszug', 'auto', 'autobahn', 'automaten', 'autonomie', 'autor', 'autoren', 'autorin', 'autors', 'autos',
-  'baby', 'babys', 'bach', 'bachelor', 'badewanne', 'bahnhof', 'bahnsteig', 'bakterien', 'balance', 'balken',
-  'balkon', 'ball', 'ballett', 'banane', 'bananen', 'bande', 'bands', 'bank', 'banken', 'bann',
-  'banner', 'bargeld', 'bars', 'bart', 'base', 'basic', 'basis', 'basler', 'bass', 'batterie',
-  'batterien', 'bauch', 'bauer', 'bauern', 'bauernhof', 'baum', 'baumwolle', 'baustelle', 'bauwerk', 'beachtung',
-  'beamte', 'beamten', 'beamter', 'bebauung', 'becher', 'becken', 'bedeutung', 'bedienung', 'bedingung', 'beethoven',
-  'befehl', 'befragung', 'befreiung', 'begegnung', 'begleiter', 'beifall', 'beileid', 'bein', 'beine', 'beinen',
-  'beispiel', 'beispiele', 'beitrag', 'belastung', 'beleg', 'belohnung', 'bemerkung', 'benutzer', 'benutzung', 'benzin',
-  'berater', 'beratung', 'bereich', 'bereiche', 'bereichen', 'berg', 'bergbau', 'bergmann', 'bericht', 'berliner',
-  'berlins', 'berner', 'beruf', 'berufung', 'besatzung', 'bescheid', 'beschluss', 'besetzung', 'besitz', 'besitzer',
-  'besuch', 'besucher', 'besuchern', 'betonung', 'betracht', 'betrag', 'betreiber', 'betreuer', 'betreuung', 'betriebe',
-  'betriebs', 'bett', 'bewegung', 'beweis', 'bewerber', 'bewerbung', 'bewertung', 'bewohner', 'bewohnern', 'bezahlung',
-  'beziehung', 'bezirk', 'bezirke', 'bezirks', 'bezug', 'biathlon', 'bienen', 'bier', 'bilanz', 'bild',
-  'bilder', 'bildern', 'bildes', 'bildung', 'bindung', 'biografie', 'biologie', 'blatt', 'blei', 'blitz',
-  'blockade', 'blog', 'blogger', 'blogs', 'blues', 'blume', 'blumen', 'blutdruck', 'bock', 'boden',
-  'bohnen', 'bonner', 'bonus', 'boom', 'boot', 'bord', 'boss', 'bote', 'botschaft', 'boulevard',
-  'boxer', 'boys', 'branche', 'branchen', 'brand', 'brauerei', 'bremer', 'brenner', 'brett', 'brief',
-  'briefe', 'briefen', 'brille', 'briten', 'bronze', 'brot', 'browser', 'bruch', 'bruder', 'bruders',
-  'brunnen', 'brust', 'buch', 'buches', 'buchstabe', 'bude', 'budget', 'bullen', 'bund', 'bundes',
-  'bundesamt', 'bundesrat', 'bundestag', 'burg', 'burschen', 'busch', 'business', 'busse', 'butler', 'button',
-  'camp', 'campus', 'caritas', 'carlo', 'casino', 'celsius', 'cent', 'center', 'chance', 'chancen',
-  'chaos', 'charakter', 'charme', 'charts', 'chat', 'check', 'chef', 'chefin', 'chefs', 'chemie',
-  'chinas', 'chinesen', 'chip', 'chips', 'chor', 'chronik', 'city', 'client', 'clip', 'clips',
-  'clown', 'club', 'clubs', 'cockpit', 'cocktail', 'code', 'codes', 'cola', 'comeback', 'comic',
-  'comics', 'computer', 'container', 'copyright', 'couch', 'cousin', 'cousine', 'cover', 'crash', 'crew',
-  'dach', 'dame', 'damen', 'damm', 'dampf', 'darlehen', 'darm', 'dasein', 'datei', 'dateien',
-  'daten', 'datenbank', 'datum', 'dauer', 'daumen', 'deal', 'deals', 'debatte', 'debatten', 'deckel',
-  'deckung', 'dekan', 'demo', 'demos', 'denkmal', 'depot', 'derby', 'design', 'designer', 'desktop',
-  'detail', 'details', 'dezember', 'dialekt', 'dialog', 'dialoge', 'dichtung', 'dieb', 'diener', 'dienstag',
-  'dienste', 'diensten', 'dienstes', 'diesel', 'differenz', 'dilemma', 'dimension', 'ding', 'dinge', 'dingen',
-  'dinger', 'dipl', 'diplom', 'direktor', 'dirigent', 'disco', 'diskurs', 'display', 'distanz', 'disziplin',
-  'division', 'doktor', 'doku', 'dokument', 'dokumente', 'dollar', 'domain', 'dominanz', 'doping', 'doppel',
-  'dorf', 'dorfes', 'dorn', 'dose', 'dosen', 'double', 'download', 'dozenten', 'drachen', 'draht',
-  'drama', 'dreck', 'drehbuch', 'dreieck', 'dresdner', 'drohne', 'drohnen', 'drucker', 'dschungel', 'duell',
-  'duft', 'dummheit', 'dunkeln', 'durchgang', 'durst', 'dynamik', 'dynamo', 'echo', 'echtzeit', 'edith',
-  'edition', 'effekt', 'effekte', 'effizienz', 'ehefrau', 'ehemann', 'ehen', 'ehepaar', 'ehrgeiz', 'eier',
-  'eiern', 'eigentum', 'eimer', 'einbau', 'einblick', 'einblicke', 'einbruch', 'eindruck', 'einfluss', 'eingang',
-  'einheit', 'einheiten', 'einigkeit', 'einigung', 'einkauf', 'einklang', 'einkommen', 'einladung', 'einnahme', 'einsatz',
-  'einsicht', 'einspruch', 'einstein', 'eintrag', 'einwohner', 'einzel', 'einzug', 'eisen', 'eisenbahn', 'eishockey',
-  'elefanten', 'element', 'elemente', 'elementen', 'elfmeter', 'elite', 'eltern', 'emotionen', 'empfang', 'endeffekt',
-  'endes', 'endspiel', 'energie', 'energien', 'engel', 'engels', 'enkel', 'ensemble', 'ente', 'entwurf',
-  'episode', 'episoden', 'epoche', 'erachtens', 'erdbeben', 'erdgas', 'ereignis', 'erfahrung', 'erfassung', 'erfinder',
-  'erfindung', 'erfolg', 'ergebnis', 'erhalt', 'erhaltung', 'erhebung', 'erholung', 'erika', 'erlass', 'erlaubnis',
-  'erlebnis', 'ermittler', 'ernennung', 'eroberung', 'ersatz', 'erwartung', 'erwerb', 'erzeugung', 'erzieher', 'erziehung',
-  'esel', 'essay', 'etage', 'etappe', 'ethik', 'euro', 'europas', 'evolution', 'ewigkeit', 'exemplar',
-  'exemplare', 'exil', 'existenz', 'expansion', 'experte', 'experten', 'explosion', 'export', 'fabrik', 'fabriken',
-  'fachleute', 'fachmann', 'fahne', 'fahnen', 'fahrbahn', 'fahrer', 'fahrrad', 'fahrten', 'fahrzeug', 'fahrzeuge',
-  'fakt', 'fakten', 'faktor', 'faktoren', 'fall', 'falter', 'familie', 'familien', 'fang', 'fans',
-  'fantasie', 'farbe', 'farben', 'farm', 'fass', 'fassade', 'fassung', 'fauna', 'faust', 'favorit',
-  'favoriten', 'fazit', 'feature', 'features', 'februar', 'feedback', 'fehler', 'fehlern', 'feiertag', 'feiertage',
-  'feinde', 'feld', 'felder', 'feldern', 'fell', 'fels', 'felsen', 'fenster', 'fenstern', 'ferien',
-  'fernseher', 'fertigung', 'festival', 'festivals', 'festung', 'feuerwehr', 'feuerwerk', 'figur', 'figuren', 'filiale',
-  'filialen', 'film', 'films', 'finanz', 'finanzamt', 'finanzen', 'finger', 'fingern', 'fink', 'firma',
-  'firmen', 'first', 'fisch', 'fischer', 'fitness', 'flair', 'flanke', 'flasche', 'flaschen', 'flash',
-  'fleck', 'flecken', 'fleisch', 'flieger', 'flora', 'fluch', 'flug', 'flughafen', 'flugzeug', 'flugzeuge',
-  'flur', 'fluss', 'flusses', 'flut', 'flyer', 'fokus', 'folie', 'fonds', 'ford', 'forderung',
-  'foren', 'form', 'format', 'formate', 'formation', 'formel', 'formular', 'forschung', 'forst', 'forum',
-  'foto', 'fotograf', 'fotos', 'fraktion', 'francisco', 'frau', 'frauen', 'frechheit', 'freibad', 'freiburg',
-  'freigabe', 'freiheit', 'freiherr', 'freistaat', 'freitag', 'freizeit', 'frequenz', 'freude', 'freunde', 'freunden',
-  'freundes', 'freundin', 'friede', 'frieden', 'friedens', 'friedhof', 'friseur', 'frist', 'frisur', 'front',
-  'fronten', 'frosch', 'frost', 'frucht', 'frust', 'fuchs', 'fund', 'fundament', 'funde', 'funk',
-  'funktion', 'fusion', 'future', 'gabe', 'gala', 'galerie', 'gallen', 'gang', 'gange', 'garage',
-  'garantie', 'garde', 'garten', 'gasse', 'gast', 'gastgeber', 'gasthaus', 'gattin', 'gattung', 'gattungen',
-  'gebiet', 'gebietes', 'gebirge', 'gebote', 'gebrauch', 'geburt', 'gedanke', 'gedanken', 'gedicht', 'gedichte',
-  'geduld', 'gefahr', 'gefecht', 'gegend', 'gegenden', 'gegensatz', 'gegenteil', 'gegenwart', 'gegenzug', 'gegner',
-  'gegnern', 'gegners', 'gehalt', 'geheimnis', 'gehirn', 'geiger', 'geist', 'geistes', 'geld', 'gelder',
-  'geldes', 'geltung', 'gemeinde', 'gemeinden', 'gene', 'general', 'generator', 'genfer', 'genie', 'genosse',
-  'genre', 'genres', 'genuss', 'geometrie', 'gerd', 'gericht', 'gerichte', 'gerichten', 'gerichts', 'geruch',
-  'gesang', 'geschenk', 'geschenke', 'geschick', 'geschirr', 'geschmack', 'gesetz', 'gesetze', 'gesetzen', 'gesetzes',
-  'gesicht', 'gesichter', 'gesinnung', 'gestalt', 'geste', 'getreide', 'getriebe', 'gewand', 'gewebe', 'gewerbe',
-  'gewicht', 'gewinn', 'gewinner', 'gewinnung', 'gewitter', 'gipfel', 'gitarre', 'glanz', 'glas', 'gleichung',
-  'gleis', 'gleise', 'glocke', 'glocken', 'gnade', 'gnaden', 'gold', 'golf', 'grad', 'grade',
-  'grafen', 'graffiti', 'grafik', 'grafiken', 'gramm', 'grammatik', 'gras', 'gremien', 'grube', 'grund',
-  'grunde', 'grundlage', 'grundriss', 'grundsatz', 'gruppe', 'gruppen', 'gulden', 'gummi', 'gunsten', 'gutachten',
-  'gutachter', 'guthaben', 'gutschein', 'gymnasien', 'gymnasium', 'haar', 'haare', 'haaren', 'hacker', 'hafen',
-  'haftung', 'hahn', 'halbinsel', 'halbjahr', 'halbzeit', 'hall', 'halloween', 'hals', 'haltung', 'hammer',
-  'hand', 'handball', 'handbuch', 'handels', 'handlung', 'handtuch', 'handwerk', 'handy', 'handys', 'hang',
-  'hardcore', 'hardware', 'harmonie', 'harz', 'hase', 'hasen', 'haufen', 'haupt', 'hauptmann', 'haus',
-  'hauses', 'hausfrau', 'haushalt', 'haustiere', 'heck', 'heer', 'heft', 'heide', 'heilung', 'heimat',
-  'heimspiel', 'heimweg', 'heirat', 'heizung', 'hektar', 'held', 'helden', 'helfer', 'helm', 'hemd',
-  'henkel', 'herd', 'herde', 'herkunft', 'hermes', 'herr', 'herren', 'herrin', 'herrn', 'herrscher',
-  'hertha', 'herz', 'herzen', 'herzens', 'herzogin', 'hesse', 'highlight', 'hilfe', 'hilfen', 'himmel',
-  'himmels', 'hinblick', 'hindernis', 'hinsicht', 'hinweis', 'hirn', 'hirsch', 'historie', 'hits', 'hitze',
-  'hobby', 'hobbys', 'hochzeit', 'hockey', 'hoffnung', 'holding', 'hollywood', 'holstein', 'homepage', 'honig',
-  'horizont', 'horn', 'horror', 'hose', 'hosen', 'hotel', 'hotels', 'hotline', 'huhn', 'humboldt',
-  'humor', 'hund', 'hunde', 'hunden', 'hygiene', 'hymne', 'idee', 'ideen', 'illusion', 'image',
-  'immobilie', 'imperium', 'impfung', 'import', 'impuls', 'impulse', 'inder', 'index', 'industrie', 'inflation',
-  'info', 'infos', 'ingenieur', 'inhaber', 'inhalt', 'inhalte', 'inhalten', 'inklusion', 'inland', 'innenhof',
-  'innenraum', 'innern', 'inschrift', 'insekten', 'insel', 'inseln', 'insider', 'instanz', 'institut', 'institute',
-  'instituts', 'interesse', 'internet', 'internets', 'investor', 'iris', 'ironie', 'irrtum', 'isolation', 'italiener',
-  'jacke', 'jagd', 'jahn', 'jahr', 'jahrbuch', 'jahre', 'jahren', 'jahres', 'jahrestag', 'jahrgang',
-  'jahrzehnt', 'januar', 'java', 'jazz', 'jeans', 'jersey', 'jobs', 'joghurt', 'johnson', 'joker',
-  'journal', 'jugend', 'jugendamt', 'juli', 'julius', 'juni', 'junior', 'junioren', 'jura', 'jurist',
-  'juristen', 'jury', 'justiz', 'kabel', 'kabine', 'kabinett', 'kader', 'kaffee', 'kaiser', 'kaiserin',
-  'kakao', 'kalender', 'kalk', 'kalorien', 'kamera', 'kameraden', 'kameras', 'kamin', 'kamm', 'kammer',
-  'kampagne', 'kampagnen', 'kampf', 'kanal', 'kandidat', 'kaninchen', 'kanton', 'kanzlei', 'kanzler', 'kanzlerin',
-  'kapelle', 'kapitel', 'karneval', 'karriere', 'karte', 'karten', 'kartoffel', 'karton', 'kaserne', 'kasse',
-  'kassen', 'kasten', 'katalog', 'kategorie', 'kater', 'katze', 'katzen', 'kaufmann', 'kehle', 'keks',
-  'kekse', 'keller', 'kellner', 'kenntnis', 'keramik', 'kerl', 'kerle', 'kern', 'kerze', 'kerzen',
-  'kicker', 'kiefer', 'kieler', 'kilo', 'kilogramm', 'kilometer', 'kind', 'kinder', 'kindern', 'kindes',
-  'kindheit', 'kino', 'kinos', 'kiosk', 'kissen', 'kiste', 'kisten', 'kita', 'kitas', 'klamotten',
-  'klarheit', 'klartext', 'klassen', 'klassik', 'klassiker', 'klausur', 'klavier', 'kleid', 'kleider', 'kleidung',
-  'klicks', 'klienten', 'klima', 'klosters', 'klub', 'klubs', 'kneipe', 'knoblauch', 'knochen', 'knopf',
-  'koalition', 'koffer', 'kohle', 'kollege', 'kollegen', 'kollegin', 'kolonie', 'kolonien', 'kolumne', 'kombi',
-  'komitee', 'kommando', 'kommentar', 'kommissar', 'kommune', 'kommunen', 'kompanie', 'kompetenz', 'komponist', 'konferenz',
-  'konflikt', 'konflikte', 'kongress', 'konsens', 'konsole', 'konsum', 'kontakt', 'kontakte', 'konten', 'kontext',
-  'kontinent', 'konto', 'kontrast', 'kontrolle', 'konzept', 'konzepte', 'konzern', 'konzerne', 'konzerns', 'konzert',
-  'konzerte', 'konzerten', 'kopf', 'kopie', 'kopien', 'korb', 'korn', 'korrektur', 'kosmos', 'kost',
-  'kraftwerk', 'kragen', 'kram', 'kredit', 'kredite', 'kreis', 'kreises', 'kreislauf', 'kreuz', 'kreuzung',
-  'krimi', 'krise', 'krisen', 'kriterien', 'kriterium', 'kritik', 'kritiker', 'krone', 'kronen', 'krug',
-  'kuchen', 'kulisse', 'kulissen', 'kult', 'kultur', 'kulturen', 'kumpel', 'kumpels', 'kunde', 'kunden',
-  'kunst', 'kunstwerk', 'kupfer', 'kurden', 'kurier', 'kurs', 'kurse', 'kuss', 'labor', 'lack',
-  'ladung', 'lady', 'lage', 'lagerung', 'laien', 'lampe', 'lampen', 'land', 'landes', 'landkreis',
-  'landtag', 'landung', 'landwirt', 'landwirte', 'lappen', 'laptop', 'laster', 'lastwagen', 'latein', 'latte',
-  'laub', 'laufbahn', 'laufzeit', 'laune', 'lebens', 'leber', 'lebewesen', 'leck', 'leder', 'lehrbuch',
-  'lehrer', 'lehrerin', 'lehrern', 'leib', 'leine', 'leinwand', 'leipziger', 'leistung', 'leiter', 'leiterin',
-  'leitfaden', 'leitung', 'leitungen', 'lektion', 'lenz', 'leser', 'lesern', 'lesung', 'leute', 'leuten',
-  'leutnant', 'level', 'lexikon', 'liebhaber', 'liebling', 'lieblings', 'lied', 'lieder', 'liedern', 'lieferung',
-  'liga', 'limit', 'linie', 'linien', 'link', 'linux', 'lippe', 'lippen', 'list', 'liter',
-  'literatur', 'lizenz', 'lloyd', 'lobby', 'loch', 'logik', 'logistik', 'logo', 'lohn', 'londoner',
-  'lotto', 'luft', 'luke', 'lunge', 'lupe', 'lust', 'luxus', 'lyrik', 'macher', 'made',
-  'magazin', 'magazine', 'magen', 'magie', 'mahlzeit', 'mail', 'mails', 'mainzer', 'mais', 'major',
-  'makler', 'maler', 'malerei', 'mama', 'manager', 'mandanten', 'mandat', 'mann', 'mannes', 'mantel',
-  'marathon', 'marc', 'marine', 'mark', 'marke', 'marken', 'marketing', 'markt', 'marktes', 'marmor',
-  'mars', 'marsch', 'marx', 'maschine', 'maschinen', 'maske', 'masken', 'massage', 'masse', 'massen',
-  'material', 'materials', 'materie', 'mathe', 'matratze', 'matrix', 'maurer', 'maus', 'maut', 'maximum',
-  'mechanik', 'medaille', 'medaillen', 'media', 'medien', 'medium', 'meer', 'meeting', 'mehl', 'mehrheit',
-  'mehrwert', 'mehrzahl', 'meilen', 'meinung', 'meinungen', 'meister', 'meldung', 'meldungen', 'melodie', 'melodien',
-  'mensch', 'menschen', 'merkels', 'merkmal', 'merkmale', 'messer', 'messung', 'messungen', 'metall', 'meter',
-  'metern', 'methode', 'methoden', 'metro', 'metropole', 'metzger', 'mieter', 'mikrofon', 'milch', 'milieu',
-  'milliarde', 'million', 'millionen', 'mine', 'mini', 'minimum', 'minister', 'minute', 'minuten', 'mischung',
-  'mission', 'mist', 'mitarbeit', 'mitglied', 'mitleid', 'mittag', 'mitte', 'mittwoch', 'mode', 'modell',
-  'modelle', 'modellen', 'modells', 'moderator', 'modus', 'moll', 'moment', 'momente', 'momenten', 'monarchie',
-  'monat', 'monate', 'monaten', 'monats', 'mond', 'monitor', 'monster', 'montag', 'montage', 'moore',
-  'moral', 'most', 'motiv', 'motive', 'motiven', 'motor', 'motoren', 'motorrad', 'motors', 'motto',
-  'multi', 'mund', 'museen', 'museum', 'museums', 'musical', 'musik', 'musiker', 'musikern', 'muskel',
-  'muskeln', 'mutter', 'mutti', 'mythen', 'mythos', 'nachbar', 'nachbarin', 'nachbarn', 'nachdruck', 'nachhilfe',
-  'nachlass', 'nachnamen', 'nachricht', 'nacht', 'nachteil', 'nachteile', 'nachtrag', 'nachweis', 'nachwuchs', 'nacken',
-  'nadel', 'nahrung', 'name', 'namen', 'nase', 'nation', 'nationen', 'natur', 'nebel', 'neffe',
-  'neffen', 'neigung', 'nerv', 'nest', 'netz', 'netze', 'netzwerk', 'netzwerke', 'neubau', 'neubauten',
-  'neugier', 'neuland', 'neuwahlen', 'neuzeit', 'news', 'nichte', 'nieren', 'nigeria', 'nintendo', 'niveau',
-  'nord', 'norden', 'nordosten', 'norm', 'normen', 'notar', 'note', 'noten', 'notiz', 'notizen',
-  'notruf', 'nova', 'novelle', 'november', 'nudeln', 'nummer', 'nuss', 'nutzer', 'nutzern', 'nutzung',
-  'obama', 'oberstufe', 'objekt', 'objekte', 'objekten', 'obst', 'ofen', 'offenheit', 'office', 'offizier',
-  'offiziere', 'ohren', 'oktober', 'oldtimer', 'olympia', 'onkel', 'oper', 'optik', 'option', 'optionen',
-  'orchester', 'orden', 'ordner', 'ordnung', 'organ', 'organe', 'orgel', 'orient', 'ortes', 'ortschaft',
-  'ortsteil', 'oscar', 'osten', 'ostern', 'ozean', 'packung', 'paket', 'pakete', 'pakt', 'palast',
-  'panorama', 'papa', 'papier', 'papiere', 'parade', 'paradies', 'parameter', 'pariser', 'parkhaus', 'parkplatz',
-  'parks', 'parlament', 'part', 'partei', 'parteien', 'parteitag', 'partie', 'partien', 'partner', 'partnerin',
-  'partnern', 'party', 'partys', 'passage', 'passagen', 'passanten', 'passau', 'passwort', 'paula', 'paulus',
-  'pech', 'pension', 'periode', 'person', 'personen', 'pest', 'petition', 'petrus', 'pfad', 'pfanne',
-  'pfeffer', 'pfeil', 'pferd', 'pferde', 'pferden', 'pflicht', 'pfosten', 'pfund', 'phantasie', 'phase',
-  'phasen', 'philosoph', 'photo', 'physik', 'physiker', 'pille', 'pilot', 'piloten', 'pilz', 'pilze',
-  'piraten', 'pisa', 'pixel', 'pizza', 'plakat', 'plakate', 'planet', 'planeten', 'planung', 'planungen',
-  'plastik', 'plattform', 'player', 'podcast', 'poesie', 'pokal', 'pole', 'politik', 'politiker', 'polizei',
-  'polizist', 'pommes', 'pony', 'pool', 'porno', 'port', 'portal', 'portfolio', 'portion', 'porto',
-  'porzellan', 'position', 'post', 'posten', 'poster', 'potential', 'potenzial', 'power', 'praktiken', 'praktikum',
-  'praxis', 'preises', 'premier', 'premiere', 'prime', 'prinz', 'prinzen', 'prinzip', 'privileg', 'problem',
-  'probleme', 'problemen', 'problems', 'produkt', 'produkte', 'produkten', 'produzent', 'prof', 'professor', 'profi',
-  'profil', 'profile', 'profis', 'profit', 'prognose', 'prognosen', 'programm', 'programme', 'programms', 'projekt',
-  'projekte', 'projekten', 'projektes', 'projekts', 'promi', 'promis', 'promotion', 'protein', 'protest', 'proteste',
-  'protesten', 'protokoll', 'provinz', 'provinzen', 'prozent', 'prozess', 'prozesse', 'prozessen', 'prozesses', 'publikum',
-  'publikums', 'pullover', 'puls', 'pulver', 'punk', 'punkt', 'puppe', 'puppen', 'quartal', 'quartett',
-  'quartier', 'quiz', 'quote', 'quoten', 'rabatt', 'radar', 'radfahrer', 'radio', 'radius', 'rahmen',
-  'rakete', 'raketen', 'rallye', 'rand', 'rande', 'rasse', 'rassen', 'rates', 'ratgeber', 'rathaus',
-  'ratten', 'rauch', 'raucher', 'raum', 'raumes', 'rausch', 'reaktion', 'realismus', 'rebellen', 'recherche',
-  'rechner', 'rechnung', 'redakteur', 'redaktion', 'redner', 'reduktion', 'referat', 'referent', 'reform', 'reformen',
-  'regal', 'regelung', 'regie', 'regierung', 'regiment', 'region', 'regionen', 'regisseur', 'register', 'reichtum',
-  'reinigung', 'reis', 'reiter', 'rekord', 'rektor', 'relation', 'relevanz', 'rendite', 'rente', 'renten',
-  'rentner', 'reparatur', 'report', 'reportage', 'reporter', 'republik', 'reserve', 'residenz', 'resonanz', 'respekt',
-  'rest', 'reste', 'resultat', 'resultate', 'retter', 'rettung', 'revier', 'review', 'revision', 'revue',
-  'rezension', 'rezept', 'rezepte', 'rezeption', 'rhetorik', 'rhythmus', 'richter', 'richterin', 'richtung', 'riegel',
-  'riesen', 'ring', 'risiken', 'risiko', 'risse', 'ritter', 'ritual', 'roboter', 'rock', 'rohr',
-  'rohstoffe', 'rollstuhl', 'roman', 'romane', 'romans', 'romantik', 'rose', 'rosen', 'rotation', 'route',
-  'router', 'routine', 'rubrik', 'rucksack', 'ruhestand', 'ruhm', 'ruinen', 'rundfunk', 'rundschau', 'saal',
-  'sache', 'sachen', 'sack', 'safe', 'saft', 'saga', 'saison', 'salat', 'salon', 'salz',
-  'same', 'samen', 'sammler', 'sammlung', 'samstag', 'sand', 'sanierung', 'satire', 'satz', 'satzes',
-  'satzung', 'sauce', 'sauna', 'schach', 'schacht', 'schaf', 'schafe', 'schaffung', 'schalter', 'schande',
-  'schatten', 'schatz', 'scheibe', 'scheiben', 'schein', 'schema', 'scherz', 'scheune', 'schicht', 'schicksal',
-  'schiff', 'schiffes', 'schild', 'schilling', 'schinken', 'schirm', 'schlacht', 'schlager', 'schlamm', 'schlange',
-  'schlauch', 'schlosses', 'schluck', 'schluss', 'schmutz', 'schnabel', 'schnaps', 'schnee', 'schnitzel', 'schrank',
-  'schrei', 'schreiber', 'schrift', 'schriften', 'schrott', 'schublade', 'schuh', 'schuhe', 'schuhen', 'schuljahr',
-  'schulung', 'schulzeit', 'schutz', 'schwaben', 'schwager', 'schwein', 'schweine', 'schwerin', 'schwester', 'schwimmer',
-  'schwung', 'seele', 'seelen', 'seen', 'segment', 'sehnsucht', 'seite', 'seiten', 'sekt', 'sektion',
-  'sektor', 'sekunde', 'sekunden', 'semester', 'seminar', 'seminare', 'senat', 'senator', 'sender', 'sendung',
-  'sendungen', 'senf', 'senior', 'senioren', 'senkung', 'sensoren', 'september', 'serie', 'serien', 'server',
-  'service', 'services', 'sessel', 'session', 'shop', 'shops', 'show', 'shows', 'sicherung', 'sicht',
-  'siedlung', 'sieg', 'siegel', 'sieger', 'signal', 'signale', 'signatur', 'silber', 'silvester', 'single',
-  'singles', 'sinn', 'situation', 'sitz', 'sitzung', 'sitzungen', 'skala', 'skandal', 'skepsis', 'skulptur',
-  'slogan', 'socken', 'sofa', 'software', 'sohn', 'sohnes', 'soldat', 'soldaten', 'soli', 'solo',
-  'sommer', 'song', 'songs', 'sonntag', 'sony', 'sorgfalt', 'sorte', 'sorten', 'sortiment', 'sound',
-  'spaltung', 'spam', 'spannung', 'speck', 'spektrum', 'spender', 'sperrung', 'spezies', 'spieler', 'spielern',
-  'spielfeld', 'spielraum', 'spiels', 'spieltag', 'spielzeit', 'spielzeug', 'spinner', 'spital', 'sponsor', 'sponsoren',
-  'sport', 'sportart', 'sportler', 'sports', 'spot', 'sprache', 'sprecher', 'springer', 'sprint', 'spruch',
-  'sprung', 'spur', 'spuren', 'staat', 'staaten', 'staates', 'staats', 'stab', 'stadien', 'stadion',
-  'stadium', 'stadt', 'stadtrat', 'stadtteil', 'staffel', 'stall', 'stamm', 'standard', 'standards', 'standort',
-  'standorte', 'stange', 'star', 'stars', 'start', 'statement', 'stationen', 'statistik', 'statue', 'status',
-  'stau', 'staub', 'steak', 'stein', 'steine', 'steinen', 'stellung', 'stern', 'sterne', 'sternen',
-  'steuerung', 'stichwort', 'stift', 'stiftung', 'stil', 'stimmung', 'stirn', 'stock', 'stoff', 'stoffe',
-  'stoffen', 'storch', 'story', 'strahlung', 'strand', 'strategie', 'strauss', 'streaming', 'streich', 'streik',
-  'stress', 'stroh', 'strom', 'struktur', 'student', 'studenten', 'studentin', 'studie', 'studien', 'studio',
-  'studios', 'studium', 'studiums', 'stuhl', 'stunde', 'stunden', 'sturm', 'sturz', 'substanz', 'suite',
-  'sultan', 'summer', 'sumpf', 'suppe', 'support', 'switch', 'symbol', 'symbole', 'sympathie', 'system',
-  'systeme', 'systemen', 'systems', 'szenarien', 'szenario', 'szene', 'szenen', 'tabak', 'tabelle', 'tabellen',
-  'tablet', 'tagebuch', 'tages', 'tags', 'tagung', 'takt', 'taktik', 'talent', 'talente', 'talk',
-  'tante', 'tarif', 'tarife', 'tasche', 'taschen', 'tasse', 'tassen', 'tastatur', 'tatsache', 'tatsachen',
-  'tattoo', 'tausch', 'taxi', 'taylor', 'team', 'teams', 'technik', 'techniken', 'techniker', 'teenager',
-  'teich', 'teig', 'teilchen', 'teilnahme', 'teilung', 'telefon', 'teller', 'tempo', 'tendenz', 'tendenzen',
-  'tennis', 'tenor', 'teppich', 'termin', 'terminal', 'termine', 'terrasse', 'test', 'testament', 'tests',
-  'text', 'texte', 'texten', 'textes', 'theater', 'theaters', 'thema', 'themas', 'thematik', 'themen',
-  'theorie', 'theorien', 'these', 'thesen', 'thriller', 'thron', 'ticket', 'tickets', 'tier', 'tierarzt',
-  'tiere', 'tieren', 'tiger', 'tipp', 'tipps', 'tiroler', 'tisch', 'tische', 'titan', 'tobias',
-  'tochter', 'toilette', 'toiletten', 'toleranz', 'tomaten', 'tonne', 'tonnen', 'tool', 'tools', 'topf',
-  'tore', 'toren', 'torte', 'torwart', 'tour', 'touren', 'tourismus', 'touristen', 'tournee', 'tradition',
-  'trailer', 'trainer', 'training', 'trans', 'transfer', 'transport', 'traum', 'treff', 'treffer', 'trend',
-  'trends', 'treppe', 'treppen', 'trick', 'tricks', 'trikot', 'trilogie', 'trio', 'trip', 'triumph',
-  'troll', 'trost', 'truppe', 'truppen', 'tuch', 'tunnel', 'turm', 'turner', 'turnier', 'turniers',
-  'type', 'typen', 'ufer', 'uhren', 'uhrzeit', 'umbau', 'umfang', 'umfeld', 'umfrage', 'umfragen',
-  'umgang', 'umgebung', 'umkreis', 'umland', 'umlauf', 'umsatz', 'umschlag', 'umsetzung', 'umstand', 'umweg',
-  'umwelt', 'umzug', 'union', 'universum', 'unruhe', 'unsinn', 'unterhalt', 'unwetter', 'update', 'updates',
-  'urheber', 'urin', 'urkunde', 'urkunden', 'urlaub', 'urlauber', 'ursache', 'ursachen', 'ursprung', 'urteil',
-  'user', 'vampire', 'variante', 'varianten', 'vater', 'vaters', 'venedig', 'venezuela', 'venus', 'verb',
-  'verbandes', 'verbund', 'verein', 'vereins', 'verfall', 'verfasser', 'vergabe', 'vergleich', 'verkehrs', 'verlag',
-  'verlage', 'verleger', 'verlegung', 'verlierer', 'verluste', 'vermieter', 'vermutung', 'vernunft', 'vers', 'versand',
-  'version', 'versionen', 'vertrages', 'vertrags', 'vertreter', 'vetter', 'victor', 'video', 'videos', 'vieh',
-  'vielfalt', 'vielzahl', 'villa', 'viren', 'visa', 'visier', 'vision', 'visionen', 'vitamin', 'vize',
-  'vogel', 'vogt', 'volk', 'volkes', 'volt', 'volumen', 'vorbild', 'vorbilder', 'vorfeld', 'vorfreude',
-  'vorgang', 'vorhang', 'vorjahr', 'vorlage', 'vorlesung', 'vorliebe', 'vormittag', 'vorname', 'vornamen', 'vorrang',
-  'vorrat', 'vorrunde', 'vorsatz', 'vorschlag', 'vorsicht', 'vorsitz', 'vorsprung', 'vorstand', 'vorteil', 'vorteile',
-  'vortrag', 'vorwand', 'vorwort', 'vorwurf', 'vulkan', 'waage', 'wachstum', 'wahl', 'wahlen', 'wahlkampf',
-  'wahlkreis', 'wahlrecht', 'wahnsinn', 'wahrheit', 'wald', 'waldes', 'wall', 'wanderer', 'wanderung', 'wangen',
-  'wanne', 'wappen', 'ware', 'warnung', 'wartezeit', 'wartung', 'wasser', 'wassers', 'watt', 'webseite',
-  'webseiten', 'website', 'wecker', 'wege', 'weges', 'weib', 'weibchen', 'weimarer', 'weisheit', 'weizen',
-  'welt', 'weltbild', 'welten', 'weltraum', 'werbung', 'werk', 'werkes', 'werkstatt', 'werkzeug', 'werkzeuge',
-  'wertung', 'wesen', 'west', 'weste', 'westen', 'westens', 'western', 'wettkampf', 'whisky', 'wiki',
-  'wikipedia', 'wille', 'willi', 'wind', 'winkel', 'winter', 'wirkung', 'wirkungen', 'wirt', 'wissens',
-  'witz', 'witze', 'woche', 'wochen', 'wohlstand', 'wohnhaus', 'wohnort', 'wohnraum', 'wohnsitz', 'wohnung',
-  'wohnungen', 'wohnwagen', 'wolf', 'wolke', 'wolken', 'word', 'workshop', 'workshops', 'wort', 'worte',
-  'worten', 'wortes', 'wortlaut', 'wunsch', 'wurf', 'wurst', 'wurzel', 'yoga', 'zahlung', 'zahlungen',
-  'zahn', 'zahnarzt', 'zauberer', 'zaun', 'zehen', 'zeichen', 'zeichnung', 'zeile', 'zeilen', 'zeitalter',
-  'zeiten', 'zeitplan', 'zeitpunkt', 'zeitraum', 'zeitung', 'zeitungen', 'zelle', 'zellen', 'zentren', 'zentrum',
-  'zentrums', 'zeremonie', 'zeugnis', 'zeugnisse', 'ziegen', 'zigarette', 'zinsen', 'zirkus', 'zitat', 'zitate',
-  'zoll', 'zombie', 'zone', 'zonen', 'zucht', 'zucker', 'zufall', 'zuflucht', 'zugang', 'zuge',
-  'zuhause', 'zukunft', 'zulassung', 'zunahme', 'zunge', 'zuordnung', 'zusatz', 'zuschauer', 'zutaten', 'zutritt',
-  'zuwachs', 'zweck', 'zwecke', 'zwecken', 'zweig', 'zwiebeln', 'zwillinge', 'zyklus', 'zylinder',
+  'abandon', 'ability', 'able', 'about', 'above', 'absent', 'absorb', 'abstract', 'absurd', 'access',
+  'account', 'accuse', 'achieve', 'acid', 'acoustic', 'acquire', 'across', 'act', 'action', 'actor',
+  'actress', 'actual', 'adapt', 'add', 'address', 'adjust', 'admit', 'adult', 'advance', 'advice',
+  'aerobic', 'affair', 'afford', 'afraid', 'again', 'age', 'agent', 'agree', 'ahead', 'aim',
+  'air', 'airport', 'aisle', 'alarm', 'album', 'alcohol', 'alert', 'alien', 'all', 'alley',
+  'allow', 'almost', 'alone', 'alpha', 'already', 'also', 'alter', 'always', 'amateur', 'amazing',
+  'among', 'amount', 'amused', 'analyst', 'anchor', 'ancient', 'anger', 'angle', 'angry', 'animal',
+  'ankle', 'announce', 'annual', 'another', 'answer', 'antenna', 'antique', 'anxiety', 'any', 'apart',
+  'apology', 'appear', 'apple', 'approve', 'april', 'arch', 'arctic', 'area', 'arena', 'argue',
+  'arm', 'armed', 'armor', 'army', 'around', 'arrange', 'arrest', 'arrive', 'arrow', 'art',
+  'artefact', 'artist', 'artwork', 'ask', 'aspect', 'asset', 'assist', 'assume', 'asthma', 'athlete',
+  'atom', 'attend', 'attitude', 'attract', 'auction', 'audit', 'august', 'aunt', 'author', 'auto',
+  'autumn', 'average', 'avocado', 'avoid', 'awake', 'aware', 'away', 'awesome', 'awful', 'awkward',
+  'axis', 'baby', 'bachelor', 'bacon', 'badge', 'bag', 'balance', 'balcony', 'ball', 'bamboo',
+  'banana', 'banner', 'bar', 'barely', 'bargain', 'barrel', 'base', 'basic', 'basket', 'battle',
+  'beach', 'bean', 'beauty', 'because', 'become', 'beef', 'before', 'begin', 'behave', 'behind',
+  'believe', 'below', 'belt', 'bench', 'benefit', 'best', 'betray', 'better', 'between', 'beyond',
+  'bicycle', 'bid', 'bike', 'bind', 'biology', 'bird', 'birth', 'bitter', 'black', 'blade',
+  'blame', 'blanket', 'blast', 'bleak', 'bless', 'blind', 'blossom', 'blouse', 'blue', 'blur',
+  'blush', 'board', 'boat', 'body', 'boil', 'bomb', 'bone', 'bonus', 'book', 'boost',
+  'border', 'boring', 'borrow', 'boss', 'bottom', 'bounce', 'box', 'boy', 'bracket', 'brain',
+  'brand', 'brass', 'brave', 'bread', 'breeze', 'brick', 'bridge', 'brief', 'bright', 'bring',
+  'brisk', 'broccoli', 'broken', 'bronze', 'broom', 'brother', 'brown', 'brush', 'bubble', 'buddy',
+  'budget', 'buffalo', 'build', 'bulb', 'bulk', 'bullet', 'bundle', 'bunker', 'burden', 'burger',
+  'burst', 'bus', 'business', 'busy', 'butter', 'buyer', 'buzz', 'cabbage', 'cabin', 'cable',
+  'cactus', 'cage', 'cake', 'call', 'calm', 'camera', 'camp', 'can', 'canal', 'cancel',
+  'candy', 'cannon', 'canoe', 'canvas', 'canyon', 'capable', 'capital', 'captain', 'car', 'carbon',
+  'card', 'cargo', 'carpet', 'carry', 'cart', 'case', 'cash', 'casino', 'castle', 'casual',
+  'cat', 'catalog', 'catch', 'category', 'cattle', 'caught', 'cause', 'caution', 'cave', 'ceiling',
+  'celery', 'cement', 'census', 'century', 'cereal', 'certain', 'chair', 'chalk', 'champion', 'change',
+  'chaos', 'chapter', 'charge', 'chase', 'chat', 'cheap', 'check', 'cheese', 'chef', 'cherry',
+  'chest', 'chicken', 'chief', 'child', 'chimney', 'choice', 'choose', 'chronic', 'chuckle', 'chunk',
+  'churn', 'cigar', 'cinnamon', 'circle', 'citizen', 'city', 'civil', 'claim', 'clap', 'clarify',
+  'claw', 'clay', 'clean', 'clerk', 'clever', 'click', 'client', 'cliff', 'climb', 'clinic',
+  'clip', 'clock', 'clog', 'close', 'cloth', 'cloud', 'clown', 'club', 'clump', 'cluster',
+  'clutch', 'coach', 'coast', 'coconut', 'code', 'coffee', 'coil', 'coin', 'collect', 'color',
+  'column', 'combine', 'come', 'comfort', 'comic', 'common', 'company', 'concert', 'conduct', 'confirm',
+  'congress', 'connect', 'consider', 'control', 'convince', 'cook', 'cool', 'copper', 'copy', 'coral',
+  'core', 'corn', 'correct', 'cost', 'cotton', 'couch', 'country', 'couple', 'course', 'cousin',
+  'cover', 'coyote', 'crack', 'cradle', 'craft', 'cram', 'crane', 'crater', 'crawl', 'crazy',
+  'cream', 'credit', 'creek', 'crew', 'cricket', 'crisp', 'critic', 'crop', 'cross', 'crouch',
+  'crowd', 'crucial', 'cruel', 'cruise', 'crumble', 'crunch', 'crush', 'cry', 'crystal', 'cube',
+  'culture', 'cup', 'cupboard', 'curious', 'current', 'curtain', 'curve', 'cushion', 'custom', 'cute',
+  'cycle', 'dad', 'damp', 'dance', 'daring', 'dash', 'daughter', 'dawn', 'day', 'deal',
+  'debate', 'decade', 'december', 'decide', 'decline', 'decorate', 'decrease', 'deer', 'defense', 'define',
+  'defy', 'degree', 'delay', 'deliver', 'demand', 'demise', 'denial', 'dentist', 'deny', 'depart',
+  'depend', 'deposit', 'depth', 'deputy', 'derive', 'describe', 'desert', 'design', 'desk', 'despair',
+  'detail', 'detect', 'develop', 'device', 'devote', 'diagram', 'dial', 'diamond', 'diary', 'dice',
+  'diesel', 'diet', 'differ', 'digital', 'dignity', 'dilemma', 'dinner', 'dinosaur', 'direct', 'dirt',
+  'disagree', 'discover', 'dish', 'dismiss', 'disorder', 'display', 'distance', 'divert', 'divide', 'divorce',
+  'dizzy', 'doctor', 'document', 'dog', 'doll', 'dolphin', 'domain', 'donate', 'donkey', 'donor',
+  'door', 'dose', 'double', 'dove', 'draft', 'dragon', 'drama', 'drastic', 'draw', 'dream',
+  'dress', 'drift', 'drill', 'drink', 'drip', 'drive', 'drop', 'drum', 'dry', 'duck',
+  'dumb', 'dune', 'during', 'dust', 'dutch', 'duty', 'dwarf', 'dynamic', 'eager', 'eagle',
+  'early', 'earn', 'earth', 'easily', 'east', 'easy', 'echo', 'ecology', 'economy', 'edge',
+  'edit', 'educate', 'effort', 'egg', 'eight', 'either', 'elbow', 'elder', 'electric', 'elegant',
+  'element', 'elephant', 'elevator', 'elite', 'else', 'embark', 'embody', 'embrace', 'emerge', 'emotion',
+  'employ', 'empower', 'empty', 'enable', 'enact', 'end', 'endless', 'endorse', 'enemy', 'energy',
+  'enforce', 'engage', 'engine', 'enhance', 'enjoy', 'enlist', 'enough', 'enrich', 'enroll', 'ensure',
+  'enter', 'entire', 'entry', 'envelope', 'episode', 'equal', 'equip', 'era', 'erase', 'erode',
+  'erosion', 'error', 'erupt', 'escape', 'essay', 'essence', 'estate', 'eternal', 'ethics', 'evidence',
+  'evoke', 'evolve', 'exact', 'example', 'excess', 'exchange', 'excite', 'exclude', 'excuse', 'execute',
+  'exercise', 'exhaust', 'exhibit', 'exile', 'exist', 'exit', 'exotic', 'expand', 'expect', 'expire',
+  'explain', 'expose', 'express', 'extend', 'extra', 'eye', 'eyebrow', 'fabric', 'face', 'faculty',
+  'fade', 'faint', 'faith', 'fall', 'false', 'fame', 'family', 'famous', 'fan', 'fancy',
+  'fantasy', 'farm', 'fashion', 'fat', 'father', 'fatigue', 'fault', 'favorite', 'feature', 'february',
+  'federal', 'fee', 'feed', 'feel', 'female', 'fence', 'festival', 'fetch', 'fever', 'few',
+  'fiber', 'fiction', 'field', 'figure', 'file', 'film', 'filter', 'final', 'find', 'fine',
+  'finger', 'finish', 'fire', 'firm', 'first', 'fiscal', 'fish', 'fit', 'fitness', 'fix',
+  'flag', 'flame', 'flash', 'flat', 'flavor', 'flee', 'flight', 'flip', 'float', 'flock',
+  'floor', 'flower', 'fluid', 'flush', 'fly', 'foam', 'focus', 'fog', 'foil', 'fold',
+  'follow', 'food', 'foot', 'force', 'forest', 'forget', 'fork', 'fortune', 'forum', 'forward',
+  'fossil', 'foster', 'found', 'fox', 'fragile', 'frame', 'frequent', 'fresh', 'friend', 'fringe',
+  'frog', 'front', 'frost', 'frown', 'frozen', 'fruit', 'fuel', 'fun', 'funny', 'furnace',
+  'fury', 'future', 'gadget', 'gain', 'galaxy', 'gallery', 'game', 'gap', 'garage', 'garbage',
+  'garden', 'garlic', 'garment', 'gas', 'gasp', 'gate', 'gather', 'gauge', 'gaze', 'general',
+  'genius', 'genre', 'gentle', 'genuine', 'gesture', 'ghost', 'giant', 'gift', 'giggle', 'ginger',
+  'giraffe', 'girl', 'give', 'glad', 'glance', 'glare', 'glass', 'glide', 'glimpse', 'globe',
+  'gloom', 'glory', 'glove', 'glow', 'glue', 'goat', 'goddess', 'gold', 'good', 'goose',
+  'gorilla', 'gospel', 'gossip', 'govern', 'gown', 'grab', 'grace', 'grain', 'grant', 'grape',
+  'grass', 'gravity', 'great', 'green', 'grid', 'grit', 'grocery', 'group', 'grow', 'grunt',
+  'guard', 'guess', 'guide', 'guitar', 'gun', 'gym', 'habit', 'hair', 'half', 'hammer',
+  'hamster', 'hand', 'happy', 'harbor', 'hard', 'harsh', 'harvest', 'hat', 'have', 'hawk',
+  'hazard', 'head', 'health', 'heart', 'heavy', 'hedgehog', 'height', 'hello', 'helmet', 'help',
+  'hen', 'hero', 'hidden', 'high', 'hill', 'hint', 'hip', 'hire', 'history', 'hobby',
+  'hockey', 'hold', 'hole', 'holiday', 'hollow', 'home', 'honey', 'hood', 'hope', 'horn',
+  'horse', 'hospital', 'host', 'hotel', 'hour', 'hover', 'hub', 'huge', 'human', 'humble',
+  'humor', 'hundred', 'hungry', 'hunt', 'hurdle', 'hurry', 'husband', 'hybrid', 'ice', 'icon',
+  'idea', 'identify', 'idle', 'ignore', 'illegal', 'illness', 'image', 'imitate', 'immense', 'immune',
+  'impact', 'impose', 'improve', 'impulse', 'inch', 'include', 'income', 'increase', 'index', 'indicate',
+  'indoor', 'industry', 'infant', 'inflict', 'inform', 'inhale', 'inherit', 'initial', 'inject', 'inmate',
+  'inner', 'innocent', 'input', 'inquiry', 'insane', 'insect', 'inside', 'inspire', 'install', 'intact',
+  'interest', 'into', 'invest', 'invite', 'involve', 'iron', 'island', 'isolate', 'issue', 'item',
+  'ivory', 'jacket', 'jaguar', 'jar', 'jazz', 'jealous', 'jeans', 'jelly', 'jewel', 'job',
+  'join', 'joke', 'journey', 'joy', 'judge', 'juice', 'jump', 'jungle', 'junior', 'junk',
+  'just', 'kangaroo', 'keen', 'keep', 'ketchup', 'key', 'kick', 'kid', 'kidney', 'kind',
+  'kingdom', 'kiss', 'kit', 'kitchen', 'kite', 'kitten', 'kiwi', 'knee', 'knife', 'knock',
+  'know', 'lab', 'label', 'labor', 'ladder', 'lady', 'lake', 'lamp', 'language', 'laptop',
+  'large', 'later', 'latin', 'laugh', 'laundry', 'lava', 'law', 'lawn', 'lawsuit', 'layer',
+  'lazy', 'leader', 'leaf', 'learn', 'leave', 'lecture', 'left', 'leg', 'legal', 'legend',
+  'leisure', 'lemon', 'lend', 'length', 'lens', 'leopard', 'lesson', 'letter', 'level', 'liar',
+  'liberty', 'library', 'license', 'life', 'lift', 'light', 'like', 'limb', 'limit', 'link',
+  'lion', 'liquid', 'list', 'little', 'live', 'lizard', 'load', 'loan', 'lobster', 'local',
+  'lock', 'logic', 'lonely', 'long', 'loop', 'lottery', 'loud', 'lounge', 'love', 'loyal',
+  'lucky', 'luggage', 'lumber', 'lunar', 'lunch', 'luxury', 'lyrics', 'machine', 'mad', 'magic',
+  'magnet', 'maid', 'mail', 'main', 'major', 'make', 'mammal', 'man', 'manage', 'mandate',
+  'mango', 'mansion', 'manual', 'maple', 'marble', 'march', 'margin', 'marine', 'market', 'marriage',
+  'mask', 'mass', 'master', 'match', 'material', 'math', 'matrix', 'matter', 'maximum', 'maze',
+  'meadow', 'mean', 'measure', 'meat', 'mechanic', 'medal', 'media', 'melody', 'melt', 'member',
+  'memory', 'mention', 'menu', 'mercy', 'merge', 'merit', 'merry', 'mesh', 'message', 'metal',
+  'method', 'middle', 'midnight', 'milk', 'million', 'mimic', 'mind', 'minimum', 'minor', 'minute',
+  'miracle', 'mirror', 'misery', 'miss', 'mistake', 'mix', 'mixed', 'mixture', 'mobile', 'model',
+  'modify', 'mom', 'moment', 'monitor', 'monkey', 'monster', 'month', 'moon', 'moral', 'more',
+  'morning', 'mosquito', 'mother', 'motion', 'motor', 'mountain', 'mouse', 'move', 'movie', 'much',
+  'muffin', 'mule', 'multiply', 'muscle', 'museum', 'mushroom', 'music', 'must', 'mutual', 'myself',
+  'mystery', 'myth', 'naive', 'name', 'napkin', 'narrow', 'nasty', 'nation', 'nature', 'near',
+  'neck', 'need', 'negative', 'neglect', 'neither', 'nephew', 'nerve', 'nest', 'net', 'network',
+  'neutral', 'never', 'news', 'next', 'nice', 'night', 'noble', 'noise', 'nominee', 'noodle',
+  'normal', 'north', 'nose', 'notable', 'note', 'nothing', 'notice', 'novel', 'now', 'nuclear',
+  'number', 'nurse', 'nut', 'oak', 'obey', 'object', 'oblige', 'obscure', 'observe', 'obtain',
+  'obvious', 'occur', 'ocean', 'october', 'odor', 'off', 'offer', 'office', 'often', 'oil',
+  'okay', 'old', 'olive', 'olympic', 'omit', 'once', 'one', 'onion', 'online', 'only',
+  'open', 'opera', 'opinion', 'oppose', 'option', 'orange', 'orbit', 'orchard', 'order', 'ordinary',
+  'organ', 'orient', 'original', 'orphan', 'ostrich', 'other', 'outdoor', 'outer', 'output', 'outside',
+  'oval', 'oven', 'over', 'own', 'owner', 'oxygen', 'oyster', 'ozone', 'pact', 'paddle',
+  'page', 'pair', 'palace', 'palm', 'panda', 'panel', 'panther', 'paper', 'parade', 'parent',
+  'park', 'parrot', 'party', 'pass', 'patch', 'path', 'patient', 'patrol', 'pattern', 'pause',
+  'pave', 'payment', 'peace', 'peanut', 'pear', 'peasant', 'pelican', 'pen', 'penalty', 'pencil',
+  'people', 'pepper', 'perfect', 'permit', 'person', 'pet', 'phone', 'photo', 'phrase', 'physical',
+  'piano', 'picnic', 'picture', 'piece', 'pig', 'pigeon', 'pill', 'pilot', 'pink', 'pioneer',
+  'pipe', 'pistol', 'pitch', 'pizza', 'place', 'planet', 'plastic', 'plate', 'play', 'please',
+  'pledge', 'pluck', 'plug', 'plunge', 'poem', 'poet', 'point', 'polar', 'pole', 'police',
+  'pond', 'pony', 'pool', 'popular', 'portion', 'position', 'possible', 'post', 'potato', 'pottery',
+  'poverty', 'powder', 'power', 'practice', 'praise', 'predict', 'prefer', 'prepare', 'present', 'pretty',
+  'prevent', 'price', 'pride', 'primary', 'print', 'priority', 'private', 'prize', 'problem', 'process',
+  'produce', 'profit', 'program', 'project', 'promote', 'proof', 'property', 'prosper', 'protect', 'proud',
+  'provide', 'public', 'pudding', 'pull', 'pulp', 'pulse', 'pumpkin', 'pupil', 'puppy', 'purchase',
+  'purity', 'purpose', 'purse', 'push', 'put', 'puzzle', 'pyramid', 'quality', 'quantum', 'quarter',
+  'question', 'quick', 'quit', 'quiz', 'quote', 'rabbit', 'raccoon', 'race', 'rack', 'radar',
+  'radio', 'rail', 'rain', 'raise', 'rally', 'ramp', 'ranch', 'random', 'range', 'rapid',
+  'rare', 'rate', 'rather', 'raven', 'raw', 'razor', 'ready', 'real', 'reason', 'rebel',
+  'rebuild', 'recall', 'receive', 'recipe', 'record', 'recycle', 'reduce', 'reflect', 'reform', 'refuse',
+  'region', 'regret', 'regular', 'reject', 'relax', 'release', 'relief', 'rely', 'remain', 'remember',
+  'remind', 'remove', 'render', 'renew', 'rent', 'reopen', 'repair', 'repeat', 'replace', 'report',
+  'require', 'rescue', 'resemble', 'resist', 'resource', 'response', 'result', 'retire', 'retreat', 'return',
+  'reunion', 'reveal', 'review', 'reward', 'rhythm', 'rib', 'ribbon', 'rice', 'rich', 'ride',
+  'ridge', 'rifle', 'right', 'rigid', 'ring', 'ripple', 'risk', 'ritual', 'rival', 'river',
+  'road', 'roast', 'robot', 'robust', 'rocket', 'romance', 'roof', 'rookie', 'room', 'rose',
+  'rotate', 'rough', 'round', 'route', 'royal', 'rubber', 'rude', 'rug', 'rule', 'run',
+  'runway', 'rural', 'sad', 'saddle', 'sadness', 'safe', 'sail', 'salad', 'salmon', 'salon',
+  'salt', 'salute', 'same', 'sample', 'sand', 'satisfy', 'satoshi', 'sauce', 'sausage', 'save',
+  'say', 'scale', 'scan', 'scare', 'scatter', 'scene', 'scheme', 'school', 'science', 'scissors',
+  'scorpion', 'scout', 'scrap', 'screen', 'script', 'scrub', 'sea', 'search', 'season', 'seat',
+  'second', 'secret', 'section', 'security', 'seed', 'seek', 'segment', 'select', 'sell', 'seminar',
+  'senior', 'sense', 'sentence', 'series', 'service', 'session', 'settle', 'setup', 'seven', 'shadow',
+  'shaft', 'shallow', 'share', 'shed', 'shell', 'sheriff', 'shield', 'shift', 'shine', 'ship',
+  'shiver', 'shoe', 'shoot', 'shop', 'short', 'shoulder', 'shove', 'shrimp', 'shrug', 'shuffle',
+  'shy', 'sibling', 'side', 'sight', 'sign', 'silent', 'silk', 'silly', 'silver', 'similar',
+  'simple', 'since', 'sing', 'siren', 'sister', 'situate', 'six', 'size', 'skate', 'sketch',
+  'ski', 'skill', 'skin', 'skirt', 'skull', 'slab', 'sleep', 'slender', 'slice', 'slide',
+  'slight', 'slim', 'slogan', 'slot', 'slow', 'slush', 'small', 'smart', 'smile', 'smoke',
+  'smooth', 'snack', 'snake', 'snap', 'sniff', 'snow', 'soap', 'soccer', 'social', 'sock',
+  'soda', 'soft', 'solar', 'soldier', 'solid', 'solution', 'solve', 'someone', 'song', 'soon',
+  'sorry', 'sort', 'soul', 'sound', 'soup', 'source', 'south', 'space', 'spare', 'spatial',
+  'spawn', 'speak', 'special', 'speed', 'spell', 'spend', 'sphere', 'spice', 'spider', 'spike',
+  'spin', 'spirit', 'split', 'spoil', 'sponsor', 'spoon', 'sport', 'spot', 'spray', 'spread',
+  'spring', 'spy', 'square', 'squeeze', 'squirrel', 'stable', 'stadium', 'staff', 'stage', 'stairs',
+  'stamp', 'stand', 'start', 'state', 'stay', 'steak', 'steel', 'stem', 'step', 'stereo',
+  'stick', 'still', 'sting', 'stock', 'stomach', 'stone', 'stool', 'story', 'stove', 'strategy',
+  'street', 'strike', 'strong', 'struggle', 'student', 'stuff', 'stumble', 'style', 'subject', 'submit',
+  'subway', 'success', 'such', 'sudden', 'sugar', 'suggest', 'suit', 'summer', 'sun', 'sunny',
+  'sunset', 'super', 'supply', 'supreme', 'sure', 'surface', 'surge', 'surprise', 'surround', 'survey',
+  'suspect', 'sustain', 'swallow', 'swamp', 'swap', 'swarm', 'swear', 'sweet', 'swift', 'swim',
+  'swing', 'switch', 'sword', 'symbol', 'symptom', 'syrup', 'system', 'table', 'tackle', 'tag',
+  'tail', 'talent', 'talk', 'tank', 'tape', 'target', 'task', 'taste', 'tattoo', 'taxi',
+  'teach', 'team', 'tell', 'ten', 'tenant', 'tennis', 'tent', 'term', 'test', 'text',
+  'thank', 'that', 'theme', 'then', 'theory', 'there', 'they', 'thing', 'this', 'thought',
+  'three', 'thrive', 'throw', 'thumb', 'thunder', 'ticket', 'tide', 'tiger', 'tilt', 'timber',
+  'time', 'tiny', 'tip', 'tired', 'tissue', 'title', 'toast', 'tobacco', 'today', 'toddler',
+  'toe', 'together', 'toilet', 'token', 'tomato', 'tomorrow', 'tone', 'tongue', 'tonight', 'tool',
+  'tooth', 'top', 'topic', 'topple', 'torch', 'tornado', 'tortoise', 'toss', 'total', 'tourist',
+  'toward', 'tower', 'town', 'toy', 'track', 'trade', 'traffic', 'train', 'transfer', 'trap',
+  'trash', 'travel', 'tray', 'treat', 'tree', 'trend', 'trial', 'tribe', 'trick', 'trigger',
+  'trim', 'trip', 'trophy', 'trouble', 'truck', 'true', 'truly', 'trumpet', 'trust', 'truth',
+  'try', 'tube', 'tuition', 'tumble', 'tuna', 'tunnel', 'turkey', 'turn', 'turtle', 'twelve',
+  'twenty', 'twice', 'twin', 'twist', 'two', 'type', 'typical', 'ugly', 'umbrella', 'unable',
+  'unaware', 'uncle', 'uncover', 'under', 'undo', 'unfair', 'unfold', 'unhappy', 'uniform', 'unique',
+  'unit', 'universe', 'unknown', 'unlock', 'until', 'unusual', 'unveil', 'update', 'upgrade', 'uphold',
+  'upon', 'upper', 'upset', 'urban', 'urge', 'usage', 'use', 'used', 'useful', 'useless',
+  'usual', 'utility', 'vacant', 'vacuum', 'vague', 'valid', 'valley', 'valve', 'van', 'vanish',
+  'vapor', 'various', 'vast', 'vault', 'vehicle', 'velvet', 'vendor', 'venture', 'venue', 'verb',
+  'verify', 'version', 'very', 'vessel', 'veteran', 'viable', 'vibrant', 'vicious', 'victory', 'video',
+  'view', 'village', 'vintage', 'violin', 'virtual', 'virus', 'visa', 'visit', 'visual', 'vital',
+  'vivid', 'vocal', 'voice', 'void', 'volcano', 'volume', 'vote', 'voyage', 'wage', 'wagon',
+  'wait', 'walk', 'wall', 'walnut', 'want', 'warfare', 'warm', 'warrior', 'wash', 'wasp',
+  'waste', 'water', 'wave', 'way', 'wealth', 'wear', 'weasel', 'weather', 'web', 'wedding',
+  'weekend', 'weird', 'welcome', 'west', 'wet', 'whale', 'what', 'wheat', 'wheel', 'when',
+  'where', 'whip', 'whisper', 'wide', 'width', 'wife', 'wild', 'will', 'win', 'window',
+  'wine', 'wing', 'wink', 'winner', 'winter', 'wire', 'wisdom', 'wise', 'wish', 'witness',
+  'wolf', 'woman', 'wonder', 'wood', 'wool', 'word', 'work', 'world', 'worry', 'worth',
+  'wrap', 'wrestle', 'wrist', 'write', 'wrong', 'yard', 'year', 'yellow', 'you', 'young',
+  'youth', 'zebra', 'zero', 'zone', 'zoo',
 ];
 // Erzeugt einen neuen, echten Zugangscode aus ACCESS_CODE_WORD_COUNT per kryptographischem
 // Zufallsgenerator (crypto.getRandomValues statt Math.random) gezogenen Wörtern aus dem Pool oben,
@@ -4357,10 +4318,18 @@ function updateStatusLine(iv) {
 // HTML weiter oben) - läuft über updateStatusLine() bei jedem "dieses Interview ist jetzt aktiv"-
 // Zeitpunkt mit, und wird explizit mit null aufgerufen, wenn kein Interview mehr ausgewählt ist
 // (siehe deleteInterview/switchToProject).
+// v2.7.2, auf Wunsch des Nutzers ("KI denkt nach ... wenn fertig kommt die Story automatisch auf den
+// Screen, KI denkt dann nicht mehr, dann der Button zum Interview, dann der Zugangscode"): der Code
+// selbst wird weiterhin als ALLERERSTES beim Anlegen des Interviews erzeugt (unverändert, siehe
+// newInterviewRecord/generateAccessCode) - nur die BANNER-ANZEIGE kann jetzt bewusst zurückgehalten
+// werden (iv.accessCodeRevealed === false), damit der Zugangscode bei einer Simulation erst nach dem
+// "▶ Weiter zum Interview"-Klick eingeblendet wird, statt gleichzeitig mit Spinner/Story auf einen
+// Schlag zu erscheinen. Fehlt das Feld (normale, echte Interviews), gilt weiterhin die alte Regel:
+// sofort sichtbar, sobald ein accessCode existiert.
 function updateAccessCodeBanner(iv) {
   const banner = el('access-code-banner');
   if (!banner) return;
-  if (iv && iv.accessCode) {
+  if (iv && iv.accessCode && iv.accessCodeRevealed !== false) {
     el('access-code-banner-text').textContent = iv.accessCode;
     banner.style.display = 'block';
   } else {
@@ -4727,11 +4696,13 @@ let simulationAbortRequested = false;
 // bilden zusammen einen einzigen offenen "Warte auf die nächste Aktion"-Punkt in runSimulation ab –
 // siehe waitForSimulationStep()/resolveSimulationStep() weiter unten.
 let simulationPaused = false;
-let simulationPauseKind = null; // 'step' (vor der nächsten Proband-Antwort, EINZIGER Pause-Typ mit
-// "▶ Weiter"-Shortcut), 'reorder' (v2.4.2, vor dem Reihenfolge-Vorschlag), 'review' (vor dem
-// Abschluss) oder 'hint' (v2.6.3, vor der Bestätigung eines periodischen Hinweises im Chat). Den
-// früheren Typ 'story' (v2.6.2, vor dem Lesen der geheimen Test-Geschichte) gibt es seit v2.7.0
-// nicht mehr - das Nachlesen ist rein freiwillig und pausiert nichts mehr (siehe runSimulation).
+let simulationPauseKind = null; // 'begin' (v2.7.2, EINMALIG direkt nach der Eröffnungsfrage, bevor
+// die eigentliche Runden-Schleife losläuft - siehe runSimulation), 'step' (vor der nächsten
+// Proband-Antwort) - beide mit "▶ Weiter"-Shortcut -, 'reorder' (v2.4.2, vor dem
+// Reihenfolge-Vorschlag), 'review' (vor dem Abschluss) oder 'hint' (v2.6.3, vor der Bestätigung eines
+// periodischen Hinweises im Chat). Den früheren Typ 'story' (v2.6.2, vor dem Lesen der geheimen
+// Test-Geschichte) gibt es seit v2.7.0 nicht mehr - das Nachlesen ist rein freiwillig und pausiert
+// nichts mehr (siehe runSimulation).
 let simulationStepResolver = null; // resolve()-Funktion des aktuell offenen Pause-Promise
 let simulationPausedIv = null; // das Interview, für das die aktuelle Pause gilt
 
@@ -4920,7 +4891,11 @@ function waitForSimulationStep(kind, iv) {
   // immer über die ganz normale Oberfläche laufen (Interview durchlesen & bearbeiten, Titel, AGB),
   // nie über einen Automatik-Shortcut übersprungen werden. Den früheren Lese-Schritt ('story') gibt
   // es seit v2.7.0 nicht mehr (siehe runSimulation).
-  if (kind === 'step') showSimulationContinueButton();
+  // v2.7.2: 'begin' bekommt denselben "▶ Weiter"-Knopf wie 'step', nur mit eigener Beschriftung
+  // ("▶ Zum Interview") - eine bewusste Entscheidung, aber KEIN inhaltlicher Entscheidungsschritt
+  // wie reorder/review, daher hier erlaubt.
+  if (kind === 'step') showSimulationContinueButton('▶ Weiter');
+  else if (kind === 'begin') showSimulationContinueButton('▶ Zum Interview');
   return new Promise((resolve) => { simulationStepResolver = resolve; });
 }
 
@@ -4935,9 +4910,9 @@ function resolveSimulationStep(outcome) {
   resolver(outcome);
 }
 
-function showSimulationContinueButton() {
+function showSimulationContinueButton(label) {
   const btn = el('btn-sim-bar-continue');
-  if (btn) btn.style.display = 'inline-block';
+  if (btn) { btn.style.display = 'inline-block'; btn.textContent = label || '▶ Weiter'; }
 }
 function hideSimulationContinueButton() {
   const btn = el('btn-sim-bar-continue');
@@ -4999,6 +4974,13 @@ async function runSimulation(genreDescription, mode) {
     updateProjectDisplay();
     const iv = newInterviewRecord(nextId(), projectId);
     iv.simulationStory = story;
+    // v2.7.2, auf Wunsch des Nutzers ("ki denkt nach ... wenn fertig kommt die Story automatisch auf
+    // den Screen, KI denkt dann nicht mehr, dann der Button zum Interview, dann der Zugangscode"):
+    // der Code selbst existiert unverändert ab der allerersten Sekunde (siehe newInterviewRecord),
+    // der rote Banner wird für Simulationen aber bewusst erst NACH dem "▶ Weiter zum Interview"-Klick
+    // eingeblendet (siehe updateAccessCodeBanner, und die neue 'begin'-Pause weiter unten) - echte
+    // Interviews sind davon nicht betroffen (dort bleibt accessCodeRevealed unbesetzt = sofort sichtbar).
+    iv.accessCodeRevealed = false;
     DB.interviews.push(iv); saveDB();
     interviewId = iv.id;
     hasStory = false;
@@ -5028,9 +5010,31 @@ async function runSimulation(genreDescription, mode) {
       return;
     }
 
+    // v2.7.2, auf Wunsch des Nutzers ("wenn fertig kommt die Story automatisch auf den Screen, KI
+    // denkt dann nicht mehr, dann der Button zum Interview, dann der Zugangscode"): neue, kurze Pause
+    // GENAU an dieser Stelle - Eröffnungsfrage steht bereits sichtbar im Chat, der große zentrierte
+    // Spinner geht jetzt aus (setBusy(false)), und erst nach bewusstem Klick auf "▶ Zum Interview"
+    // (derselbe Knopf/Mechanismus wie bei der 'step'-Pause, siehe waitForSimulationStep) geht es
+    // weiter - und GENAU DANN, nicht früher, wird auch der rote Zugangscode-Banner eingeblendet.
+    setBusy(false);
+    setSimulationStatus('🎭 Bereit – klicke „▶ Zum Interview", um die Simulation zu starten ...', true);
+    await waitForSimulationStep('begin', iv);
+    if (simulationAbortRequested) {
+      setSimulationStatus('🎭 Simulation von dir gestoppt. Das bisherige Interview bleibt erhalten.', false);
+      return;
+    }
+    iv.accessCodeRevealed = true;
+    saveDB();
+    updateAccessCodeBanner(iv);
+    // AUTOMATISCHER Durchlauf lief vor dieser neuen Pause ohne Unterbrechung durchgängig als "busy"
+    // (siehe Kommentar weiter unten bei "AUTOMATISCHER DURCHLAUF") - das wird hier bewusst
+    // wiederhergestellt, sonst bliebe der große Spinner für den gesamten Rest der automatischen
+    // Simulation fälschlich aus. Der manuelle Modus regelt setBusy() weiterhin selbst pro Runde.
+    if (!isManualMode) setBusy(true);
+
     let round = 0;
     if (isManualMode) {
-      setBusy(false); // Eingabefeld für die gleich folgende erste Pause wieder freigeben
+      setBusy(false); // war durch die neue 'begin'-Pause bereits aus - Eingabefeld bleibt frei
 
       // Einmaliger grüner Hinweis direkt nach der Eröffnungsfrage (siehe buildSimulationHintBubble):
       // erklärt, dass ab jetzt nach jeder Frage pausiert wird und wie man selbst eingreifen kann.
@@ -7074,6 +7078,8 @@ on('btn-sim-bar-continue', 'click', () => {
   // (finishQaEdit/finalizeReview) bzw. "OK, verstanden" (acknowledgeHint) für die einzig gültigen
   // Wege, diese Pausen aufzulösen. Den Lese-Schritt ('story') gibt es seit v2.7.0 nicht mehr - das
   // Nachlesen der geheimen Story ist rein freiwillig und pausiert nichts mehr (siehe runSimulation).
+  // v2.7.2: 'begin' (neue Pause direkt nach der Eröffnungsfrage, siehe runSimulation) fällt bewusst
+  // NICHT unter diesen Schutz - sie hat keine inhaltliche Entscheidung, ist rein ein "Los geht's"-Klick.
   if (simulationPauseKind === 'reorder' || simulationPauseKind === 'review' || simulationPauseKind === 'hint') return;
   resolveSimulationStep('auto');
 });
