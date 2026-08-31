@@ -181,7 +181,7 @@
      kann aber weiter blinken, also Info-Text absetzen"): die Blink-Animation saß bisher auf der
      GESAMTEN .spinner.sim-big-Box, wodurch auch der neue Erklärtext (.spinner-why) mit blinkte - das
      wirkte bei einem ganzen erklärenden Absatz unruhig/schwer lesbar. Jetzt blinkt NUR noch dieser
-     innere Wrapper um Titel/Untertitel, der Rest der Box (inkl. .spinner-why) bleibt ruhig stehen. -->
+     innere Wrapper um Titel/Untertitel, der Rest der Box (inkl. .spinner-why) bleibt ruhig stehen. */
   .spinner-blink-part { animation: sim-thinking-blink 1.1s ease-in-out infinite; }
   @keyframes sim-thinking-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   .spinner-title { display: block; }
@@ -205,7 +205,14 @@
     transition: width 0.4s ease;
   }
 
-  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  /* v2.9.3, Nutzer-Feedback ("'Wer' ist nicht ganz zu erkennen" im Story-Lese-Modal): seit v2.9.1
+     stecken Simulationsleiste/Zugangscode-Banner/Kopfzeile in EINEM gemeinsamen sticky-Block mit
+     z-index 9997 (siehe #sticky-top-bar). Modale wie #sim-story-modal hatten mit z-index:50 vorher
+     (als die Kopfzeile noch einen niedrigen eigenen z-index von 5 hatte) immer komplett darüber
+     gelegen und sie unsichtbar gemacht - jetzt lag die Kopfzeile plötzlich WIEDER darüber und schnitt
+     den oberen Teil jedes Modals (hier: die "Wer"-Überschrift) sichtbar ab. z-index jetzt über
+     #sticky-top-bar gesetzt, damit jedes Modal wie zuvor die komplette Seite überdeckt. */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 9998; padding: 16px; }
   .modal-backdrop.open { display: flex; }
   .modal { background: var(--panel); border-radius: 14px; padding: 22px; max-width: 480px; width: 100%; max-height: 85vh; overflow-y: auto; }
   .modal h2 { margin-top: 0; font-size: 17px; }
@@ -236,13 +243,13 @@
      startOnboarding/renderOnboardingPanel weiter unten im Skript). Bewusst mit denselben Design-Tokens
      wie die öffentliche Startseite (--bg/--accent/--panel/--border), damit es sich wie derselbe Auftritt
      anfühlt, nicht wie eine separate Technik-Oberfläche. */
-  <!-- v2.9.2, Nutzer-Feedback ("Text klebt unter dem Dach"): der feste padding-top von 40px reichte
-       nicht, sobald die sticky Kopfleiste (Simulationsleiste + Zugangscode-Banner + Kopfzeile
-       zusammen, seit v2.9.1 EIN gemeinsamer Block, siehe #sticky-top-bar) hoch genug wurde - die
-       Kopfzeile liegt mit höherem z-index über dieser Einführung und deckte dadurch den oberen Teil
-       des Einführungstexts einfach ab. padding-top wird deshalb jetzt per JS auf die tatsächliche,
-       aktuelle Höhe dieser Kopfleiste gesetzt (siehe syncOnboardingOverlayTopOffset im Skript) - 90px
-       hier ist nur ein grober Startwert, bis das JS beim Öffnen den echten Wert einträgt. -->
+  /* v2.9.2, Nutzer-Feedback ("Text klebt unter dem Dach"): der feste padding-top von 40px reichte
+     nicht, sobald die sticky Kopfleiste (Simulationsleiste + Zugangscode-Banner + Kopfzeile
+     zusammen, seit v2.9.1 EIN gemeinsamer Block, siehe #sticky-top-bar) hoch genug wurde - die
+     Kopfzeile liegt mit höherem z-index über dieser Einführung und deckte dadurch den oberen Teil
+     des Einführungstexts einfach ab. padding-top wird deshalb jetzt per JS auf die tatsächliche,
+     aktuelle Höhe dieser Kopfleiste gesetzt (siehe syncOnboardingOverlayTopOffset im Skript) - 90px
+     hier ist nur ein grober Startwert, bis das JS beim Öffnen den echten Wert einträgt. */
   #onboarding-overlay { display: none; position: fixed; inset: 0; z-index: 9996; background: var(--bg); overflow-y: auto; padding: 90px 18px 56px; }
   #onboarding-overlay.open { display: block; }
   .onboarding-wrap { max-width: 540px; margin: 0 auto; }
@@ -699,7 +706,11 @@
            genau dieses einen Wartemoments sichtbar ist (siehe simulationSpinnerAllowed/setBusy oben)
            - kein zusätzlicher Show/Hide-Mechanismus nötig, das Verschwinden passiert automatisch mit
            dem Rest des Spinners. -->
-      <div class="spinner-why">Warum überhaupt ein KI-Interview? Ein erfahrener Journalist oder Biograf wäre besser als eine KI – keine Frage. Aber die meisten Menschen werden nie von großen Medien interviewt, und kaum jemand setzt sich freiwillig hin, um monatelang an den eigenen Erinnerungen zu schreiben. Ein KI-Interview ist nicht perfekt – schafft vielleicht 80 % der Qualität eines guten menschlichen Interviews. Aber 80 % einer Geschichte, die sonst nie festgehalten worden wäre, sind unendlich viel mehr als die 0 %, die sonst übrig blieben. Genau deshalb gibt es arkaa: um Stimmen zu bewahren, die sonst nirgends vorkämen.</div>
+      <!-- v2.9.3, auf Wunsch des Nutzers ("bitte kürze den Text noch etwas"): von fünf auf drei
+           knappere Sätze gekürzt, Kernaussage bleibt erhalten (unperfekt, aber erreicht Menschen, die
+           sonst nie interviewt würden; 80 % einer Geschichte sind mehr als die 0 %, die sonst übrig
+           blieben). -->
+      <div class="spinner-why">Ein KI-Interview ist nicht perfekt – ein erfahrener Journalist wäre besser. Aber es erreicht Menschen, die sonst nie interviewt würden, und 80 % einer Geschichte sind unendlich viel mehr als die 0 %, die sonst übrig blieben. Genau dafür gibt es arkaa.</div>
     </div>
     <div class="input-row">
       <textarea id="input" placeholder="Deine Antwort … (Enter zum Senden, Shift+Enter für neue Zeile)"></textarea>
@@ -4292,11 +4303,14 @@ function startOnboarding(iv, onComplete) {
 // Simulationsleiste, mit/ohne Zugangscode-Banner). Läuft einmal beim Öffnen der Einführung sowie bei
 // jeder Fenstergrößenänderung, SOLANGE die Einführung offen ist (z. B. Zeilenumbruch der Kopfzeile bei
 // schmalerem Fenster ändert ihre Höhe).
+// v2.9.3, Nutzer-Feedback ("jetzt sind die Kästen zu weit unten"): der zusätzliche Puffer war mit
+// 24px unnötig großzügig und wirkte als spürbare Lücke - auf 8px verkleinert, reicht als kleiner
+// Sicherheitsabstand locker aus.
 function syncOnboardingOverlayTopOffset() {
   const overlay = el('onboarding-overlay');
   const bar = el('sticky-top-bar');
   if (!overlay || !bar) return;
-  overlay.style.paddingTop = (bar.offsetHeight + 24) + 'px';
+  overlay.style.paddingTop = (bar.offsetHeight + 8) + 'px';
 }
 window.addEventListener('resize', () => {
   const overlay = el('onboarding-overlay');
@@ -5994,6 +6008,11 @@ function buildArchivPdfHtml(iv, title, project) {
     font-size: 11.5px; color: #0f766e; font-weight: 700; margin-bottom: 16px; }
   .cover h1 { font-size: 30px; margin: 0 0 14px; line-height: 1.3; }
   .cover .meta { font-family: -apple-system, sans-serif; font-size: 12.5px; color: #756e63; }
+  /* v2.9.3, auf Wunsch des Nutzers ("oben im Interview nach der Veröffentlichung: Orte und Namen
+     wurden von arkaa geändert, um Personen zu schützen"): kurzer, unaufdringlicher Hinweis direkt im
+     Titelbereich der Vorschau/des PDFs - erscheint NUR, wenn die Schutz-Anonymisierung für dieses
+     Interview tatsächlich gelaufen ist (siehe iv.protectionAnonymized/buildArchivPdfHtml). */
+  .cover .protection-note { font-family: -apple-system, sans-serif; font-size: 12px; color: #0f766e; margin-top: 10px; }
   .qa-block { margin-bottom: 8px; }
   .frage { font-family: -apple-system, sans-serif; font-size: 12px; letter-spacing: 0.03em; text-transform: uppercase;
     color: #0f766e; font-weight: 700; margin: 26px 0 6px; page-break-after: avoid; }
@@ -6017,6 +6036,7 @@ function buildArchivPdfHtml(iv, title, project) {
       <div class="kicker">arkaa — Archiv der echten Geschichten</div>
       <h1>${escapeHtml(title)}</h1>
       <div class="meta">${projectName ? projectName + ' · ' : ''}Erzählt am ${dateStr}</div>
+      ${iv.protectionAnonymized ? '<div class="protection-note">🛡️ Namen und Orte in dieser Geschichte wurden von arkaa geändert, um beteiligte Personen zu schützen.</div>' : ''}
     </div>
     ${qaHtml}
     <footer>arkaa — ein offenes, dauerhaftes Archiv für persönliche Erinnerungen.</footer>
@@ -7065,16 +7085,24 @@ const PROTECTION_ANONYMIZATION_SYSTEM_PROMPT = `Du bist ein erfahrener Redakteur
   `1. FAKTEN BLEIBEN UNANGETASTET. Was tatsächlich geschehen ist - der Ablauf, die Handlungen, Beziehungen, ` +
   `Ursachen, die Reihenfolge der Ereignisse - darf sich durch deine Änderung inhaltlich NICHT verändern. Du ` +
   `ersetzt ausschließlich identifizierende Bezeichnungen, niemals den Inhalt einer Aussage.\n` +
-  `2. PERSONEN: Ersetze JEDEN echten Vor-/Nachnamen einer Person - ausgenommen die erzählende Person selbst ` +
-  `(Ich-Perspektive) - entweder durch eine passende Rollenbezeichnung, wenn diese aus dem Kontext eindeutig ` +
-  `hervorgeht (z. B. "Herr Müller" -> "der Sportlehrer", "meine Tante Sabine" -> "meine Tante"), oder, wenn ` +
-  `keine natürliche Rollenbezeichnung möglich ist, durch einen austauschbaren Platzhaltervornamen (z. B. ` +
-  `"Karim"). WICHTIG FÜR TRANSPARENZ: Markiere bei JEDER so ersetzten Person das ERSTE Auftreten ihrer neuen ` +
-  `Bezeichnung im Text mit dem Zusatz "(Name von der Redaktion geändert)" - unabhängig davon, ob du eine ` +
-  `Rollenbezeichnung oder einen Platzhaltervornamen verwendet hast (z. B. "der Sportlehrer (Name von der ` +
-  `Redaktion geändert)" bzw. "Karim (Name von der Redaktion geändert)"). Bei JEDER weiteren Erwähnung derselben ` +
-  `Person im weiteren Verlauf lässt du diesen Zusatz weg und verwendest nur noch die neue Bezeichnung, damit ` +
-  `der Text nicht unnötig aufgebläht wird.\n` +
+  `2. PERSONEN: Ersetze JEDEN echten Vor-/Nachnamen einer Person entweder durch eine passende ` +
+  `Rollenbezeichnung, wenn diese aus dem Kontext eindeutig hervorgeht (z. B. "Herr Müller" -> "der ` +
+  `Sportlehrer", "meine Tante Sabine" -> "meine Tante"), oder, wenn keine natürliche Rollenbezeichnung ` +
+  `möglich ist, durch einen austauschbaren Platzhaltervornamen (z. B. "Karim"). WICHTIG FÜR TRANSPARENZ: ` +
+  `Markiere bei JEDER so ersetzten Person das ERSTE Auftreten ihrer neuen Bezeichnung im Text mit dem Zusatz ` +
+  `"(Name von der Redaktion geändert)" - unabhängig davon, ob du eine Rollenbezeichnung oder einen ` +
+  `Platzhaltervornamen verwendet hast (z. B. "der Sportlehrer (Name von der Redaktion geändert)" bzw. "Karim ` +
+  `(Name von der Redaktion geändert)"). Bei JEDER weiteren Erwähnung derselben Person im weiteren Verlauf ` +
+  `lässt du diesen Zusatz weg und verwendest nur noch die neue Bezeichnung, damit der Text nicht unnötig ` +
+  `aufgebläht wird.\n` +
+  `2b. DIE ERZÄHLENDE PERSON SELBST (Ich-Perspektive): Nennt sie irgendwo im Text ihren eigenen echten ` +
+  `Vornamen (z. B. in "Ich heiße Lena, ich bin 29 ..."), erfinde auch für SIE einen neuen, plausiblen ` +
+  `Vornamen und verwende ihn konsequent im gesamten Text überall dort, wo vorher ihr echter Name stand. ` +
+  `Anders als bei anderen Personen (Regel 2) bekommt dieser neue Name für die erzählende Person selbst ` +
+  `KEINEN Zusatz "(Name von der Redaktion geändert)" - das würde in der Ich-Perspektive unnatürlich klingen ` +
+  `("Ich heiße Alex (Name von der Redaktion geändert)" liest sich falsch). Trage diese Ersetzung trotzdem ` +
+  `ganz normal in "changes" ein (mit typ "person"), damit sie in der Änderungsübersicht sichtbar bleibt - nur ` +
+  `im FLIESSTEXT selbst bleibt der Zusatz weg.\n` +
   `3. ORTE/INSTITUTIONEN/FIRMEN: Ersetze JEDE konkrete, identifizierende Orts-, Institutions- oder ` +
   `Firmenangabe (Schulen, Straßen, Dörfer, kleine Orte, Kliniken, Firmen, Agenturen, Behörden, Stadtteile ` +
   `etc.) durch eine sinnvolle Verallgemeinerung eine Ebene höher, die die Geschichte weiterhin verständlich ` +
@@ -7131,7 +7159,7 @@ async function analyzeProtectionAnonymization(iv) {
   const userContent = `Hier ist das vollständige, fertige Interview als nummerierte Frage-Antwort-Paare:\n\n${promptBody}`;
 
   const extractedTerms = await extractIdentifyingTermsForAnonymization(promptBody)
-    .catch(() => ({ personen: [], orteInstitutionen: [] }));
+    .catch(() => ({ personen: [], orteInstitutionen: [], erzaehlerName: null }));
   const mandatoryNote = buildMandatoryTermsNote(extractedTerms);
 
   async function attempt(extra) {
@@ -7213,6 +7241,7 @@ async function analyzeProtectionAnonymization(iv) {
 const MECHANICAL_FALLBACK_ALIAS_POOL = ['Alex', 'Sam', 'Kim', 'Robin', 'Toni', 'Mika', 'Charlie', 'Noah', 'Jamie', 'Elin'];
 function applyMechanicalAnonymizationFallback(pairs, leftoverTerms, extractedTerms) {
   const personSet = new Set((extractedTerms && extractedTerms.personen) || []);
+  const erzaehlerName = extractedTerms && extractedTerms.erzaehlerName;
   const usedAliases = new Set();
   function nextAlias() {
     for (const a of MECHANICAL_FALLBACK_ALIAS_POOL) {
@@ -7221,6 +7250,15 @@ function applyMechanicalAnonymizationFallback(pairs, leftoverTerms, extractedTer
     return 'Person ' + (usedAliases.size + 1);
   }
   const plans = leftoverTerms.map(term => {
+    // v2.9.3, siehe Regel 2b im PROTECTION_ANONYMIZATION_SYSTEM_PROMPT: der eigene Name der
+    // erzählenden Person bekommt - anders als bei allen anderen Personen - NIE den "(Name von der
+    // Redaktion geändert)"-Zusatz, auch nicht beim ersten Auftreten, weil das in der Ich-Perspektive
+    // unnatürlich klingt ("Ich heiße Alex (Name von der Redaktion geändert)" - Nutzer-Feedback: "klingt
+    // doof, ich würde einfach einen anderen Namen erfinden").
+    if (erzaehlerName && term === erzaehlerName) {
+      const alias = nextAlias();
+      return { term, typ: 'person', plain: alias, marked: alias, isNarrator: true };
+    }
     if (personSet.has(term)) {
       const alias = nextAlias();
       return { term, typ: 'person', plain: alias, marked: `${alias} (Name von der Redaktion geändert)` };
@@ -7247,7 +7285,9 @@ function applyMechanicalAnonymizationFallback(pairs, leftoverTerms, extractedTer
             original: plan.term,
             replacement: plan.marked,
             typ: plan.typ,
-            begruendung: 'Automatisch erzwungen (mechanisches Sicherheitsnetz, da die KI-Anonymisierung diesen Begriff zweimal übersehen hatte).',
+            begruendung: plan.isNarrator
+              ? 'Automatisch erzwungen: eigener Name der erzählenden Person wurde zu ihrem Schutz durch einen erfundenen Namen ersetzt (mechanisches Sicherheitsnetz, da die KI-Anonymisierung dies zweimal übersehen hatte).'
+              : 'Automatisch erzwungen (mechanisches Sicherheitsnetz, da die KI-Anonymisierung diesen Begriff zweimal übersehen hatte).',
           });
           return plan.marked;
         }
@@ -7268,19 +7308,20 @@ async function extractIdentifyingTermsForAnonymization(promptBody) {
   const systemPrompt = `Du durchsuchst ein Interview-Transkript. Deine EINZIGE Aufgabe: finde JEDEN echten ` +
     `Eigennamen einer Person (Vorname, Nachname, Spitzname, Anrede mit Namen wie "Herr Kessler" oder "Frau ` +
     `Dr. Schönfeld") sowie JEDE konkrete Firma, Agentur, Schule, Klinik, Behörde oder jeden kleinräumigen Ort ` +
-    `(Stadtteil, Dorf, Straße), der im Text vorkommt - AUSGENOMMEN die Bezeichnung der erzählenden Person ` +
-    `selbst (Ich-Perspektive). Du änderst NICHTS am Text, du listest nur auf. Sei lieber zu großzügig als zu ` +
-    `vorsichtig: nimm auch Begriffe auf, bei denen du unsicher bist, ob sie relevant sind. Gib für jeden ` +
-    `Namen NUR die kürzeste eindeutige Form an, ohne Anrede-Titel (z. B. "Kessler" statt "Herr Kessler", ` +
-    `"Schönfeld" statt "Frau Dr. Schönfeld"). Antworte AUSSCHLIESSLICH mit validem JSON, ohne Markdown-` +
-    `Codeblock, in genau dieser Form: {"personen": ["..."], "orte_institutionen": ["..."]}. Beide Listen ` +
-    `dürfen leer sein, wenn wirklich nichts davon vorkommt.`;
+    `(Stadtteil, Dorf, Straße), der im Text vorkommt. Du änderst NICHTS am Text, du listest nur auf. Sei ` +
+    `lieber zu großzügig als zu vorsichtig: nimm auch Begriffe auf, bei denen du unsicher bist, ob sie ` +
+    `relevant sind. Gib für jeden Namen NUR die kürzeste eindeutige Form an, ohne Anrede-Titel (z. B. ` +
+    `"Kessler" statt "Herr Kessler", "Schönfeld" statt "Frau Dr. Schönfeld"). ` +
+    `NENNT DIE ERZÄHLENDE PERSON SELBST (Ich-Perspektive, z. B. "Ich heiße Lena, ich bin 29 ...") IRGENDWO ` +
+    `IHREN EIGENEN NAMEN, gib diesen zusätzlich GENAU EINMAL separat im Feld "erzaehler_name" an (NICHT auch ` +
+    `noch in "personen" wiederholen). Antworte AUSSCHLIESSLICH mit validem JSON, ohne Markdown-Codeblock, in ` +
+    `genau dieser Form: {"personen": ["..."], "orte_institutionen": ["..."], "erzaehler_name": "..." oder null}.`;
   const userContent = `Hier ist das Interview als nummerierte Frage-Antwort-Paare:\n\n${promptBody}`;
   let raw;
   try {
     raw = await callChat(systemPrompt, [{ role: 'user', content: userContent }], 1000);
   } catch (err) {
-    return { personen: [], orteInstitutionen: [] };
+    return { personen: [], orteInstitutionen: [], erzaehlerName: null };
   }
   let parsed;
   try {
@@ -7291,7 +7332,13 @@ async function extractIdentifyingTermsForAnonymization(promptBody) {
   const clean = (arr) => Array.isArray(arr)
     ? [...new Set(arr.filter(s => typeof s === 'string' && s.trim().length >= 2 && s.trim().length <= 60).map(s => s.trim()))]
     : [];
-  return { personen: clean(parsed && parsed.personen), orteInstitutionen: clean(parsed && parsed.orte_institutionen) };
+  const erzaehlerNameRaw = parsed && typeof parsed.erzaehler_name === 'string' ? parsed.erzaehler_name.trim() : '';
+  const erzaehlerName = erzaehlerNameRaw.length >= 2 && erzaehlerNameRaw.length <= 60 ? erzaehlerNameRaw : null;
+  return {
+    personen: clean(parsed && parsed.personen),
+    orteInstitutionen: clean(parsed && parsed.orte_institutionen),
+    erzaehlerName,
+  };
 }
 
 // v2.9.1: baut aus der Fundliste von extractIdentifyingTermsForAnonymization einen Zusatzabschnitt für
@@ -7300,11 +7347,13 @@ async function extractIdentifyingTermsForAnonymization(promptBody) {
 function buildMandatoryTermsNote(extractedTerms) {
   const personen = (extractedTerms && extractedTerms.personen) || [];
   const orte = (extractedTerms && extractedTerms.orteInstitutionen) || [];
-  if (personen.length === 0 && orte.length === 0) return '';
+  const erzaehlerName = extractedTerms && extractedTerms.erzaehlerName;
+  if (personen.length === 0 && orte.length === 0 && !erzaehlerName) return '';
   const lines = [];
   lines.push('\n\nEIN SEPARATER SUCHDURCHGANG hat bereits folgende möglicherweise identifizierende Begriffe in diesem Text gefunden. Prüfe JEDEN einzelnen und ersetze ihn gemäß den Regeln oben, falls es sich tatsächlich um eine echte, identifizierende Angabe handelt:');
   if (personen.length > 0) lines.push(`Mögliche Personennamen: ${personen.join(', ')}`);
   if (orte.length > 0) lines.push(`Mögliche Orte/Institutionen/Firmen: ${orte.join(', ')}`);
+  if (erzaehlerName) lines.push(`Eigener Name der erzählenden Person selbst (siehe Regel 2b - neuer Name OHNE "(Name von der Redaktion geändert)"-Zusatz): ${erzaehlerName}`);
   lines.push('Diese Liste kann auch falsch-positive Treffer enthalten (z. B. ein ganz gewöhnliches Wort) - in dem seltenen Fall lässt du diesen einen Begriff unverändert. Aber jeder Begriff, der tatsächlich ein echter Name/Ort/Firma ist, MUSS ersetzt werden.');
   return lines.join('\n');
 }
@@ -7314,7 +7363,11 @@ function buildMandatoryTermsNote(extractedTerms) {
 // Anonymisierung noch als GANZES WORT im Ergebnistext vorkommt (Wortgrenzen über Unicode-Buchstaben/
 // -Ziffern, damit z. B. "Karim" nicht fälschlich in einem längeren zusammengesetzten Wort anschlägt).
 function findLeftoverMandatoryTerms(resultPairs, extractedTerms) {
-  const terms = [...((extractedTerms && extractedTerms.personen) || []), ...((extractedTerms && extractedTerms.orteInstitutionen) || [])];
+  const terms = [
+    ...((extractedTerms && extractedTerms.personen) || []),
+    ...((extractedTerms && extractedTerms.orteInstitutionen) || []),
+    ...((extractedTerms && extractedTerms.erzaehlerName) ? [extractedTerms.erzaehlerName] : []),
+  ];
   if (terms.length === 0) return [];
   const fullText = resultPairs.map(p => `${p.question || ''} ${p.answer || ''}`).join(' \n ');
   return terms.filter(term => {
