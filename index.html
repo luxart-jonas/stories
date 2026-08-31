@@ -121,7 +121,9 @@
   .card .card-body-inner { padding: 0 20px 20px 76px; font-size: 14.5px; color: var(--muted); }
   .card[data-open="true"] { box-shadow: 0 6px 20px rgba(43,38,32,0.06); }
 
-  /* Audience grid */
+  /* Audience grid - seit v2 anklickbar (siehe #audience-cards im HTML, nutzt dieselben .card-Klassen
+     wie #info-cards oben), .audience/.aud-card werden dadurch nicht mehr verwendet, hier aber bewusst
+     stehen gelassen statt gelöscht (falls irgendwo noch referenziert). */
   .audience { display: grid; gap: 16px; grid-template-columns: repeat(2, 1fr); }
   @media (min-width: 760px) { .audience { grid-template-columns: repeat(4, 1fr); } }
   .aud-card { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 22px 18px; text-align: center; }
@@ -171,9 +173,18 @@
       <a href="#funktion">Wie es funktioniert</a>
       <a href="#sicherheit">Sicherheit</a>
       <a href="#wofuer">Wofür</a>
-      <a href="archiv/">Archiv</a>
     </nav>
-    <a class="btn btn-primary" href="interview/">Zum Interview</a>
+    <!-- Auf Wunsch des Nutzers ("Archiv sollte genauso groß stehen wie Zum Interview, mit demselben
+         grünen Button, daneben"): "Archiv" war vorher nur ein kleiner, unauffälliger Text-Link
+         innerhalb von nav.links (siehe oben) - steht jetzt gleichwertig, in derselben
+         .btn-primary-Optik, direkt neben "Zum Interview". Zunächst rein optisch, wie gewünscht. Beide
+         zusammen in einem eigenen Flex-Container, damit "justify-content: space-between" (siehe
+         .nav-row oben) sie als EIN Grüppchen ganz rechts hält, statt sie einzeln über die Zeile zu
+         verteilen. -->
+    <div style="display:flex; gap:10px;">
+      <a class="btn btn-primary" href="archiv/">Archiv</a>
+      <a class="btn btn-primary" href="interview/">Zum Interview</a>
+    </div>
   </div>
 </header>
 
@@ -302,8 +313,10 @@
             <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div class="card-body"><div class="card-body-inner">
-            Jede veröffentlichte Geschichte wird mit Metadaten wie Ort, Zeit und Kontext versehen
-            und kann im Nachhinein nicht verändert werden – so bleibt sie als Quelle glaubwürdig.
+            Jede veröffentlichte Geschichte wird mit Metadaten wie Ort, Zeit und Kontext versehen.
+            Verändern oder löschen kannst nur du sie selbst, mit deinem persönlichen Zugangscode –
+            niemand sonst kann nachträglich etwas an ihr manipulieren. So bleibt sie als Quelle
+            glaubwürdig, ohne dass du die Kontrolle darüber abgibst.
           </div></div>
         </div>
         <div class="card" data-open="false">
@@ -328,10 +341,14 @@
             <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div class="card-body"><div class="card-body-inner">
-            Erzählst du von etwas Schwerem – einem Verlust, einem Unrecht, einer Grenzüberschreitung
-            – geht die KI behutsam vor: Sie drängt nicht und lässt dir die Kontrolle über die Tiefe
-            deiner Erzählung. Namen von Einrichtungen oder Dritten kannst du vor einer Veröffentlichung
-            auf Wunsch anonymisieren lassen.
+            Geht es in deiner Geschichte erkennbar um ein besonders schutzbedürftiges Thema – etwa
+            Missbrauch, eine Straftat oder Flucht und Verfolgung –, greift ein zusätzlicher
+            Schutzmechanismus: Am Ende, nachdem du alles noch einmal in Ruhe durchgelesen hast, werden
+            Namen automatisch zu Rollenbezeichnungen und Orte zu allgemeineren Angaben verändert, ohne
+            dass sich an dem, was wirklich passiert ist, etwas ändert. Das schützt sowohl dich als auch
+            andere in deiner Geschichte vorkommende Personen – bei Missbrauch ausdrücklich sowohl
+            mutmaßliche Täter*innen als auch Betroffene. Bei Flucht- und Verfolgungsgeschichten
+            empfehlen wir dir zusätzlich, arkaa über ein VPN oder den Tor-Browser aufzurufen.
           </div></div>
         </div>
         <div class="card" data-open="false">
@@ -349,6 +366,44 @@
           </div></div>
         </div>
       </div>
+
+      <!-- Auf Wunsch des Nutzers ("Sicherheit sollte ein eigener Menüpunkt sein ... erkläre wie
+           sicher der Zugangscode ist, mache ruhig ein Beispiel"): zwei ausführlichere Absätze unter
+           den anklickbaren Karten oben - Anonymität/Tracking-Verzicht, und eine konkrete
+           Beispielrechnung zur Zugangscode-Sicherheit. Die Zahlen (539 Wörter, 5 Wörter pro Code)
+           stammen direkt aus ACCESS_CODE_WORDS/ACCESS_CODE_WORD_COUNT im Interview-Code, damit die
+           Aussage hier auch tatsächlich stimmt. WICHTIG FÜR JONAS: Die "5 Minuten Sperre nach 4
+           Fehlversuchen" ist eine serverseitige Regel (in der Supabase-Funktion, die den Zugangscode
+           prüft) - die liegt außerhalb dieses Repos, ich konnte sie von hier aus nicht prüfen. Bitte
+           vor Veröffentlichung sicherstellen, dass sie tatsächlich so umgesetzt ist, sonst stimmt die
+           Beispielrechnung nicht mehr. -->
+      <div style="max-width:720px; margin:44px auto 0; text-align:left;">
+        <h3 style="font-size:19px; margin:0 0 14px;">Anonymität ist uns wichtig – deshalb tracken wir nicht</h3>
+        <p style="font-size:15px; color:var(--ink); margin:0 0 20px; line-height:1.7;">
+          arkaa verlangt bewusst keine E-Mail-Adresse, keine Registrierung und keinen
+          Identitätsnachweis. Nicht aus Nachlässigkeit, sondern aus Prinzip: Wer nicht weiß, wer du
+          bist, kann dich auch nicht verfolgen, dein Verhalten auswerten oder unter Druck setzen. Es
+          gibt keine Nutzerkonten, kein Log-in und kein Tracking über mehrere Sitzungen hinweg – nur
+          dein Interview und, falls du veröffentlichst, dein persönlicher Zugangscode.
+        </p>
+        <h3 style="font-size:19px; margin:0 0 14px;">Wie sicher ist der Zugangscode?</h3>
+        <p style="font-size:15px; color:var(--ink); margin:0 0 12px; line-height:1.7;">
+          Statt eines Passworts bekommst du bei arkaa fünf zufällig gewürfelte Wörter – nach demselben
+          Prinzip wie bei modernen Hardware-Wallets für Kryptowährungen, zum Beispiel
+          „mond-riese-katze-fluss-baum“. Aus einem Wortpool von 539 Begriffen ergeben sich daraus rund
+          45,5 Billionen mögliche Kombinationen (das sind gut 45 Bit Entropie, falls dir dieser Wert
+          etwas sagt).
+        </p>
+        <p style="font-size:15px; color:var(--ink); margin:0; line-height:1.7;">
+          Ein Rechenbeispiel: Nach vier falschen Versuchen sperrt arkaa die Eingabe für fünf Minuten –
+          macht höchstens 48 Versuche pro Stunde, selbst wenn jemand rund um die Uhr automatisiert
+          raten würde. Bei rund 45,5 Billionen möglichen Codes bräuchte ein solcher Angriff im
+          statistischen Mittel über <strong>50 Millionen Jahre</strong>, um deinen Code zu treffen.
+          Bewahre ihn trotzdem gut auf – er ist der einzige Weg, deine veröffentlichte Geschichte
+          später zu bearbeiten oder zu löschen, und lässt sich aus genau diesem Grund nicht
+          zurücksetzen.
+        </p>
+      </div>
     </div>
   </section>
 
@@ -357,36 +412,119 @@
       <div class="section-head">
         <span class="tag">Wofür das gut ist</span>
         <h2>Ein Archiv für viele Blickwinkel</h2>
+        <p>Klick auf eine Karte für ein konkretes Beispiel.</p>
       </div>
-      <div class="audience">
-        <div class="aud-card">
-          <div class="icon-badge">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          </div>
-          <h4>Historiker&shy;innen</h4>
-          <p>Eine Fundgrube an Primärquellen, direkt von den Menschen, die sie erlebt haben.</p>
+      <!-- Auf Wunsch des Nutzers ("diese Kästen will ich anklicken können"): dieselbe anklickbare
+           Karten-Mechanik wie bei #info-cards oben (siehe .card/.card-body/.chevron weiter oben im
+           CSS, und das gemeinsame Klick-Script ganz unten im HTML) - jetzt für BEIDE Karten-Gruppen
+           über einen gemeinsamen Selektor statt nur für #info-cards. Zwei neue Karten ergänzt
+           (Katastrophenschutz, Menschenrechtsorganisationen), plus darunter ein ausführlicherer,
+           visionärer Absatz mit einem konkreten Beispiel zur statistischen Auswertung. -->
+      <div class="cards" id="audience-cards">
+        <div class="card" data-open="false">
+          <button type="button" aria-expanded="false">
+            <span class="icon-badge">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            </span>
+            <span class="card-title">Historiker&shy;innen</span>
+            <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="card-body"><div class="card-body-inner">
+            In 100 Jahren wird niemand mehr fragen können, wie sich eine Flucht über den Balkan 2015
+            wirklich angefühlt hat oder wie eine Familie in einer bestimmten Krisenzeit ihren Alltag
+            organisiert hat. arkaa bewahrt genau diese Stimmen als Primärquelle – nicht die Perspektive
+            der Mächtigen, sondern die der vielen, die es tatsächlich erlebt haben.
+          </div></div>
         </div>
-        <div class="aud-card">
-          <div class="icon-badge">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H8l-4 3V5z"/><path d="M8 9h8M8 13h5"/></svg>
-          </div>
-          <h4>Journalist&shy;innen</h4>
-          <p>Echte Stimmen finden, jenseits von Pressemitteilungen.</p>
+        <div class="card" data-open="false">
+          <button type="button" aria-expanded="false">
+            <span class="icon-badge">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H8l-4 3V5z"/><path d="M8 9h8M8 13h5"/></svg>
+            </span>
+            <span class="card-title">Journalist&shy;innen</span>
+            <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="card-body"><div class="card-body-inner">
+            Zum Beispiel: Wer zu Fluchtrouten übers Mittelmeer recherchiert, will oft nicht nur
+            Statistiken zitieren, sondern eine reale, im Detail erzählte Geschichte einbetten – ohne
+            wochenlang eine Kontaktperson suchen zu müssen, die bereit ist zu erzählen. Im Archiv
+            stehen bereits erzählte, authentische Berichte zu genau solchen Themen, nach Kategorie und
+            Hashtag durchsuchbar – eine Recherchegrundlage, die es vorher in dieser Form nicht gab.
+          </div></div>
         </div>
-        <div class="aud-card">
-          <div class="icon-badge">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/><circle cx="18" cy="9" r="2.4"/><path d="M15.5 14.2c2.6.5 4.5 2.4 4.5 5.8"/></svg>
-          </div>
-          <h4>Soziolog&shy;innen, Autor&shy;innen &amp; Filmemacher&shy;innen</h4>
-          <p>Material, das nicht erfunden werden muss.</p>
+        <div class="card" data-open="false">
+          <button type="button" aria-expanded="false">
+            <span class="icon-badge">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/><circle cx="18" cy="9" r="2.4"/><path d="M15.5 14.2c2.6.5 4.5 2.4 4.5 5.8"/></svg>
+            </span>
+            <span class="card-title">Soziolog&shy;innen, Autor&shy;innen &amp; Filmemacher&shy;innen</span>
+            <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="card-body"><div class="card-body-inner">
+            Material, das nicht erfunden werden muss: reale Erzählmuster, echte Widersprüche, echte
+            Details, die sich kein Drehbuch ausdenken würde. Und je größer das Archiv wird, desto mehr
+            wird daraus auch eine auswertbare Sammlung – etwa um zu untersuchen, wie sich bestimmte
+            Erfahrungen über Generationen oder Regionen hinweg unterscheiden.
+          </div></div>
         </div>
-        <div class="aud-card">
-          <div class="icon-badge">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
-          </div>
-          <h4>Für dich selbst</h4>
-          <p>Deine Geschichte bekommt einen Ort – du musst sie nicht länger allein tragen.</p>
+        <div class="card" data-open="false">
+          <button type="button" aria-expanded="false">
+            <span class="icon-badge">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11.8V5l-8-3-8 3v5.2C4 17.5 12 22 12 22z"/></svg>
+            </span>
+            <span class="card-title">Katastrophenschutz</span>
+            <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="card-body"><div class="card-body-inner">
+            Wie haben Menschen ein bestimmtes Hochwasser, einen Sturm oder eine Evakuierung tatsächlich
+            erlebt – welche Warnzeichen gab es, was hat im Ernstfall gefehlt? Aus vielen einzelnen,
+            konkret erzählten Erfahrungen lassen sich Muster ableiten, die in reinen Unfallstatistiken
+            oft untergehen, und die künftige Schutzmaßnahmen verbessern können.
+          </div></div>
         </div>
+        <div class="card" data-open="false">
+          <button type="button" aria-expanded="false">
+            <span class="icon-badge">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 5.5L20 9l-4.6 3.6L16.9 19 12 15.8 7.1 19l1.5-6.4L4 9l5.6-1.5z"/></svg>
+            </span>
+            <span class="card-title">Menschenrechtsorganisationen</span>
+            <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="card-body"><div class="card-body-inner">
+            Dokumentation von Unrecht direkt aus erster Hand – unabhängig davon, ob und wann eine
+            offizielle Aufarbeitung stattfindet. Für Organisationen, die Muster von Gewalt, Verfolgung
+            oder Vertreibung sichtbar machen wollen, ist eine wachsende Sammlung echter Berichte eine
+            Quelle, die sich sonst kaum in dieser Breite zusammentragen ließe.
+          </div></div>
+        </div>
+        <div class="card" data-open="false">
+          <button type="button" aria-expanded="false">
+            <span class="icon-badge">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+            </span>
+            <span class="card-title">Für dich selbst</span>
+            <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="card-body"><div class="card-body-inner">
+            Manche Erinnerungen wiegen weniger, wenn sie nicht länger nur in einem selbst existieren.
+            Du entscheidest, ob deine Geschichte für immer privat bleibt oder Teil eines größeren
+            Bildes wird – so oder so bekommt sie danach einen Platz außerhalb deines Kopfes.
+          </div></div>
+        </div>
+      </div>
+      <div class="idea-text" style="margin-top:36px;">
+        <p>
+          Was heute wie ein einzelner, kleiner Bericht wirkt, kann in einigen Jahren Teil einer
+          breiten Materialsammlung sein, die sich systematisch auswerten lässt. Historiker*innen,
+          Journalist*innen, Menschenrechtsorganisationen, Katastrophenschutz-Einrichtungen und
+          Forschende bekommen so Zugang zu echten Erfahrungen, die sich zum Beispiel danach
+          durchsuchen und statistisch auswerten lassen: Wie viele der hier archivierten
+          Missbrauchsfälle passierten innerhalb der eigenen Familie? Welche Fluchtrouten wurden über
+          die Jahre am häufigsten beschrieben, und wie haben sie sich verändert? An welchen Stellen
+          hätte eine frühere Warnung Leben retten können? Je mehr Menschen ihre Geschichte hier
+          festhalten, desto aussagekräftiger wird dieses Bild – nicht als anonyme Statistik von oben
+          herab, sondern zusammengesetzt aus dem, was einzelne Menschen tatsächlich erlebt haben.
+        </p>
       </div>
     </div>
   </section>
@@ -397,6 +535,10 @@
         <span class="tag">Klarstellung</span>
         <h2>Was wir nicht tun</h2>
       </div>
+      <!-- Auf Wunsch des Nutzers: "Keine Likes, keine Kommentare" jeweils als eigener Punkt, dazu
+           "kein Login, keine Registrierung, kein Ranking, keine Monetarisierung" neu ergänzt. Der
+           frühere vierte Listenpunkt ("Es gibt nur den Ort ...") war inhaltlich gar kein "Nope" -
+           steht jetzt abgesetzt UNTER der Liste als eigenständiger Schlusssatz, ohne X-Icon davor. -->
       <div class="nope-list">
         <div class="nope-item">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -404,7 +546,11 @@
         </div>
         <div class="nope-item">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-          <span>Keine Likes, keine Kommentare</span>
+          <span>Keine Likes</span>
+        </div>
+        <div class="nope-item">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          <span>Keine Kommentare</span>
         </div>
         <div class="nope-item">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -412,9 +558,32 @@
         </div>
         <div class="nope-item">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-          <span>Es gibt nur den Ort, die Geschichte – und deine Entscheidung</span>
+          <span>Kein Login</span>
+        </div>
+        <div class="nope-item">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          <span>Keine Registrierung</span>
+        </div>
+        <div class="nope-item">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          <span>Kein Ranking</span>
+        </div>
+        <div class="nope-item">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          <span>Keine Monetarisierung</span>
         </div>
       </div>
+      <!-- Punkt 8, auf Wunsch des Nutzers: "finde einen Platz, wo du erklärst, dass dieses Projekt
+           völlig altruistisch ist. Keine Monetarisierung." - direkt hier bei "Keine Monetarisierung"
+           oben platziert, weil es inhaltlich genau dazu gehört. -->
+      <p style="max-width:560px; margin:26px auto 0; text-align:center; font-size:14.5px; color:var(--muted); line-height:1.7;">
+        arkaa wird nicht kommerziell betrieben. Es gibt kein Geschäftsmodell dahinter, keine
+        Investor*innen und keine Werbeeinnahmen – dieses Archiv ist ein rein altruistisches Projekt.
+        Es existiert, damit Geschichten nicht verloren gehen, nicht, um damit Geld zu verdienen.
+      </p>
+      <p style="max-width:560px; margin:22px auto 0; text-align:center; font-size:17px; font-style:italic; color:var(--ink);">
+        Es gibt nur den Ort, die Geschichte – und deine Entscheidung.
+      </p>
     </div>
   </section>
 
@@ -468,7 +637,9 @@
 </footer>
 
 <script>
-  document.querySelectorAll('#info-cards .card > button').forEach((btn) => {
+  // Ein gemeinsamer Selektor für beide Karten-Gruppen (Sicherheit + Wofür/Zielgruppen, siehe
+  // #info-cards/#audience-cards oben) - dieselbe Klick-Mechanik, kein zweites Script nötig.
+  document.querySelectorAll('#info-cards .card > button, #audience-cards .card > button').forEach((btn) => {
     btn.addEventListener('click', () => {
       const card = btn.closest('.card');
       const isOpen = card.getAttribute('data-open') === 'true';
