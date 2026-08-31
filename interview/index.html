@@ -109,8 +109,9 @@
      sie den Simulationsmodus ausprobieren können, ohne selbst ein zeitaufwändiges eigenes Interview
      zu führen"): erscheint zentriert, solange noch kein Interview läuft (siehe
      updateTesterInfoBoxVisibility im Skript) - verschwindet, sobald "Simulation" gedrückt wird oder
-     über das ✕ manuell weggeklickt wird (Dismiss wird in localStorage gemerkt, siehe
-     TESTER_INFO_DISMISS_KEY, damit wiederkehrende Tester sie nicht bei jedem Laden erneut sehen). */
+     über das ✕ manuell weggeklickt wird. Der Dismiss gilt bewusst nur für die aktuell offene Seite
+     (siehe testerInfoDismissedThisPageLoad im Skript) - ein Neuladen zeigt ihn wieder, solange in der
+     aktuellen Testphase noch kein Interview läuft. */
   #tester-info-box {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
     z-index: 40; max-width: 460px; width: calc(100% - 32px);
@@ -180,7 +181,22 @@
   @keyframes sim-thinking-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   .spinner-title { display: block; }
   .spinner-subtitle { display: block; font-size: 13px; font-weight: 400; opacity: 0.7; margin-top: 6px; }
+  /* v2.8.2, siehe #spinner im HTML weiter unten - deutlich kleinerer/leichterer Textblock als Titel/
+     Untertitel, damit ein ganzer erklärender Absatz nicht wie eine zweite Überschrift wirkt. */
+  .spinner-why { display: block; font-size: 13px; font-weight: 400; text-align: left; line-height: 1.55; opacity: 0.85; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(46,95,138,0.25); }
   .badge { display: inline-block; font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: var(--accent-light); color: var(--accent); margin-left: 6px; }
+  /* v2.9.0: ungefährer Fortschrittsbalken in der Kopfzeile, ersetzt die frühere "Frage X von Y"-Zahl
+     (siehe updateInterviewProgressBar im Skript). Bewusst schmal und dezent, kein zusätzlicher großer
+     UI-Block - soll orientieren, ohne wichtiger zu wirken als der eigentliche Chat. */
+  .interview-progress-wrap {
+    width: 180px; max-width: 40vw; height: 7px; border-radius: 999px;
+    background: var(--border); overflow: hidden; margin-top: 6px;
+  }
+  .interview-progress-bar {
+    height: 100%; width: 4%; border-radius: 999px;
+    background: linear-gradient(90deg, #3a6b3a, #2e7d4f);
+    transition: width 0.4s ease;
+  }
 
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
   .modal-backdrop.open { display: flex; }
@@ -327,6 +343,13 @@
     <a href="../index.html" class="home-link-btn" title="Zurück zur arkaa-Startseite">← Zur arkaa-Startseite</a>
     <h1 id="project-name-display" title="Klicken zum Wechseln/Anlegen eines Projekts">Lade …</h1>
     <div class="sub" id="interview-status">Kein Interview ausgewählt</div>
+    <!-- v2.9.0: ersetzt die frühere nackte Zahl ("Frage X von Y") durch einen ungefähren visuellen
+         Fortschrittsbalken (siehe updateInterviewProgressBar im Skript) - auf Wunsch des Nutzers, der
+         die konkrete Zahl "ein bisschen erschreckend" fand. Startet unsichtbar, wird erst bei
+         laufendem Interview per JS eingeblendet. -->
+    <div id="interview-progress-wrap" class="interview-progress-wrap" style="display:none;" title="Ungefährer Fortschritt des Interviews">
+      <div id="interview-progress-bar" class="interview-progress-bar"></div>
+    </div>
     <div class="sub" id="version-badge" style="color:#2e7d4f;"></div>
   </div>
   <div class="controls">
@@ -474,7 +497,10 @@
             <button id="btn-protection-confirm" type="button" class="primary">Verstanden – jetzt schützen</button>
           </div>
         </div>
-        <div id="protection-modal-loading" style="display:none; font-size:13.5px;">Ich passe jetzt Namen und Orte an, um dich – und andere Personen in deiner Geschichte – zu schützen …</div>
+        <!-- Nutzer-Feedback: "das Überprüfen der Geschichte auf Identität, Namen und Personen hat
+             ziemlich lange gedauert" - deshalb jetzt mit konkreter Zeitangabe, statt die Person ohne
+             jeden Anhaltspunkt warten zu lassen. -->
+        <div id="protection-modal-loading" style="display:none; font-size:13.5px;">Ich passe jetzt Namen und Orte an, um dich – und andere Personen in deiner Geschichte – zu schützen … Das kann 1–2 Minuten dauern.</div>
         <div id="protection-modal-error" style="display:none;">
           <div class="warn" id="protection-modal-error-text"></div>
           <div class="row" style="justify-content:flex-end;">
@@ -640,6 +666,13 @@
     <div class="spinner" id="spinner" style="display:none;">
       <div class="spinner-title">Story wird generiert …</div>
       <div class="spinner-subtitle">Die Interview-KI kennt den Inhalt nicht.</div>
+      <!-- v2.8.2, auf Wunsch des Nutzers ("während die Story generiert wird, sollte darunter noch ein
+           Kasten stehen, warum wir KI-Interviews machen ... verschwindet, wenn die Story fertig ist
+           und erscheint"): steckt bewusst HIER, im selben #spinner-Element, das ohnehin nur während
+           genau dieses einen Wartemoments sichtbar ist (siehe simulationSpinnerAllowed/setBusy oben)
+           - kein zusätzlicher Show/Hide-Mechanismus nötig, das Verschwinden passiert automatisch mit
+           dem Rest des Spinners. -->
+      <div class="spinner-why">Warum überhaupt ein KI-Interview? Ein erfahrener Journalist oder Biograf wäre besser als eine KI – keine Frage. Aber die meisten Menschen werden nie von großen Medien interviewt, und kaum jemand setzt sich freiwillig hin, um monatelang an den eigenen Erinnerungen zu schreiben. Ein KI-Interview ist nicht perfekt – schafft vielleicht 80 % der Qualität eines guten menschlichen Interviews. Aber 80 % einer Geschichte, die sonst nie festgehalten worden wäre, sind unendlich viel mehr als die 0 %, die sonst übrig blieben. Genau deshalb gibt es arkaa: um Stimmen zu bewahren, die sonst nirgends vorkämen.</div>
     </div>
     <div class="input-row">
       <textarea id="input" placeholder="Deine Antwort … (Enter zum Senden, Shift+Enter für neue Zeile)"></textarea>
@@ -3969,16 +4002,18 @@ let hasStory = false;
 
 const el = (id) => document.getElementById(id);
 
-// --- INFO-KASTEN FÜR TESTER (v2.8.1) -----------------------------------------------------------
-// Siehe #tester-info-box im HTML weiter oben. Der Dismiss-Status lebt bewusst in einem eigenen,
-// simplen localStorage-Eintrag statt im großen DB-Blob (siehe loadDB/saveDB) - unabhängig von jedem
-// Interview/Projekt, und einfach wieder zu entfernen, sobald die aktive Testphase vorbei ist.
-const TESTER_INFO_DISMISS_KEY = 'arkaa_tester_info_dismissed';
-function isTesterInfoDismissed() {
-  try { return localStorage.getItem(TESTER_INFO_DISMISS_KEY) === '1'; } catch (err) { return false; }
-}
+// --- INFO-KASTEN FÜR TESTER (v2.8.1, angepasst v2.8.2) -----------------------------------------
+// Siehe #tester-info-box im HTML weiter oben. v2.8.1 hatte den Dismiss-Status noch dauerhaft in
+// localStorage gemerkt - Nutzer-Feedback direkt danach: "ich sehe den Kasten nicht mehr, den ich
+// eben noch gesehen habe, ich habe mehrfach Cmd+R gedrückt" - ein einmal per Klick (X ODER
+// "Simulation ausprobieren") weggeklickter Kasten blieb dadurch für IMMER verschwunden, auch nach
+// einem Neuladen der Seite. In der aktuellen Testphase soll er aber gerade bei jedem frischen
+// Seitenaufruf wieder da sein, solange kein Interview läuft - deshalb jetzt bewusst NUR eine
+// In-Memory-Variable (kein localStorage mehr): "weg" gilt nur für die aktuell offene Seite, ein
+// Neuladen zeigt ihn wieder.
+let testerInfoDismissedThisPageLoad = false;
 function dismissTesterInfoBox() {
-  try { localStorage.setItem(TESTER_INFO_DISMISS_KEY, '1'); } catch (err) { /* ignorieren - reine Komfortfunktion */ }
+  testerInfoDismissedThisPageLoad = true;
   const box = el('tester-info-box');
   if (box) box.style.display = 'none';
 }
@@ -3989,7 +4024,7 @@ function dismissTesterInfoBox() {
 function updateTesterInfoBoxVisibility() {
   const box = el('tester-info-box');
   if (!box) return;
-  box.style.display = (!interviewId && !isTesterInfoDismissed()) ? 'block' : 'none';
+  box.style.display = (!interviewId && !testerInfoDismissedThisPageLoad) ? 'block' : 'none';
 }
 const messagesEl = el('messages');
 const spinnerEl = el('spinner');
@@ -4713,21 +4748,54 @@ async function requestAndHandleReply(iv) {
 const INTERVIEW_STATUS_LABELS = { laufend: 'läuft', pausiert: 'pausiert', in_pruefung: 'wartet auf deine Überprüfung', abgeschlossen: 'abgeschlossen' };
 function statusLabel(status) { return INTERVIEW_STATUS_LABELS[status] || status; }
 function updateStatusLine(iv) {
-  // v2.4.0, auf Wunsch des Nutzers ("ich hätte gerne das du das interview durchnummerierst"):
+  // v2.4.0, ursprünglich auf Wunsch des Nutzers ("ich hätte gerne das du das interview durchnummerierst"):
   // macht den mechanischen Fakten-/Abschlussfragen-Deckel im laufenden Gespräch sichtbar, statt nur
   // intern zu wirken – so fallen Abweichungen sofort auf, statt erst im fertigen Archiv-PDF.
-  let counterText = '';
-  if (iv.phase === 'interview') {
-    counterText = ` · Frage ${Math.min((iv.factQuestionsAsked || 0) + 1, HARD_FACT_QUESTION_CAP)} von ${HARD_FACT_QUESTION_CAP}`;
-  } else if (iv.phase === 'closing') {
-    // v2.4.4: Der feste Übergangs-Turn (CLOSING_TRANSITION_TEXT) zählt hier bewusst NICHT als
-    // "Abschlussfrage" mit – gezeigt wird der Fortschritt innerhalb der vier tatsächlich aus dem
-    // Plan gestellten Fragen (siehe getOrGenerateClosingPlan/MAX_CLOSING_QUESTIONS_SELECTED oben).
-    const realAsked = Math.max(0, (iv.closingQuestionsAsked || 0) - 1);
-    counterText = ` · Abschlussfrage ${Math.min(realAsked, MAX_CLOSING_QUESTIONS_SELECTED)} von ${MAX_CLOSING_QUESTIONS_SELECTED}`;
-  }
-  statusEl.textContent = `Interview #${iv.id} · ${statusLabel(iv.status)}${counterText}`;
+  // v2.9.0, auf erneuten Wunsch des Nutzers ("die Anzahl der Fragen, da steht 'maximal 20', das finde
+  // ich ein bisschen erschreckend, also weg damit ... stattdessen einen ungefähren Fortschrittsbalken"):
+  // die konkrete Zahl (die den echten, mechanischen Deckel verrät) wird hier NICHT mehr als Text
+  // angezeigt - der Deckel selbst bleibt unverändert bestehen (siehe HARD_FACT_QUESTION_CAP/
+  // MAX_CLOSING_QUESTIONS_SELECTED oben), er wird nur nicht mehr als nackte Zahl kommuniziert.
+  // Stattdessen ein ungefährer, visueller Fortschrittsbalken über beide Phasen hinweg (siehe
+  // updateInterviewProgressBar unten) - "ungefähr", weil die tatsächliche Fragenzahl je nach Gespräch
+  // variiert (siehe HARD_FACT_QUESTION_CAP-Kommentar) und niemand exakt wissen kann, wie weit ein noch
+  // offenes Gespräch wirklich ist.
+  statusEl.textContent = `Interview #${iv.id} · ${statusLabel(iv.status)}`;
+  updateInterviewProgressBar(iv);
   updateAccessCodeBanner(iv);
+}
+
+// v2.9.0: siehe Kommentar in updateStatusLine oben. TOTAL_PROGRESS_UNITS gewichtet die Interview-Phase
+// (bis zu HARD_FACT_QUESTION_CAP Fragen, meist die deutlich längere Phase) automatisch stärker als die
+// Abschluss-Phase (bis zu MAX_CLOSING_QUESTIONS_SELECTED Fragen) - beide Deckel bleiben die einzige
+// Quelle der Wahrheit, hier wird nur ein ungefährer Prozentsatz aus denselben Zahlen berechnet, die
+// zuvor als "Frage X von Y" zu sehen waren.
+const TOTAL_PROGRESS_UNITS = HARD_FACT_QUESTION_CAP + MAX_CLOSING_QUESTIONS_SELECTED;
+
+function updateInterviewProgressBar(iv) {
+  const wrap = el('interview-progress-wrap');
+  const bar = el('interview-progress-bar');
+  if (!wrap || !bar) return;
+  let percent = null;
+  if (iv.phase === 'interview') {
+    const asked = Math.min(iv.factQuestionsAsked || 0, HARD_FACT_QUESTION_CAP);
+    percent = (asked / TOTAL_PROGRESS_UNITS) * 100;
+  } else if (iv.phase === 'closing') {
+    // v2.4.4: derselbe feste Übergangs-Turn (CLOSING_TRANSITION_TEXT) zählt hier weiterhin bewusst
+    // NICHT als "Abschlussfrage" mit - siehe ursprünglichen Kommentar, unverändert übernommen.
+    const realAsked = Math.max(0, (iv.closingQuestionsAsked || 0) - 1);
+    const closingDone = Math.min(realAsked, MAX_CLOSING_QUESTIONS_SELECTED);
+    percent = ((HARD_FACT_QUESTION_CAP + closingDone) / TOTAL_PROGRESS_UNITS) * 100;
+  }
+  if (percent === null) {
+    wrap.style.display = 'none';
+    return;
+  }
+  // Ein winziger Sockelwert, damit der Balken gleich zu Beginn (Frage 1) sichtbar ist, statt komplett
+  // leer auszusehen - rein kosmetisch, ändert nichts an der zugrunde liegenden Berechnung.
+  percent = Math.max(4, Math.min(100, percent));
+  wrap.style.display = 'block';
+  bar.style.width = percent + '%';
 }
 
 // v2.7.0: zeigt/versteckt den dauerhaften roten Zugangscode-Banner (#access-code-banner, siehe
@@ -6936,32 +7004,47 @@ const PROTECTION_ANONYMIZATION_SYSTEM_PROMPT = `Du bist ein erfahrener Redakteur
   `geführtes Interview zu einer persönlichen Lebensgeschichte vor der Veröffentlichung anonymisiert - genau ` +
   `wie ein Journalist, der eine Quelle bei einem sensiblen Thema (z. B. Missbrauch, eine Straftat, Flucht oder ` +
   `Verfolgung) schützt, bevor der Text veröffentlicht wird.\n\n` +
-  `DEIN AUFTRAG: Ersetze ALLE echten Eigennamen von Personen und ALLE zu konkreten, identifizierenden Orts-/` +
-  `Institutionsangaben durch verallgemeinerte oder rollenbezogene Bezeichnungen. Ziel ist es, dass weder die ` +
-  `erzählende Person noch andere in der Geschichte vorkommende Personen (das schließt sowohl mutmaßliche ` +
-  `Täter*innen als auch Betroffene ein) anhand des veröffentlichten Textes real identifiziert werden können.\n\n` +
+  `DEIN AUFTRAG: Ersetze AUSNAHMSLOS JEDEN echten Eigennamen einer Person und JEDE konkrete, identifizierende ` +
+  `Orts-, Institutions- oder Firmenangabe durch eine verallgemeinerte oder rollenbezogene Bezeichnung. Ziel ist ` +
+  `es, dass weder die erzählende Person noch andere in der Geschichte vorkommende Personen (das schließt sowohl ` +
+  `mutmaßliche Täter*innen als auch Betroffene ein) anhand des veröffentlichten Textes real identifiziert ` +
+  `werden können.\n\n` +
+  `WICHTIG, BEVOR DU ANFÄNGST: Diese Geschichte wurde bereits automatisch als schutzbedürftig eingestuft (z. B. ` +
+  `Missbrauch, eine Straftat, Flucht oder Verfolgung). Das bedeutet: Es gibt so gut wie IMMER etwas zu ändern. ` +
+  `"changes" leer zu lassen ist nur dann richtig, wenn im gesamten Text WIRKLICH kein einziger echter ` +
+  `Personenname und keine einzige konkrete, identifizierende Orts-/Institutions-/Firmenangabe vorkommt. Prüfe ` +
+  `dafür WORT FÜR WORT: jeden Vornamen, jeden Nachnamen, jede Anrede mit Namen ("Herr X", "Frau Y"), jede ` +
+  `benannte Schule/Firma/Agentur/Klinik/Behörde, jeden benannten Stadtteil/Ort/jede Straße. Im Zweifel gilt: ` +
+  `ÄNDERN, nicht stehen lassen.\n\n` +
   `REGELN:\n` +
   `1. FAKTEN BLEIBEN UNANGETASTET. Was tatsächlich geschehen ist - der Ablauf, die Handlungen, Beziehungen, ` +
   `Ursachen, die Reihenfolge der Ereignisse - darf sich durch deine Änderung inhaltlich NICHT verändern. Du ` +
   `ersetzt ausschließlich identifizierende Bezeichnungen, niemals den Inhalt einer Aussage.\n` +
-  `2. PERSONEN: Ersetze echte Vor-/Nachnamen durch eine passende Rollenbezeichnung, wenn diese aus dem Kontext ` +
-  `eindeutig hervorgeht (z. B. "Herr Müller" -> "der Sportlehrer", "meine Tante Sabine" -> "meine Tante"). Ist ` +
-  `keine natürliche Rollenbezeichnung möglich, verwende stattdessen einen austauschbaren Platzhaltervornamen ` +
-  `mit dem Zusatz "(Name von der Redaktion geändert)" (z. B. "Karim (Name von der Redaktion geändert)"). Die ` +
-  `erzählende Person selbst (Ich-Perspektive) wird nicht verändert.\n` +
-  `3. ORTE/INSTITUTIONEN: Ersetze konkrete, identifizierende Orts- oder Institutionsnamen (Schulen, Straßen, ` +
-  `Dörfer, kleine Orte, Kliniken, Firmen, Stadtteile etc.) durch eine sinnvolle Verallgemeinerung eine Ebene ` +
-  `höher, die die Geschichte weiterhin verständlich hält (z. B. "Paul-Klee-Gymnasium in Overath" -> "ein ` +
-  `Gymnasium in NRW", "die Dorfschule in Kleinort" -> "eine Dorfschule in Süddeutschland"). Große, für die ` +
-  `Anonymität unkritische Orte (z. B. ein bloßes Land oder eine Großstadt ohne weitere Präzisierung) müssen ` +
-  `NICHT verallgemeinert werden, wenn sie für sich genommen nicht identifizierend sind.\n` +
+  `2. PERSONEN: Ersetze JEDEN echten Vor-/Nachnamen einer Person - ausgenommen die erzählende Person selbst ` +
+  `(Ich-Perspektive) - entweder durch eine passende Rollenbezeichnung, wenn diese aus dem Kontext eindeutig ` +
+  `hervorgeht (z. B. "Herr Müller" -> "der Sportlehrer", "meine Tante Sabine" -> "meine Tante"), oder, wenn ` +
+  `keine natürliche Rollenbezeichnung möglich ist, durch einen austauschbaren Platzhaltervornamen (z. B. ` +
+  `"Karim"). WICHTIG FÜR TRANSPARENZ: Markiere bei JEDER so ersetzten Person das ERSTE Auftreten ihrer neuen ` +
+  `Bezeichnung im Text mit dem Zusatz "(Name von der Redaktion geändert)" - unabhängig davon, ob du eine ` +
+  `Rollenbezeichnung oder einen Platzhaltervornamen verwendet hast (z. B. "der Sportlehrer (Name von der ` +
+  `Redaktion geändert)" bzw. "Karim (Name von der Redaktion geändert)"). Bei JEDER weiteren Erwähnung derselben ` +
+  `Person im weiteren Verlauf lässt du diesen Zusatz weg und verwendest nur noch die neue Bezeichnung, damit ` +
+  `der Text nicht unnötig aufgebläht wird.\n` +
+  `3. ORTE/INSTITUTIONEN/FIRMEN: Ersetze JEDE konkrete, identifizierende Orts-, Institutions- oder ` +
+  `Firmenangabe (Schulen, Straßen, Dörfer, kleine Orte, Kliniken, Firmen, Agenturen, Behörden, Stadtteile ` +
+  `etc.) durch eine sinnvolle Verallgemeinerung eine Ebene höher, die die Geschichte weiterhin verständlich ` +
+  `hält (z. B. "Paul-Klee-Gymnasium in Overath" -> "ein Gymnasium in NRW", "die Dorfschule in Kleinort" -> ` +
+  `"eine Dorfschule in Süddeutschland", "Marxen & Locke Werbeagentur in Hamburg" -> "eine Hamburger ` +
+  `Agentur"). Große, für die Anonymität unkritische Orte (z. B. ein bloßes Land oder eine Großstadt ohne ` +
+  `weitere Präzisierung) müssen NICHT verallgemeinert werden, wenn sie für sich genommen nicht identifizierend ` +
+  `sind.\n` +
   `4. ZEITANGABEN: Nur wenn ein exaktes Datum in Kombination mit anderen Angaben identifizierend wirken ` +
   `könnte, darfst du es leicht verallgemeinern (z. B. ein exaktes Datum -> nur Monat und Jahreszeit, oder ein ` +
   `Jahr -> "Anfang der 2010er-Jahre"). Die zeitliche REIHENFOLGE und der ungefähre Abstand zwischen ` +
   `Ereignissen müssen erhalten bleiben. Ändere Zeitangaben nur, wenn es für den Schutz der Identität wirklich ` +
   `nötig ist - im Zweifel unverändert lassen.\n` +
-  `5. KONSISTENZ: Verwende für dieselbe reale Person bzw. denselben realen Ort im GESAMTEN Text durchgehend ` +
-  `dieselbe Ersetzung.\n` +
+  `5. KONSISTENZ: Verwende für dieselbe reale Person, denselben realen Ort bzw. dieselbe reale Institution im ` +
+  `GESAMTEN Text durchgehend dieselbe Ersetzung.\n` +
   `6. Du darfst an den Fragen und Antworten sonst NICHTS verändern - keine Kürzung, keine Umformulierung ohne ` +
   `identifizierenden Grund, keine neuen Inhalte. Die Anzahl der Frage-Antwort-Paare bleibt exakt gleich, in ` +
   `exakt gleicher Reihenfolge.\n\n` +
@@ -7002,7 +7085,40 @@ async function analyzeProtectionAnonymization(iv) {
       parsed = robustParseJson(raw, {});
     }
   }
-  return sanitizeAnonymizationResult(pairs, parsed);
+  let result = sanitizeAnonymizationResult(pairs, parsed);
+
+  // Zusätzliches mechanisches Sicherheitsnetz (dieselbe "nie einem einzelnen KI-Urteil vertrauen"-Regel
+  // wie überall sonst im Projekt): kommt beim ersten Versuch "changes: []" heraus - also die Behauptung,
+  // es gäbe in der GESAMTEN Geschichte nichts Identifizierendes zu ändern -, ist das in der Praxis so gut
+  // wie nie korrekt (echte Namen tauchen fast immer auf) und wurde bei einem Testinterview bereits als
+  // Fehlentscheidung beobachtet. Statt das kommentarlos zu übernehmen, wird EIN weiterer Versuch mit
+  // einer verschärften Zusatzanweisung unternommen, bevor "nichts zu ändern" tatsächlich akzeptiert wird.
+  if (result.changes.length === 0) {
+    try {
+      const rawRetry = await attempt(
+        '\n\nACHTUNG: Ein vorheriger Durchgang ist fälschlicherweise zu dem Schluss gekommen, dass nichts geändert werden muss - obwohl dieses Interview als schutzbedürftig eingestuft wurde. ' +
+        'Das ist in aller Regel falsch. Prüfe JEDES einzelne Frage-Antwort-Paar noch einmal ganz genau, Wort für Wort, auf Vor- und Nachnamen, Spitznamen, Firmen-, Agentur-, Schul- oder Behördennamen sowie konkrete Ortsangaben (Stadtteile, Straßen, kleine Orte). ' +
+        'Nur wenn die Geschichte nach dieser erneuten, gründlichen Prüfung WIRKLICH und nachweislich überhaupt keine solchen Angaben enthält, darf "changes" wieder leer bleiben.'
+      );
+      let parsedRetry;
+      try {
+        parsedRetry = parseJsonResponse(rawRetry);
+      } catch (errRetry) {
+        parsedRetry = robustParseJson(rawRetry, {});
+      }
+      const resultRetry = sanitizeAnonymizationResult(pairs, parsedRetry);
+      if (resultRetry.changes.length > 0) {
+        result = resultRetry;
+      }
+    } catch (errRetry) {
+      // Netzwerk-/API-Fehler beim Retry: beim ursprünglichen (leeren) Ergebnis bleiben, statt die
+      // ganze Anonymisierung daran scheitern zu lassen - der Autor sieht die (leere) Änderungsliste
+      // ohnehin transparent im Modal und kann die Geschichte danach weiterhin nicht unbemerkt
+      // unveraendert lassen, da die Prüfung ja stattgefunden hat.
+    }
+  }
+
+  return result;
 }
 
 // Mechanische Absicherung, getrennt von analyzeProtectionAnonymization gehalten (dieselbe Lektion wie
