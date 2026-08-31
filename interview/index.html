@@ -42,9 +42,9 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px;
-    position: sticky;
-    top: 0;
-    z-index: 5;
+    /* v2.9.1: KEIN eigenes position:sticky mehr - siehe Kommentar bei #sticky-top-bar im HTML weiter
+       unten. header ist jetzt selbst Teil dieses gemeinsamen sticky-Wrappers, statt ein eigener,
+       zweiter sticky-Kontext mit demselben top:0 zu sein. */
   }
   header h1 { font-size: 16px; margin: 0; font-weight: 600; }
   header .sub { font-size: 11px; color: var(--muted); }
@@ -262,7 +262,18 @@
      gemeinsam in einem einzigen "position:sticky"-Wrapper statt jeder für sich - zwei direkt
      aufeinanderfolgende sticky-Elemente mit demselben "top:0" würden sich beim Scrollen sonst
      gegenseitig überlappen, statt sauber untereinander zu bleiben. Innerhalb des Wrappers läuft
-     alles ganz normal im Fluss (jedes Kind zeigt/versteckt sich unabhängig per style.display). -->
+     alles ganz normal im Fluss (jedes Kind zeigt/versteckt sich unabhängig per style.display).
+     v2.9.1, Nutzer-Feedback ("die obere Leiste sollte immer zu sehen sein, je länger das Interview,
+     desto mehr verschwindet sie"): genau dasselbe Problem bestand zusätzlich zwischen diesem Wrapper
+     und der Kopfzeile (<header> weiter unten) - <header> war bisher ein EIGENES, zweites sticky-
+     Element mit ebenfalls top:0, aber niedrigerem z-index. Sobald Simulationsleiste und/oder
+     Zugangscode-Banner sichtbar waren (also bei jedem etwas längeren Interview mit Zugangscode), hat
+     header beim Scrollen dadurch genau UNTER diesem Wrapper "geklebt" und wurde optisch verdeckt -
+     die Kopfzeile mit Titel, Status/Fortschritt und allen Buttons verschwand scheinbar. Jetzt zieht
+     <header> selbst mit in diesen einen gemeinsamen sticky-Wrapper (kein eigenes position:sticky mehr,
+     siehe header-Regel oben) - damit gibt es nur noch EINEN sticky-Kontext, und alle sichtbaren Teile
+     bleiben in ihrer natürlichen Reihenfolge sauber übereinander stehen, unabhängig davon, wie lang
+     das Interview schon ist. -->
 <div id="sticky-top-bar" style="position:sticky; top:0; z-index:9997;">
   <!-- Simulations-Statusleiste: bewusst KEIN Modal, damit der Chat dahinter sichtbar bleibt und
        live mitzuverfolgen ist, während die Simulation im Hintergrund läuft (siehe SIMULATIONSMODUS). -->
@@ -293,6 +304,46 @@
     <div id="access-code-banner-text" style="font-size:17px; font-weight:800; color:#c0392b; letter-spacing:.02em;"></div>
     <div style="font-size:10.5px; color:#c0392b; margin-top:2px; opacity:0.9;">Es gibt keine klassische Registrierung mit Benutzername/Passwort – nur dieser Code lässt sich später nutzen, um deinen Eintrag zu ändern oder zu löschen.</div>
   </div>
+
+<header>
+  <div>
+    <a href="../index.html" class="home-link-btn" title="Zurück zur arkaa-Startseite">← Zur arkaa-Startseite</a>
+    <h1 id="project-name-display" title="Klicken zum Wechseln/Anlegen eines Projekts">Lade …</h1>
+    <div class="sub" id="interview-status">Kein Interview ausgewählt</div>
+    <!-- v2.9.0: ersetzt die frühere nackte Zahl ("Frage X von Y") durch einen ungefähren visuellen
+         Fortschrittsbalken (siehe updateInterviewProgressBar im Skript) - auf Wunsch des Nutzers, der
+         die konkrete Zahl "ein bisschen erschreckend" fand. Startet unsichtbar, wird erst bei
+         laufendem Interview per JS eingeblendet. -->
+    <div id="interview-progress-wrap" class="interview-progress-wrap" style="display:none;" title="Ungefährer Fortschritt des Interviews">
+      <div id="interview-progress-bar" class="interview-progress-bar"></div>
+    </div>
+    <div class="sub" id="version-badge" style="color:#2e7d4f;"></div>
+  </div>
+  <div class="controls">
+    <!-- v2.6.0, auf Wunsch des Nutzers ("Die Hauptseite besteht aus neues Interview"): einzige,
+         hervorgehobene Hauptaktion. Das frühere "Zusammenfassen" ist hier bewusst entfernt (bleibt
+         als Modal/Funktion im Code erhalten, nur ohne Einstiegspunkt in der Kopfzeile) - für
+         Test-Interviewpartner unnötige, verwirrende Zusatzfunktion. -->
+    <button id="btn-new" class="primary">Neues Interview</button>
+    <!-- v2.7.8, auf Wunsch des Nutzers ("'Meine Interviews' Button kann weg. Nur bitte noch 'Mein
+         Interview mit Schlüssel'"): der frühere Knopf #btn-list (lokale, rein browserbezogene Liste
+         aller Interviews, siehe renderInterviewList/list-modal weiter unten) ist hier entfernt - bleibt
+         im Code stehen, nur ohne Einstiegspunkt in der Kopfzeile (gleiches Muster wie beim früheren
+         "Zusammenfassen"-Knopf, siehe Kommentar oben). Übrig bleibt nur noch der Zugang über den
+         Zugangscode (v2.7.7, siehe #mystory-modal/openMyStoryModal weiter unten), der ohnehin auch von
+         einem anderen Gerät/Browser funktioniert. -->
+    <button id="btn-my-story">🔑 Mein Interview mit Schlüssel</button>
+    <button id="btn-pause">⏸ Pause</button>
+    <!-- v2.6.2: standardmäßig verborgen, bis ein Archiv-PDF erstellt oder veröffentlicht wurde
+         (siehe maybeShowReviewPrompt) - vorher gibt es ohnehin nichts sinnvoll zu exportieren. -->
+    <button id="btn-export" style="display:none;">⬇️ Exportieren</button>
+    <!-- Bewusst als letztes Element, aber seit v2.8.0 klar erkennbar statt optisch zurückgenommen
+         (siehe .btn-testmode oben) - eine Testfunktion, keine Hauptaktion, aber von Testpersonen
+         aktiv gesucht. -->
+    <button id="btn-simulation" class="btn-testmode" title="Lässt die App automatisch ein komplettes Testinterview mit sich selbst führen (KI vs. KI), ohne dass du selbst antworten musst">🎭 Simulation</button>
+  </div>
+  <button id="btn-settings" class="icon-btn" title="Einstellungen">⚙️</button>
+</header>
 </div>
 
 <!-- v2.7.4, auf Wunsch des Nutzers ("nach Interview starten kommt eine Seite ... Fenster für Fenster,
@@ -337,46 +388,6 @@
   <p><strong>Wichtig:</strong> Die Interview-KI, die die Fragen stellt, kennt diese erfundene Geschichte selbst nicht – genau wie bei einem echten Interview weiß sie vorher nicht, was als Nächstes kommt. So lassen sich die Interviewtechnik und die Mechanik der App gut nachvollziehen, ohne selbst ein zeitaufwändiges eigenes Interview führen zu müssen.</p>
   <button id="btn-tester-info-start" type="button" class="primary">🎭 Simulation ausprobieren</button>
 </div>
-
-<header>
-  <div>
-    <a href="../index.html" class="home-link-btn" title="Zurück zur arkaa-Startseite">← Zur arkaa-Startseite</a>
-    <h1 id="project-name-display" title="Klicken zum Wechseln/Anlegen eines Projekts">Lade …</h1>
-    <div class="sub" id="interview-status">Kein Interview ausgewählt</div>
-    <!-- v2.9.0: ersetzt die frühere nackte Zahl ("Frage X von Y") durch einen ungefähren visuellen
-         Fortschrittsbalken (siehe updateInterviewProgressBar im Skript) - auf Wunsch des Nutzers, der
-         die konkrete Zahl "ein bisschen erschreckend" fand. Startet unsichtbar, wird erst bei
-         laufendem Interview per JS eingeblendet. -->
-    <div id="interview-progress-wrap" class="interview-progress-wrap" style="display:none;" title="Ungefährer Fortschritt des Interviews">
-      <div id="interview-progress-bar" class="interview-progress-bar"></div>
-    </div>
-    <div class="sub" id="version-badge" style="color:#2e7d4f;"></div>
-  </div>
-  <div class="controls">
-    <!-- v2.6.0, auf Wunsch des Nutzers ("Die Hauptseite besteht aus neues Interview"): einzige,
-         hervorgehobene Hauptaktion. Das frühere "Zusammenfassen" ist hier bewusst entfernt (bleibt
-         als Modal/Funktion im Code erhalten, nur ohne Einstiegspunkt in der Kopfzeile) - für
-         Test-Interviewpartner unnötige, verwirrende Zusatzfunktion. -->
-    <button id="btn-new" class="primary">Neues Interview</button>
-    <!-- v2.7.8, auf Wunsch des Nutzers ("'Meine Interviews' Button kann weg. Nur bitte noch 'Mein
-         Interview mit Schlüssel'"): der frühere Knopf #btn-list (lokale, rein browserbezogene Liste
-         aller Interviews, siehe renderInterviewList/list-modal weiter unten) ist hier entfernt - bleibt
-         im Code stehen, nur ohne Einstiegspunkt in der Kopfzeile (gleiches Muster wie beim früheren
-         "Zusammenfassen"-Knopf, siehe Kommentar oben). Übrig bleibt nur noch der Zugang über den
-         Zugangscode (v2.7.7, siehe #mystory-modal/openMyStoryModal weiter unten), der ohnehin auch von
-         einem anderen Gerät/Browser funktioniert. -->
-    <button id="btn-my-story">🔑 Mein Interview mit Schlüssel</button>
-    <button id="btn-pause">⏸ Pause</button>
-    <!-- v2.6.2: standardmäßig verborgen, bis ein Archiv-PDF erstellt oder veröffentlicht wurde
-         (siehe maybeShowReviewPrompt) - vorher gibt es ohnehin nichts sinnvoll zu exportieren. -->
-    <button id="btn-export" style="display:none;">⬇️ Exportieren</button>
-    <!-- Bewusst als letztes Element, aber seit v2.8.0 klar erkennbar statt optisch zurückgenommen
-         (siehe .btn-testmode oben) - eine Testfunktion, keine Hauptaktion, aber von Testpersonen
-         aktiv gesucht. -->
-    <button id="btn-simulation" class="btn-testmode" title="Lässt die App automatisch ein komplettes Testinterview mit sich selbst führen (KI vs. KI), ohne dass du selbst antworten musst">🎭 Simulation</button>
-  </div>
-  <button id="btn-settings" class="icon-btn" title="Einstellungen">⚙️</button>
-</header>
 
 <main>
   <section class="chat-col">
@@ -7060,6 +7071,21 @@ const PROTECTION_ANONYMIZATION_SYSTEM_PROMPT = `Du bist ein erfahrener Redakteur
 // Ruft die KI EINMAL mit dem kompletten, bereits fertigen Kapitel auf und liefert die validierte,
 // mechanisch abgesicherte Anonymisierung zurück. Nutzt dieselbe Paar-Zerlegung wie die Redaktion oben
 // (buildRedactionPairs).
+// v2.9.1, Nutzer-Feedback nach einem Testinterview ("Mobbing durch Abteilungsleiter"): trotz des
+// bereits verschärften PROTECTION_ANONYMIZATION_SYSTEM_PROMPT (v2.9.0) blieben "Herr Kessler", "Frau
+// Dr. Schönfeld" und "Jonas" im veröffentlichten Text unverändert stehen - der EINE, kombinierte
+// KI-Aufruf (gleichzeitig Namen finden UND konsistent ersetzen UND die Geschichte lesbar halten) hatte
+// die Namen schlicht übersehen. Die reine "nochmal genauer hinschauen"-Wiederholung von v2.9.0 half
+// nicht zuverlässig genug, weil dasselbe Modell mit demselben Text leicht wieder dieselbe Lücke lässt.
+// Deshalb jetzt ein zweistufiges Verfahren, das dieselbe "nie einem einzelnen KI-Urteil vertrauen"-
+// Regel konsequenter anwendet: (1) ein eigener, schmaler KI-Aufruf, dessen EINZIGE Aufgabe die reine
+// Suche nach Namen/Orten/Institutionen ist (siehe extractIdentifyingTermsForAnonymization) - eine
+// fokussierte Aufgabe, bei der ein Modell erfahrungsgemäß gründlicher ist als bei einer kombinierten
+// Aufgabe. Die gefundene Liste wird dem eigentlichen Anonymisierungs-Aufruf als Pflichtliste mitgegeben.
+// (2) Nach der Anonymisierung wird MECHANISCH (kein KI-Urteil, sondern ein einfacher Text-Check)
+// überprüft, ob einer dieser gefundenen Begriffe wortwörtlich im Ergebnistext übrig geblieben ist -
+// nicht nur, ob "changes" leer war. Bleibt trotzdem etwas übrig, gibt es einen gezielten zweiten
+// Versuch, der genau diese übrig gebliebenen Begriffe beim Namen nennt.
 async function analyzeProtectionAnonymization(iv) {
   const history = getHistory(iv.id);
   const pairs = buildRedactionPairs(history);
@@ -7070,8 +7096,12 @@ async function analyzeProtectionAnonymization(iv) {
   ).join('\n');
   const userContent = `Hier ist das vollständige, fertige Interview als nummerierte Frage-Antwort-Paare:\n\n${promptBody}`;
 
+  const extractedTerms = await extractIdentifyingTermsForAnonymization(promptBody)
+    .catch(() => ({ personen: [], orteInstitutionen: [] }));
+  const mandatoryNote = buildMandatoryTermsNote(extractedTerms);
+
   async function attempt(extra) {
-    return callChat(PROTECTION_ANONYMIZATION_SYSTEM_PROMPT + (extra || ''), [{ role: 'user', content: userContent }], 4000);
+    return callChat(PROTECTION_ANONYMIZATION_SYSTEM_PROMPT + mandatoryNote + (extra || ''), [{ role: 'user', content: userContent }], 4000);
   }
   const raw = await attempt();
   let parsed;
@@ -7087,19 +7117,16 @@ async function analyzeProtectionAnonymization(iv) {
   }
   let result = sanitizeAnonymizationResult(pairs, parsed);
 
-  // Zusätzliches mechanisches Sicherheitsnetz (dieselbe "nie einem einzelnen KI-Urteil vertrauen"-Regel
-  // wie überall sonst im Projekt): kommt beim ersten Versuch "changes: []" heraus - also die Behauptung,
-  // es gäbe in der GESAMTEN Geschichte nichts Identifizierendes zu ändern -, ist das in der Praxis so gut
-  // wie nie korrekt (echte Namen tauchen fast immer auf) und wurde bei einem Testinterview bereits als
-  // Fehlentscheidung beobachtet. Statt das kommentarlos zu übernehmen, wird EIN weiterer Versuch mit
-  // einer verschärften Zusatzanweisung unternommen, bevor "nichts zu ändern" tatsächlich akzeptiert wird.
-  if (result.changes.length === 0) {
+  // Mechanischer Check (siehe großer Kommentar oben): steht einer der separat gefundenen Begriffe
+  // wortwörtlich noch im Ergebnis, oder kam trotz Pflichtliste "changes: []" heraus, ist das ein
+  // starkes Signal für eine übersehene Stelle - kein bloßer Verdacht, sondern ein direkter Textfund.
+  let leftover = findLeftoverMandatoryTerms(result.pairs, extractedTerms);
+  if (leftover.length > 0 || result.changes.length === 0) {
     try {
-      const rawRetry = await attempt(
-        '\n\nACHTUNG: Ein vorheriger Durchgang ist fälschlicherweise zu dem Schluss gekommen, dass nichts geändert werden muss - obwohl dieses Interview als schutzbedürftig eingestuft wurde. ' +
-        'Das ist in aller Regel falsch. Prüfe JEDES einzelne Frage-Antwort-Paar noch einmal ganz genau, Wort für Wort, auf Vor- und Nachnamen, Spitznamen, Firmen-, Agentur-, Schul- oder Behördennamen sowie konkrete Ortsangaben (Stadtteile, Straßen, kleine Orte). ' +
-        'Nur wenn die Geschichte nach dieser erneuten, gründlichen Prüfung WIRKLICH und nachweislich überhaupt keine solchen Angaben enthält, darf "changes" wieder leer bleiben.'
-      );
+      const leftoverNote = leftover.length > 0
+        ? `\n\nACHTUNG: Nach deiner Anonymisierung stehen folgende Begriffe IMMER NOCH wortwörtlich im Text: ${leftover.map(t => `"${t}"`).join(', ')}. Das sind mit sehr hoher Wahrscheinlichkeit echte, identifizierende Namen/Orte/Institutionen. Ersetze JEDEN davon jetzt konsequent gemäß den Regeln oben.`
+        : '\n\nACHTUNG: Ein vorheriger Durchgang ist fälschlicherweise zu dem Schluss gekommen, dass nichts geändert werden muss - obwohl dieses Interview als schutzbedürftig eingestuft wurde. Das ist in aller Regel falsch. Prüfe JEDES einzelne Frage-Antwort-Paar noch einmal ganz genau, Wort für Wort, auf Vor- und Nachnamen, Spitznamen, Firmen-, Agentur-, Schul- oder Behördennamen sowie konkrete Ortsangaben (Stadtteile, Straßen, kleine Orte). Nur wenn die Geschichte nach dieser erneuten, gründlichen Prüfung WIRKLICH und nachweislich überhaupt keine solchen Angaben enthält, darf "changes" wieder leer bleiben.';
+      const rawRetry = await attempt(leftoverNote);
       let parsedRetry;
       try {
         parsedRetry = parseJsonResponse(rawRetry);
@@ -7107,18 +7134,93 @@ async function analyzeProtectionAnonymization(iv) {
         parsedRetry = robustParseJson(rawRetry, {});
       }
       const resultRetry = sanitizeAnonymizationResult(pairs, parsedRetry);
-      if (resultRetry.changes.length > 0) {
+      const leftoverRetry = findLeftoverMandatoryTerms(resultRetry.pairs, extractedTerms);
+      // Den zweiten Versuch nur übernehmen, wenn er tatsächlich weniger übrig gebliebene Treffer hat
+      // (oder der erste Versuch ohnehin nichts geändert hatte) - nie einen zweiten Versuch übernehmen,
+      // der schlechter wäre als der erste.
+      if (resultRetry.changes.length > 0 && leftoverRetry.length <= leftover.length) {
         result = resultRetry;
+        leftover = leftoverRetry;
       }
     } catch (errRetry) {
-      // Netzwerk-/API-Fehler beim Retry: beim ursprünglichen (leeren) Ergebnis bleiben, statt die
-      // ganze Anonymisierung daran scheitern zu lassen - der Autor sieht die (leere) Änderungsliste
-      // ohnehin transparent im Modal und kann die Geschichte danach weiterhin nicht unbemerkt
-      // unveraendert lassen, da die Prüfung ja stattgefunden hat.
+      // Netzwerk-/API-Fehler beim Retry: beim ursprünglichen Ergebnis bleiben, statt die ganze
+      // Anonymisierung daran scheitern zu lassen - der Autor sieht die Änderungsliste ohnehin
+      // transparent im Modal.
     }
   }
 
   return result;
+}
+
+// v2.9.1: schmaler, fokussierter KI-Aufruf mit GENAU EINER Aufgabe - siehe großer Kommentar bei
+// analyzeProtectionAnonymization oben. Bewusst getrennt vom eigentlichen Anonymisierungs-Aufruf, damit
+// das Modell sich nicht gleichzeitig um Ersetzung/Konsistenz/Lesbarkeit kümmern muss und dadurch beim
+// reinen Suchen nachlässiger wird.
+async function extractIdentifyingTermsForAnonymization(promptBody) {
+  const systemPrompt = `Du durchsuchst ein Interview-Transkript. Deine EINZIGE Aufgabe: finde JEDEN echten ` +
+    `Eigennamen einer Person (Vorname, Nachname, Spitzname, Anrede mit Namen wie "Herr Kessler" oder "Frau ` +
+    `Dr. Schönfeld") sowie JEDE konkrete Firma, Agentur, Schule, Klinik, Behörde oder jeden kleinräumigen Ort ` +
+    `(Stadtteil, Dorf, Straße), der im Text vorkommt - AUSGENOMMEN die Bezeichnung der erzählenden Person ` +
+    `selbst (Ich-Perspektive). Du änderst NICHTS am Text, du listest nur auf. Sei lieber zu großzügig als zu ` +
+    `vorsichtig: nimm auch Begriffe auf, bei denen du unsicher bist, ob sie relevant sind. Gib für jeden ` +
+    `Namen NUR die kürzeste eindeutige Form an, ohne Anrede-Titel (z. B. "Kessler" statt "Herr Kessler", ` +
+    `"Schönfeld" statt "Frau Dr. Schönfeld"). Antworte AUSSCHLIESSLICH mit validem JSON, ohne Markdown-` +
+    `Codeblock, in genau dieser Form: {"personen": ["..."], "orte_institutionen": ["..."]}. Beide Listen ` +
+    `dürfen leer sein, wenn wirklich nichts davon vorkommt.`;
+  const userContent = `Hier ist das Interview als nummerierte Frage-Antwort-Paare:\n\n${promptBody}`;
+  let raw;
+  try {
+    raw = await callChat(systemPrompt, [{ role: 'user', content: userContent }], 1000);
+  } catch (err) {
+    return { personen: [], orteInstitutionen: [] };
+  }
+  let parsed;
+  try {
+    parsed = parseJsonResponse(raw);
+  } catch (err) {
+    parsed = robustParseJson(raw, {});
+  }
+  const clean = (arr) => Array.isArray(arr)
+    ? [...new Set(arr.filter(s => typeof s === 'string' && s.trim().length >= 2 && s.trim().length <= 60).map(s => s.trim()))]
+    : [];
+  return { personen: clean(parsed && parsed.personen), orteInstitutionen: clean(parsed && parsed.orte_institutionen) };
+}
+
+// v2.9.1: baut aus der Fundliste von extractIdentifyingTermsForAnonymization einen Zusatzabschnitt für
+// den Anonymisierungs-Prompt - eine konkrete Pflichtliste statt nur der allgemeinen Regeln, damit das
+// Modell nicht selbst erst suchen muss, sondern direkt weiß, was mindestens zu prüfen/ersetzen ist.
+function buildMandatoryTermsNote(extractedTerms) {
+  const personen = (extractedTerms && extractedTerms.personen) || [];
+  const orte = (extractedTerms && extractedTerms.orteInstitutionen) || [];
+  if (personen.length === 0 && orte.length === 0) return '';
+  const lines = [];
+  lines.push('\n\nEIN SEPARATER SUCHDURCHGANG hat bereits folgende möglicherweise identifizierende Begriffe in diesem Text gefunden. Prüfe JEDEN einzelnen und ersetze ihn gemäß den Regeln oben, falls es sich tatsächlich um eine echte, identifizierende Angabe handelt:');
+  if (personen.length > 0) lines.push(`Mögliche Personennamen: ${personen.join(', ')}`);
+  if (orte.length > 0) lines.push(`Mögliche Orte/Institutionen/Firmen: ${orte.join(', ')}`);
+  lines.push('Diese Liste kann auch falsch-positive Treffer enthalten (z. B. ein ganz gewöhnliches Wort) - in dem seltenen Fall lässt du diesen einen Begriff unverändert. Aber jeder Begriff, der tatsächlich ein echter Name/Ort/Firma ist, MUSS ersetzt werden.');
+  return lines.join('\n');
+}
+
+// v2.9.1: rein mechanischer Nachher-Check (keine KI) - siehe großer Kommentar bei
+// analyzeProtectionAnonymization oben. Prüft, ob einer der separat gefundenen Begriffe nach der
+// Anonymisierung noch als GANZES WORT im Ergebnistext vorkommt (Wortgrenzen über Unicode-Buchstaben/
+// -Ziffern, damit z. B. "Karim" nicht fälschlich in einem längeren zusammengesetzten Wort anschlägt).
+function findLeftoverMandatoryTerms(resultPairs, extractedTerms) {
+  const terms = [...((extractedTerms && extractedTerms.personen) || []), ...((extractedTerms && extractedTerms.orteInstitutionen) || [])];
+  if (terms.length === 0) return [];
+  const fullText = resultPairs.map(p => `${p.question || ''} ${p.answer || ''}`).join(' \n ');
+  return terms.filter(term => {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let re;
+    try {
+      re = new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'u');
+    } catch (err) {
+      // Falls die Unicode-Wortgrenzen-Syntax in einer sehr alten Browser-Engine nicht unterstützt wird:
+      // einfacher Teilstring-Fallback statt eines harten Fehlers.
+      return fullText.includes(term);
+    }
+    return re.test(fullText);
+  });
 }
 
 // Mechanische Absicherung, getrennt von analyzeProtectionAnonymization gehalten (dieselbe Lektion wie
