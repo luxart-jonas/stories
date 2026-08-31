@@ -117,7 +117,11 @@
   .card .chevron { flex: 0 0 auto; color: var(--muted); transition: transform 0.2s ease; }
   .card[data-open="true"] .chevron { transform: rotate(180deg); }
   .card .card-body { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
-  .card[data-open="true"] .card-body { max-height: 240px; }
+  /* Feedback des Nutzers ("Texte in den Kästen sind unten abgeschnitten, z.B. bei Journalist*innen"):
+     240px hat für die inzwischen deutlich längeren Erklärtexte (v2.8) nicht mehr gereicht - jetzt
+     großzügig bemessen, plus overflow-y:auto als Sicherheitsnetz, falls ein Text auf einem sehr
+     schmalen Bildschirm/mit größerer Systemschrift trotzdem einmal länger wird. */
+  .card[data-open="true"] .card-body { max-height: 620px; overflow-y: auto; }
   .card .card-body-inner { padding: 0 20px 20px 76px; font-size: 14.5px; color: var(--muted); }
   .card[data-open="true"] { box-shadow: 0 6px 20px rgba(43,38,32,0.06); }
 
