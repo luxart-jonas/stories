@@ -105,6 +105,26 @@
     background: var(--accent-light);
   }
   .home-link-btn:hover { background: var(--accent); color: #fff; }
+  /* v2.8.1, auf Wunsch des Nutzers ("großen Info-Kasten in der Mitte für Tester, der erklärt, dass
+     sie den Simulationsmodus ausprobieren können, ohne selbst ein zeitaufwändiges eigenes Interview
+     zu führen"): erscheint zentriert, solange noch kein Interview läuft (siehe
+     updateTesterInfoBoxVisibility im Skript) - verschwindet, sobald "Simulation" gedrückt wird oder
+     über das ✕ manuell weggeklickt wird (Dismiss wird in localStorage gemerkt, siehe
+     TESTER_INFO_DISMISS_KEY, damit wiederkehrende Tester sie nicht bei jedem Laden erneut sehen). */
+  #tester-info-box {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 40; max-width: 460px; width: calc(100% - 32px);
+    background: var(--panel); border: 2px solid #2e5f8a; border-radius: 18px;
+    padding: 30px 26px 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.18); text-align: center;
+  }
+  #tester-info-box .tester-info-close {
+    position: absolute; top: 8px; right: 10px; border: none; background: none;
+    font-size: 19px; color: var(--muted); cursor: pointer; line-height: 1; padding: 6px;
+  }
+  #tester-info-box .tester-info-icon { font-size: 34px; margin-bottom: 8px; }
+  #tester-info-box h2 { font-size: 18px; margin: 0 0 12px; color: #2e5f8a; }
+  #tester-info-box p { font-size: 13.5px; line-height: 1.6; color: var(--ink); text-align: left; margin: 0 0 12px; }
+  #tester-info-box button.primary { margin-top: 4px; background: #2e5f8a; border-color: #2e5f8a; }
 
   main {
     flex: 1;
@@ -287,6 +307,19 @@
       <button id="btn-sim-story-continue" type="button" class="primary">Schließen</button>
     </div>
   </div>
+</div>
+
+<!-- v2.8.1: INFO-KASTEN FÜR TESTER (siehe updateTesterInfoBoxVisibility/dismissTesterInfoBox im
+     Skript, auf Wunsch des Nutzers: "es geht ja im Moment um die Tester ... großer Info-Kasten in der
+     Mitte, der erklärt, dass sie den Simulationsmodus ausprobieren können"). Zeigt sich nur, solange
+     kein Interview offen ist (interviewId === null) UND noch nicht weggeklickt wurde. -->
+<div id="tester-info-box" style="display:none;">
+  <button id="btn-tester-info-close" type="button" class="tester-info-close" aria-label="Hinweis schließen">✕</button>
+  <div class="tester-info-icon">🎭</div>
+  <h2>Testest du gerade arkaa?</h2>
+  <p>Wenn du kein eigenes, echtes Interview führen möchtest (das kann etwas dauern), probiere den <strong>Simulationsmodus</strong> aus: Die App erfindet sich dafür selbst eine Geschichte und führt anschließend automatisch ein Testinterview dazu – KI gegen KI.</p>
+  <p><strong>Wichtig:</strong> Die Interview-KI, die die Fragen stellt, kennt diese erfundene Geschichte selbst nicht – genau wie bei einem echten Interview weiß sie vorher nicht, was als Nächstes kommt. So lassen sich die Interviewtechnik und die Mechanik der App gut nachvollziehen, ohne selbst ein zeitaufwändiges eigenes Interview führen zu müssen.</p>
+  <button id="btn-tester-info-start" type="button" class="primary">🎭 Simulation ausprobieren</button>
 </div>
 
 <header>
@@ -3935,6 +3968,29 @@ let interviewId = null;
 let hasStory = false;
 
 const el = (id) => document.getElementById(id);
+
+// --- INFO-KASTEN FÜR TESTER (v2.8.1) -----------------------------------------------------------
+// Siehe #tester-info-box im HTML weiter oben. Der Dismiss-Status lebt bewusst in einem eigenen,
+// simplen localStorage-Eintrag statt im großen DB-Blob (siehe loadDB/saveDB) - unabhängig von jedem
+// Interview/Projekt, und einfach wieder zu entfernen, sobald die aktive Testphase vorbei ist.
+const TESTER_INFO_DISMISS_KEY = 'arkaa_tester_info_dismissed';
+function isTesterInfoDismissed() {
+  try { return localStorage.getItem(TESTER_INFO_DISMISS_KEY) === '1'; } catch (err) { return false; }
+}
+function dismissTesterInfoBox() {
+  try { localStorage.setItem(TESTER_INFO_DISMISS_KEY, '1'); } catch (err) { /* ignorieren - reine Komfortfunktion */ }
+  const box = el('tester-info-box');
+  if (box) box.style.display = 'none';
+}
+// Zeigt den Kasten NUR, solange kein Interview offen ist (interviewId === null) - sobald ein
+// Interview läuft (echt oder Simulation), würde er nur störend über dem Chat schweben. Wird deshalb
+// sowohl beim Start als auch am Ende von renderMessages() aufgerufen (siehe dort), da dort so gut wie
+// jeder Wechsel des Interview-Status ohnehin schon durchläuft.
+function updateTesterInfoBoxVisibility() {
+  const box = el('tester-info-box');
+  if (!box) return;
+  box.style.display = (!interviewId && !isTesterInfoDismissed()) ? 'block' : 'none';
+}
 const messagesEl = el('messages');
 const spinnerEl = el('spinner');
 const statusEl = el('interview-status');
@@ -4385,6 +4441,7 @@ function renderMessages(messages, iv) {
   // ONBOARDING_PANELS/startOnboarding).
   messagesEl.scrollTop = messagesEl.scrollHeight;
   applyHintGate(iv);
+  updateTesterInfoBoxVisibility();
 }
 
 function getInterview(id) { return DB.interviews.find(i => i.id === id); }
@@ -8048,6 +8105,8 @@ on('btn-export-both', 'click', exportBoth);
 on('btn-export-sim-story', 'click', exportSimulationStory);
 
 on('btn-simulation', 'click', openSimulationModal);
+on('btn-tester-info-close', 'click', dismissTesterInfoBox);
+on('btn-tester-info-start', 'click', openSimulationModal);
 on('btn-simulation-close', 'click', () => el('simulation-modal').classList.remove('open'));
 on('sim-genre', 'change', () => {
   el('sim-custom-genre-row').style.display = el('sim-genre').value === 'eigenes' ? 'block' : 'none';
@@ -8113,6 +8172,9 @@ on('btn-sim-bar-continue', 'click', () => {
 });
 
 function openSimulationModal() {
+  // v2.8.1, auf Wunsch des Nutzers ("der Kasten verschwindet, wenn Simulation gedrückt wird"): siehe
+  // #tester-info-box/dismissTesterInfoBox weiter oben.
+  dismissTesterInfoBox();
   el('sim-genre').value = 'zufall';
   el('sim-custom-genre').value = '';
   el('sim-custom-genre-row').style.display = 'none';
@@ -8146,6 +8208,10 @@ try {
     statusEl.textContent = 'Kein Interview ausgewählt';
   }
 } catch (err) { showFatalError('Fehler beim Start: ' + err.message); }
+
+// v2.8.1: Info-Kasten für Tester initial ein-/ausblenden (siehe updateTesterInfoBoxVisibility oben) -
+// zeigt sich beim allerersten Laden, solange kein Interview offen ist und er noch nicht weggeklickt wurde.
+try { updateTesterInfoBoxVisibility(); } catch (err) { /* rein kosmetisch, kein Blocker */ }
 
 // Service Worker registrieren – ein gemeinsamer Worker für die ganze arkaa-Seite (siehe
 // /service-worker.js im Hauptordner), damit eine installierte App zwischen Startseite,
