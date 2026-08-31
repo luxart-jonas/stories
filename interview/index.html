@@ -741,8 +741,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.7.8';
-const APP_BUILD = '2026-08-30 19:45 UTC';
+const APP_VERSION = '2.7.9';
+const APP_BUILD = '2026-08-31 05:14 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 
@@ -7572,7 +7572,16 @@ on('btn-toggle-prompts', 'click', () => {
 });
 on('btn-prompts-reset', 'click', resetPrompts);
 
-on('btn-list', 'click', () => { renderInterviewList(); el('list-modal').classList.add('open'); });
+// v2.7.8.1, BUGFIX (Jonas: "Konnte Button/Feld 'btn-list' nicht verknüpfen: Element #btn-list nicht
+// gefunden"): on() bricht bei einem fehlenden Ziel-Element nicht einfach nur schweigend ab, sondern
+// zeigt genau dafür bewusst den showFatalError()-Banner an (siehe Kommentar bei on() oben) - das
+// frühere Entfernen NUR des Kopf-Knopfs #btn-list (v2.7.8, "Meine Interviews" Button weg) durfte
+// deshalb nicht auch die Bindung hier stehen lassen, die genau dieses jetzt fehlende Element sucht.
+// Für den analogen, früheren Fall (Zusammenfassen-Knopf, v2.6.0, siehe Kommentar oben bei
+// btn-edit-modal-close) war das kein Problem, weil dort NIE eine eigene Bindung auf den Kopf-Knopf
+// existierte - hier schon. Fix: nur die Bindung auf den entfallenen Kopf-Knopf entfernt, das Modal
+// selbst (#list-modal/renderInterviewList) und sein eigener Schließen-Knopf bleiben unverändert
+// bestehen, für den Fall, dass ein Einstiegspunkt dorthin später wieder gebraucht wird.
 on('btn-list-close', 'click', () => el('list-modal').classList.remove('open'));
 
 on('btn-export', 'click', openExportModal);
