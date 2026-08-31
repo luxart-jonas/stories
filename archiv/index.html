@@ -105,6 +105,17 @@
   #detail-panel .a { font-size: 16px; line-height: 1.7; }
 
   footer { padding: 20px 24px; text-align: center; font-size: 12.5px; color: var(--muted); }
+
+  /* Auf Wunsch des Nutzers ("wir sollten im Archiv kenntlich machen, dass die Geschichten alle mit KI
+     entstanden sind - steht bisher nur ganz klein in den Kästen, das ist mir nicht deutlich genug"):
+     eigener, gut sichtbarer Banner direkt unter der Kopfzeile statt nur der kleinen Quellenangabe im
+     Karten-Footer (.meta-row, siehe unten) - WICHTIG dabei die richtige Aussage: nicht "die
+     Geschichten sind von einer KI erfunden", sondern "reale Erinnerungen echter Menschen, im
+     KI-geführten Interview aufgezeichnet" - alles andere wäre irreführend. */
+  .ai-notice {
+    background: var(--accent-light); border-bottom: 1px solid var(--border);
+    padding: 12px 24px; text-align: center; font-size: 13.5px; color: var(--sage); font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -118,6 +129,8 @@
     <a href="../interview/">Eigene Geschichte erzählen</a>
   </nav>
 </header>
+
+<div class="ai-notice">🤖 Alle Geschichten hier sind echte, persönliche Erinnerungen echter Menschen – aufgezeichnet und sprachlich aufbereitet im Gespräch mit einer KI.</div>
 
 <main>
   <div class="toolbar">
