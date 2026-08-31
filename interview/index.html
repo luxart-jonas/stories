@@ -71,6 +71,40 @@
      an den rechten Rand der Kopfzeile rutscht, statt zwischen den Hauptaktionen zu stehen. */
   button.btn-subtle { opacity: 0.62; font-size: 11.5px; padding: 6px 10px; margin-left: auto; }
   button.btn-subtle:hover { opacity: 0.95; }
+  /* v2.8.0, auf Wunsch des Nutzers ("der Button 'Simulation' sollte größer und deutlicher werden für
+     die Tester"): löst die vorherige, bewusst unauffällige .btn-subtle-Optik (siehe Kommentar oben)
+     für genau diesen einen Knopf wieder auf - Testpersonen SUCHEN diesen Knopf aktiv, im Unterschied
+     zu normalen Erzählenden, für die er irrelevant ist. Volle Deckkraft, größere Schrift/Fläche und
+     ein eigener, klar erkennbarer Rahmen statt der halbtransparenten Zurückhaltung, aber bewusst in
+     einer anderen Farbe als .primary (Türkis), damit er trotzdem klar als Testfunktion und nicht als
+     Hauptaktion erkennbar bleibt. */
+  button.btn-testmode {
+    margin-left: auto;
+    opacity: 1;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 8px 14px;
+    color: #2e5f8a;
+    background: #eaf2fa;
+    border: 1.5px solid #2e5f8a;
+  }
+  button.btn-testmode:hover { background: #d8e9f8; }
+  /* v2.8.0, auf Wunsch des Nutzers ("zurück zur Hauptseite ... bis jetzt nur ein Mini-Button links
+     oben, muss größer und deutlicher"): löst den vorherigen reinen Text-Link (siehe #header a weiter
+     unten im HTML) durch eine klar als Button erkennbare Fläche ab - eigener Rahmen, Hintergrund und
+     größere Schrift/Klickfläche statt eines kleinen, leicht zu übersehenden Fließtext-Links. */
+  .home-link-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 700;
+    color: var(--accent);
+    text-decoration: none;
+    margin-bottom: 8px;
+    padding: 6px 13px;
+    border: 1.5px solid var(--accent);
+    border-radius: 8px;
+    background: var(--accent-light);
+  }
+  .home-link-btn:hover { background: var(--accent); color: #fff; }
 
   main {
     flex: 1;
@@ -257,7 +291,7 @@
 
 <header>
   <div>
-    <a href="../index.html" style="display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--muted); text-decoration:none; margin-bottom:4px;" title="Zurück zur arkaa-Startseite">← arkaa</a>
+    <a href="../index.html" class="home-link-btn" title="Zurück zur arkaa-Startseite">← Zur arkaa-Startseite</a>
     <h1 id="project-name-display" title="Klicken zum Wechseln/Anlegen eines Projekts">Lade …</h1>
     <div class="sub" id="interview-status">Kein Interview ausgewählt</div>
     <div class="sub" id="version-badge" style="color:#2e7d4f;"></div>
@@ -280,9 +314,10 @@
     <!-- v2.6.2: standardmäßig verborgen, bis ein Archiv-PDF erstellt oder veröffentlicht wurde
          (siehe maybeShowReviewPrompt) - vorher gibt es ohnehin nichts sinnvoll zu exportieren. -->
     <button id="btn-export" style="display:none;">⬇️ Exportieren</button>
-    <!-- Bewusst als letztes, optisch zurückgenommenes Element (siehe .btn-subtle oben) - eine
-         Testfunktion, keine Hauptaktion. -->
-    <button id="btn-simulation" class="btn-subtle" title="Lässt die App automatisch ein komplettes Testinterview mit sich selbst führen (KI vs. KI), ohne dass du selbst antworten musst">🎭 Simulation</button>
+    <!-- Bewusst als letztes Element, aber seit v2.8.0 klar erkennbar statt optisch zurückgenommen
+         (siehe .btn-testmode oben) - eine Testfunktion, keine Hauptaktion, aber von Testpersonen
+         aktiv gesucht. -->
+    <button id="btn-simulation" class="btn-testmode" title="Lässt die App automatisch ein komplettes Testinterview mit sich selbst führen (KI vs. KI), ohne dass du selbst antworten musst">🎭 Simulation</button>
   </div>
   <button id="btn-settings" class="icon-btn" title="Einstellungen">⚙️</button>
 </header>
@@ -382,6 +417,44 @@
           <div style="display:flex; gap:8px;">
             <button id="btn-qa-edit-close" type="button">Später weiterlesen</button>
             <button id="btn-qa-edit-done" type="button" class="primary" disabled>Fertig, Interview abschließen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHUTZ-MECHANIK: AUTOMATISCHE ANONYMISIERUNG (v2.8.0, siehe detectProtectionSignals/
+         openProtectionModal im Skript). Öffnet sich nach "Fertig, Interview abschließen" oben (siehe
+         finishQaEdit/maybeGateOnProtectionThenFinalize), GENAU EINMAL pro Interview, NUR falls
+         mindestens einmal während des Gesprächs Missbrauch/Kriminelles oder Flucht/Verfolgung erkannt
+         wurde (der grüne Hinweis dazu ist da bereits vorher im Chat selbst erschienen, siehe
+         buildProtectionHintBubble) - oder als zweites Sicherheitsnetz kurz vor der Veröffentlichung
+         (siehe publishDirectly). Zwei Schritte in einem Modal: erst Erklärung + "Verstanden"-Knopf
+         (#protection-modal-intro), dann - nach der automatischen Anpassung - eine transparente Liste
+         aller Änderungen (#protection-modal-result), wie vom Nutzer ausdrücklich gefordert ("werden
+         dem Autor transparent mitgeteilt"). -->
+    <div class="modal-backdrop" id="protection-modal">
+      <div class="modal" style="max-width:640px;">
+        <div id="protection-modal-intro">
+          <h2>🛡️ Schutz deiner Geschichte</h2>
+          <div id="protection-modal-intro-text" style="font-size:13.5px; line-height:1.6;"></div>
+          <div class="row" style="justify-content:flex-end;">
+            <button id="btn-protection-confirm" type="button" class="primary">Verstanden – jetzt schützen</button>
+          </div>
+        </div>
+        <div id="protection-modal-loading" style="display:none; font-size:13.5px;">Ich passe jetzt Namen und Orte an, um dich – und andere Personen in deiner Geschichte – zu schützen …</div>
+        <div id="protection-modal-error" style="display:none;">
+          <div class="warn" id="protection-modal-error-text"></div>
+          <div class="row" style="justify-content:flex-end;">
+            <button id="btn-protection-retry" type="button" class="primary">Erneut versuchen</button>
+          </div>
+        </div>
+        <div id="protection-modal-result" style="display:none;">
+          <h2>✅ Deine Geschichte ist jetzt geschützt</h2>
+          <div class="hint" style="margin-top:0;">Was tatsächlich passiert ist, bleibt unverändert – nur diese Bezeichnungen wurden geändert, damit niemand real erkannt werden kann:</div>
+          <ul id="protection-modal-changes-list" style="font-size:13px; line-height:1.7; padding-left:20px;"></ul>
+          <div class="hint" id="protection-modal-no-changes" style="display:none;">Es gab nichts, das geändert werden musste.</div>
+          <div class="row" style="justify-content:flex-end;">
+            <button id="btn-protection-continue" type="button" class="primary">Weiter</button>
           </div>
         </div>
       </div>
@@ -875,6 +948,14 @@ const ARCHIV_CATEGORIES = [
   { id: 'beruf_identitaet', label: 'Beruf & Identität' },
   { id: 'sonstiges', label: 'Sonstiges' },
 ];
+
+// v2.8.0, SCHUTZ-MECHANIK, ZWEITES SICHERHEITSNETZ (siehe detectProtectionSignals weiter unten für
+// das erste, während des laufenden Interviews): Fällt die KI-Kategorisierung kurz vor der
+// Veröffentlichung (siehe getOrGeneratePublishSuggestion/publishDirectly weiter unten) auf eine
+// dieser beiden Kategorien, wird die Anonymisierung erzwungen, auch falls die Live-Erkennung sie
+// während des Gesprächs verpasst haben sollte - dieselbe Lektion wie überall sonst in diesem
+// Projekt: sich nie auf eine einzelne Erkennung verlassen.
+const PROTECTION_CATEGORY_IDS = ['flucht_vertreibung', 'gewalt_missbrauch'];
 
 // Dünner fetch()-Wrapper im selben Stil wie callChat() weiter unten (siehe dort) – bewusst kein
 // zusätzliches Supabase-JS-SDK per CDN, damit die App eine einzige, selbstständige HTML-Datei
@@ -1963,6 +2044,23 @@ function newInterviewRecord(id, projectId) {
     archivSourceType: null, // 'selbstbericht' | 'fremdbericht' | 'simulation'
     publishedStoryId: null, // gesetzte Supabase-Story-ID, sobald einmal erfolgreich veröffentlicht
     publishedAt: null,
+    // v2.8.0, SCHUTZ-MECHANIK (auf Wunsch des Nutzers: "wenn der Interviewer erkennt, es ist eine
+    // Fluchtgeschichte, ein Missbrauch, etwas Kriminelles, sollte er sowohl mutmaßliche Täter wie
+    // auch die Opfer schützen"). Zwei getrennte Kategorien, weil die Schutzmaßnahmen teils
+    // unterschiedlich sind (siehe buildProtectionHintBubble/buildProtectionIntroText weiter unten) -
+    // eine Geschichte kann auch beide gleichzeitig betreffen. Einmal gesetzt, bleibt ein Flag für den
+    // Rest des Interviews bestehen (wird nie wieder auf false zurückgesetzt), genau wie
+    // simulationHintShown oben.
+    protectionAbuseFlag: false, // erkennbar Missbrauch/strafrechtlich Relevantes (siehe detectProtectionSignals)
+    protectionAbuseHintAnchor: null, // Nachrichten-Position (Länge der history zum Erkennungszeitpunkt), an der der grüne Hinweis im Chat erscheint (siehe renderMessages)
+    protectionFlightFlag: false, // erkennbar Flucht/Verfolgung (siehe detectProtectionSignals)
+    protectionFlightHintAnchor: null,
+    // Wurde die automatische Anonymisierung (Namen -> Rollen, Orte verallgemeinert) bereits
+    // durchgeführt? Läuft GENAU EINMAL, bewusst erst NACH "Durchlesen & bearbeiten" (siehe
+    // finishQaEdit/openProtectionModal) - "diese Änderungen passieren ganz am Schluss, nach dem
+    // Durchlesen" war eine ausdrückliche Vorgabe des Nutzers.
+    protectionAnonymized: false,
+    protectionAnonymizationResult: null, // { changes: [{original, replacement, typ, begruendung}], appliedAt } - für die transparente Anzeige an die erzählende Person (siehe #protection-modal-result)
   };
 }
 // --- PFLICHTPUNKT-MECHANIK (v2.0.0) -----------------------------------------
@@ -2609,6 +2707,70 @@ function mentionsSpecificDate(text) {
   const hasNumericDate = /\b\d{1,2}\.\s?\d{1,2}\.(\s?\d{2,4})?/.test(t);
   const hasSeason = /\b(frühling|frühjahr|sommer|herbst|winter|regenzeit|trockenzeit)\b/.test(t);
   return hasMonth || hasNumericDate || hasSeason;
+}
+
+// --- SCHUTZ-MECHANIK: ERKENNUNG SENSIBLER THEMEN (v2.8.0) -----------------------------------------
+// Auf Wunsch des Nutzers: "wenn der Interviewer erkennt, es ist eine Fluchtgeschichte, ein
+// Missbrauch, etwas Kriminelles, sollte er sowohl mutmaßliche Täter (bei Missbrauch) wie auch die
+// Opfer schützen." Genau wie bei JEDER anderen sicherheitsrelevanten Weiche in diesem Projekt (siehe
+// z.B. mentionsFatalOrSeriousOutcome, looksLikeAftermathQuestion weiter oben) wird das NICHT allein
+// dem freien Urteil des Interview-Modells im laufenden Gespräch überlassen, sondern zusätzlich
+// mechanisch über den gesamten bisherigen Gesprächsverlauf geprüft - ein einzelner Turn kann ein
+// Thema beiläufig erwähnen, ohne dass das Modell "im Moment" daran denkt, hier zu warnen. Als
+// zweites, unabhängiges Sicherheitsnetz (siehe publishDirectly weiter unten) prüft zusätzlich die
+// KI-Kategorisierung kurz vor der Veröffentlichung noch einmal mit Blick auf das KOMPLETTE, fertige
+// Interview - fällt sie auf "Flucht & Vertreibung" oder "Gewalt & Missbrauch", greift der Schutz
+// auch dann noch, falls diese Erkennung hier ihn während des laufenden Gesprächs verpasst hätte.
+//
+// ERSTE FASSUNG, NOCH OHNE ECHTE TESTINTERVIEWS: Anders als die übrigen Regex-Sicherheitsnetze in
+// diesem Projekt, die alle aus konkreten, dokumentierten Testlauf-Lücken entstanden sind, ist dies
+// hier eine erste, bewusst eher weit gefasste Wortliste - sie wird mit echten Testinterviews
+// vermutlich noch nachjustiert werden müssen (zu eng: verpasste reale Fälle; zu weit: unnötige
+// Anonymisierung bei Geschichten, die nur beiläufig ein Reizwort streifen). Ein Fehlalarm ist hier
+// bewusst der ungefährlichere Fehler als eine verpasste Erkennung: Im schlimmsten Fall werden ein
+// paar Namen/Orte unnötig verallgemeinert (transparent gezeigt, siehe #protection-modal-result, und
+// über "Mein Interview" mit dem Zugangscode jederzeit nachträglich wieder änderbar) - eine verpasste
+// Erkennung dagegen ließe eine tatsächlich schutzbedürftige Person ungeschützt.
+function detectProtectionSignals(text) {
+  const t = (text || '').toLowerCase();
+  const abuse = /missbrauch(t|te|en|s)?\b|sexuell(e|er|en)?\s+(missbrauch|übergriff|nötigung|belästigung|gewalt)|vergewaltig(t|te|ung|ungen)?\b|sexuell genötigt|zur? sexuellen? handlung(en)? gezwungen|kindesmissbrauch|häusliche gewalt|misshandel(t|te|ung|ungen)\b|zwangsprostitution|menschenhandel|pädophil|grooming\b|\binzest\b|übergriffig(e|en|er)?\b|hat mich missbraucht|wurde missbraucht|nötigte (mich|ihn|sie)|zwang (mich|ihn|sie) (zu|dazu)|gegen meinen willen (angefasst|berührt)/.test(t);
+  const flight = /\bflucht\b|\bflüchten\b|geflohen|flüchtete(n)?\b|auf der flucht|fluchthelfer|schleuser(n)?\b|schlepper\b|asylverfahren|asylantrag|asylbewerber|politisch verfolgt|verfolgung durch (das regime|die polizei|die miliz|den geheimdienst)|geheimpolizei|geheimdienst verfolgt|bürgerkrieg|militärdiktatur|illegal(e)?\s+(ausreise|grenzübertritt)|schwarz über die grenze|musste(n)? untertauchen|fluchtroute|flüchtlingslager|abschiebung droht|politisches asyl|steckbrief\b|von der regierung gesucht/.test(t);
+  return { abuse, flight };
+}
+
+// Baut die grüne Schutz-Hinweis-Sprechblase (siehe buildSimulationHintBubble/buildClosingTransitionBubble
+// weiter unten für dasselbe visuelle Muster - zentrierte, dunkelgrüne Sprechblase statt einer normalen
+// Chat-Nachricht). "kind" ist 'abuse' oder 'flight' - beide Texte erklären zuerst WARUM überhaupt
+// verändert wird (rechtliche Verpflichtung, Schutz sowohl mutmaßlicher Täter als auch Betroffener bei
+// Missbrauch bzw. Selbstschutz bei Flucht/Verfolgung, siehe Nutzer-Vorgabe), dann WAS konkret passiert
+// (Namen -> Rollen, Orte verallgemeinert, am Ende nach dem Durchlesen, siehe openProtectionModal),
+// und bei Flucht zusätzlich die vom Nutzer ausdrücklich gewünschten Sicherheitshinweise (VPN/Tor,
+// Zugangscode lieber merken/handschriftlich notieren statt Screenshot).
+function buildProtectionHintBubble(kind) {
+  const div = document.createElement('div');
+  div.className = 'bubble hint';
+  div.style.alignSelf = 'center';
+  div.style.background = '#3a6b3a';
+  div.style.color = '#fff';
+  div.style.maxWidth = '90%';
+  div.style.textAlign = 'left';
+  const label = document.createElement('div');
+  label.style.fontSize = '10.5px';
+  label.style.letterSpacing = '0.08em';
+  label.style.textTransform = 'uppercase';
+  label.style.opacity = '0.8';
+  label.style.marginBottom = '5px';
+  label.style.textAlign = 'center';
+  label.textContent = '🛡️ Schutz-Hinweis';
+  div.appendChild(label);
+  const text = document.createElement('div');
+  if (kind === 'abuse') {
+    text.textContent = 'In deiner Geschichte geht es erkennbar um ein möglicherweise strafrechtlich relevantes Thema (z. B. Missbrauch). Aus rechtlichen Gründen sind wir verpflichtet, dich und andere in deiner Geschichte vorkommende Personen zu schützen – das gilt für mutmaßliche Täter*innen ebenso wie für Betroffene. Deshalb werden ganz am Ende, nachdem du dir alles noch einmal in Ruhe durchgelesen hast, Namen automatisch durch Rollenbezeichnungen ersetzt und Orte verallgemeinert (z. B. wird aus „Herr Müller" „der Sportlehrer", aus „Paul-Klee-Gymnasium in Overath" „ein Gymnasium in NRW"). Das verändert nichts an dem, was tatsächlich passiert ist – es schützt nur die Identität der beteiligten Personen. Bevor diese Änderungen endgültig übernommen werden, bekommst du sie dir genau gezeigt.';
+  } else {
+    text.textContent = 'In deiner Geschichte geht es erkennbar um Flucht oder Verfolgung. Aus rechtlichen und Sicherheitsgründen schützen wir dich: Ganz am Ende, nachdem du dir alles noch einmal in Ruhe durchgelesen hast, werden Namen automatisch durch Rollenbezeichnungen ersetzt und Orte verallgemeinert, ohne dass sich an der eigentlichen Geschichte etwas ändert. Bevor diese Änderungen endgültig übernommen werden, bekommst du sie dir genau gezeigt. Zusätzlich empfehlen wir dir dringend: Nutze für den Zugriff auf diese Seite ein VPN und wenn möglich den Tor-Browser. Deinen Zugangscode (oben rot zu sehen) solltest du dir am besten merken oder handschriftlich notieren, statt einen Screenshot zu machen – ein Screenshot kann leichter in falsche Hände geraten.';
+  }
+  div.appendChild(text);
+  return div;
 }
 
 // Erkennt explizite Steuerungssignale der Person (siehe Prompt-Abschnitt "NUTZERSTEUERUNG HAT
@@ -4168,7 +4330,9 @@ function buildClosingTransitionBubble(num) {
 function renderMessages(messages, iv) {
   messagesEl.innerHTML = '';
   let kiCount = 0;
+  let msgPos = 0; // laufende 1-basierte Nachrichten-Position - siehe SCHUTZ-HINWEISE unten
   for (const m of messages) {
+    msgPos++;
     // ZÄSUR-ERKENNUNG (v2.3.0, siehe CLOSING_TRANSITION_TEXT/getInterviewReply oben): Diese eine,
     // exakte Nachricht ist mechanisch von der App vorformuliert, nicht von der KI – wird deshalb
     // wie buildSimulationHintBubble als eigene, grün hervorgehobene Sprechblase dargestellt statt
@@ -4197,6 +4361,20 @@ function renderMessages(messages, iv) {
         messagesEl.appendChild(buildSimulationHintBubble());
       }
     }
+    // SCHUTZ-HINWEISE (v2.8.0, siehe detectProtectionSignals/requestAndHandleReply weiter unten):
+    // erscheinen als grüne Sprechblase direkt NACH der Antwort, die das jeweilige Thema erstmals
+    // erkennbar gemacht hat. protectionAbuseHintAnchor/protectionFlightHintAnchor speichern dafür die
+    // Nachrichten-Position zum Erkennungszeitpunkt (Länge der history in diesem Moment) - dadurch
+    // steht der Hinweis auch nach einem Neuladen der Seite immer an derselben, nachvollziehbaren
+    // Stelle im Chat, statt z.B. bei jedem Rendern ans Ende zu wandern. Bewusst NICHT Teil von
+    // DB.messages (siehe addMessage) - reine Chat-Anzeige, taucht deshalb nie im Rohtranskript, der
+    // Redaktion oder dem Archiv-PDF auf.
+    if (iv && iv.protectionAbuseFlag && iv.protectionAbuseHintAnchor === msgPos) {
+      messagesEl.appendChild(buildProtectionHintBubble('abuse'));
+    }
+    if (iv && iv.protectionFlightFlag && iv.protectionFlightHintAnchor === msgPos) {
+      messagesEl.appendChild(buildProtectionHintBubble('flight'));
+    }
     // v2.7.4: die früheren periodischen Hinweis-Sprechblasen HIER im laufenden Chat (HINT_TIMELINE,
     // je einer bei Frage 1/4/8) sind auf Wunsch des Nutzers entfallen - derselbe Inhalt läuft jetzt VOR
     // dem ersten Chat-Fenster als eigene Einführung (siehe startOnboarding/ONBOARDING_PANELS).
@@ -4216,6 +4394,31 @@ function getInterview(id) { return DB.interviews.find(i => i.id === id); }
 // Zusammenfassung dieses Kapitels aus (die Abschiedsnachricht der KI kündigt das ja an).
 async function requestAndHandleReply(iv) {
   const history = getHistory(iv.id);
+  // SCHUTZ-MECHANIK (v2.8.0, siehe detectProtectionSignals weiter oben): läuft bei JEDEM Turn erneut
+  // über den GESAMTEN bisherigen Verlauf (bewusst nicht nur über die zuletzt hinzugekommene Antwort -
+  // ein Reizwort kann auch in einer früheren Antwort stecken, ohne dass die App das damals schon
+  // erkannt hätte). Ein einmal gesetztes Flag bleibt für den Rest des Interviews bestehen; der grüne
+  // Hinweis dazu (siehe renderMessages) erscheint direkt an der Nachrichtenposition, an der die
+  // Erkennung ausgelöst hat. Läuft hier VOR dem eigentlichen Modellaufruf, weil sowohl der reguläre
+  // Ablauf als auch die Simulation (siehe runSimulation) an dieser Stelle bereits sicher wissen, dass
+  // die neueste Antwort der Person bereits in "history" steckt (addMessage(..., 'nutzer', ...) läuft
+  // in beiden Fällen unmittelbar davor).
+  if (!iv.protectionAbuseFlag || !iv.protectionFlightFlag) {
+    const fullText = history.map(m => m.text).join('\n');
+    const signals = detectProtectionSignals(fullText);
+    let changed = false;
+    if (signals.abuse && !iv.protectionAbuseFlag) {
+      iv.protectionAbuseFlag = true;
+      iv.protectionAbuseHintAnchor = history.length;
+      changed = true;
+    }
+    if (signals.flight && !iv.protectionFlightFlag) {
+      iv.protectionFlightFlag = true;
+      iv.protectionFlightHintAnchor = history.length;
+      changed = true;
+    }
+    if (changed) saveDB();
+  }
   const project = getProject(iv.projectId);
   const priorChapterRecords = getProjectInterviews(iv.projectId).filter(x => x.id !== iv.id);
   const isFirstChapterOfProject = priorChapterRecords.length === 0;
@@ -4604,7 +4807,11 @@ function finishQaEdit() {
   qaEditPairs = null;
   el('qa-edit-modal').classList.remove('open');
   renderMessages(getHistory(iv.id), iv);
-  finalizeReview();
+  // v2.8.0: SCHUTZ-MECHANIK - siehe maybeGateOnProtectionThenFinalize/openProtectionModal weiter
+  // unten. Schiebt sich bewusst genau HIER dazwischen, nach dem Durchlesen, bevor das Interview als
+  // "abgeschlossen" gilt (siehe Nutzer-Vorgabe "diese Änderungen passieren ganz am Schluss, nach dem
+  // Durchlesen").
+  maybeGateOnProtectionThenFinalize(iv);
 }
 
 // Zeigt bzw. versteckt den Rohtext-Überprüfungs-Block (siehe #review-prompt) passend zum aktuellen
@@ -5941,6 +6148,21 @@ async function publishDirectly(iv) {
   if (statusLine) statusLine.textContent = 'Wird veröffentlicht …';
   try {
     const suggestion = await getOrGeneratePublishSuggestion(iv);
+    // SCHUTZ-MECHANIK, ZWEITES SICHERHEITSNETZ (siehe PROTECTION_CATEGORY_IDS/detectProtectionSignals
+    // weiter oben): dieselbe KI-Kategorisierung, die ohnehin für die Archiv-Einordnung läuft, sieht
+    // dabei das KOMPLETTE, fertige Interview auf einmal - fällt sie auf "Flucht & Vertreibung" oder
+    // "Gewalt & Missbrauch" und die Anonymisierung ist noch nie gelaufen, wird die Veröffentlichung
+    // hier gestoppt und stattdessen das Schutz-Modal geöffnet ('publish'-Kontext, siehe
+    // continueAfterProtection) - danach versucht die Person "Veröffentlichen" einfach erneut.
+    if (PROTECTION_CATEGORY_IDS.includes(suggestion.category_id) && !iv.protectionAnonymized) {
+      if (suggestion.category_id === 'gewalt_missbrauch') iv.protectionAbuseFlag = true;
+      if (suggestion.category_id === 'flucht_vertreibung') iv.protectionFlightFlag = true;
+      saveDB();
+      if (btn) btn.disabled = false;
+      if (statusLine) statusLine.textContent = '';
+      openProtectionModal(iv, 'publish');
+      return;
+    }
     const project = getProject(iv.projectId);
     const sourceType = iv.archivSourceType
       || ((project && project.isSimulation) ? 'simulation' : 'selbstbericht');
@@ -6641,6 +6863,236 @@ async function getOrGenerateRedaction(iv) {
   iv.redaction = { ...result, generatedAt: new Date().toISOString() };
   saveDB();
   return iv.redaction;
+}
+
+// --- SCHUTZ-MECHANIK: AUTOMATISCHE ANONYMISIERUNG (v2.8.0) --------------------------------------
+// Siehe detectProtectionSignals/buildProtectionHintBubble weiter oben für die Erkennung und den
+// grünen Hinweis, der bereits WÄHREND des Interviews im Chat erscheint. DIESE Funktion hier führt
+// die eigentliche Änderung aus - bewusst erst NACH "Durchlesen & bearbeiten" ausgelöst (siehe
+// finishQaEdit/openProtectionModal weiter unten), weil der Nutzer das ausdrücklich so vorgegeben hat
+// ("diese Änderungen passieren ganz am Schluss, nach dem Durchlesen ... und werden dem Autor
+// transparent mitgeteilt"). Arbeitet auf denselben Frage-Antwort-Paaren wie die REDAKTION oben
+// (buildRedactionPairs) - im Unterschied dazu wird hier aber (anders als bei der Redaktion, die
+// "kein einziges Wort verändern" darf) GENAU AN DEN IDENTIFIZIERENDEN STELLEN bewusst umformuliert,
+// alles andere bleibt unangetastet.
+const PROTECTION_ANONYMIZATION_SYSTEM_PROMPT = `Du bist ein erfahrener Redakteur, der ein bereits fertig ` +
+  `geführtes Interview zu einer persönlichen Lebensgeschichte vor der Veröffentlichung anonymisiert - genau ` +
+  `wie ein Journalist, der eine Quelle bei einem sensiblen Thema (z. B. Missbrauch, eine Straftat, Flucht oder ` +
+  `Verfolgung) schützt, bevor der Text veröffentlicht wird.\n\n` +
+  `DEIN AUFTRAG: Ersetze ALLE echten Eigennamen von Personen und ALLE zu konkreten, identifizierenden Orts-/` +
+  `Institutionsangaben durch verallgemeinerte oder rollenbezogene Bezeichnungen. Ziel ist es, dass weder die ` +
+  `erzählende Person noch andere in der Geschichte vorkommende Personen (das schließt sowohl mutmaßliche ` +
+  `Täter*innen als auch Betroffene ein) anhand des veröffentlichten Textes real identifiziert werden können.\n\n` +
+  `REGELN:\n` +
+  `1. FAKTEN BLEIBEN UNANGETASTET. Was tatsächlich geschehen ist - der Ablauf, die Handlungen, Beziehungen, ` +
+  `Ursachen, die Reihenfolge der Ereignisse - darf sich durch deine Änderung inhaltlich NICHT verändern. Du ` +
+  `ersetzt ausschließlich identifizierende Bezeichnungen, niemals den Inhalt einer Aussage.\n` +
+  `2. PERSONEN: Ersetze echte Vor-/Nachnamen durch eine passende Rollenbezeichnung, wenn diese aus dem Kontext ` +
+  `eindeutig hervorgeht (z. B. "Herr Müller" -> "der Sportlehrer", "meine Tante Sabine" -> "meine Tante"). Ist ` +
+  `keine natürliche Rollenbezeichnung möglich, verwende stattdessen einen austauschbaren Platzhaltervornamen ` +
+  `mit dem Zusatz "(Name von der Redaktion geändert)" (z. B. "Karim (Name von der Redaktion geändert)"). Die ` +
+  `erzählende Person selbst (Ich-Perspektive) wird nicht verändert.\n` +
+  `3. ORTE/INSTITUTIONEN: Ersetze konkrete, identifizierende Orts- oder Institutionsnamen (Schulen, Straßen, ` +
+  `Dörfer, kleine Orte, Kliniken, Firmen, Stadtteile etc.) durch eine sinnvolle Verallgemeinerung eine Ebene ` +
+  `höher, die die Geschichte weiterhin verständlich hält (z. B. "Paul-Klee-Gymnasium in Overath" -> "ein ` +
+  `Gymnasium in NRW", "die Dorfschule in Kleinort" -> "eine Dorfschule in Süddeutschland"). Große, für die ` +
+  `Anonymität unkritische Orte (z. B. ein bloßes Land oder eine Großstadt ohne weitere Präzisierung) müssen ` +
+  `NICHT verallgemeinert werden, wenn sie für sich genommen nicht identifizierend sind.\n` +
+  `4. ZEITANGABEN: Nur wenn ein exaktes Datum in Kombination mit anderen Angaben identifizierend wirken ` +
+  `könnte, darfst du es leicht verallgemeinern (z. B. ein exaktes Datum -> nur Monat und Jahreszeit, oder ein ` +
+  `Jahr -> "Anfang der 2010er-Jahre"). Die zeitliche REIHENFOLGE und der ungefähre Abstand zwischen ` +
+  `Ereignissen müssen erhalten bleiben. Ändere Zeitangaben nur, wenn es für den Schutz der Identität wirklich ` +
+  `nötig ist - im Zweifel unverändert lassen.\n` +
+  `5. KONSISTENZ: Verwende für dieselbe reale Person bzw. denselben realen Ort im GESAMTEN Text durchgehend ` +
+  `dieselbe Ersetzung.\n` +
+  `6. Du darfst an den Fragen und Antworten sonst NICHTS verändern - keine Kürzung, keine Umformulierung ohne ` +
+  `identifizierenden Grund, keine neuen Inhalte. Die Anzahl der Frage-Antwort-Paare bleibt exakt gleich, in ` +
+  `exakt gleicher Reihenfolge.\n\n` +
+  `Gib deine Antwort AUSSCHLIESSLICH als valides JSON-Objekt zurück, ohne Markdown-Codeblock, in genau diesem ` +
+  `Format:\n` +
+  `{\n  "changes": [ { "original": "...", "replacement": "...", "typ": "person" oder "ort" oder "zeit", ` +
+  `"begruendung": "kurze Begründung in einem Satz" } ],\n  "qa": [ { "question": "... (mit angewendeten ` +
+  `Ersetzungen, oder null falls dieses Paar keine Frage hat)", "answer": "... (mit angewendeten Ersetzungen, ` +
+  `oder null falls dieses Paar keine Antwort hat)" } ]\n}\n\n` +
+  `"qa" muss GENAU so viele Einträge enthalten wie die Eingabe, in exakt derselben Reihenfolge. Enthält ein ` +
+  `Paar in der Eingabe keine Frage bzw. keine Antwort, bleibt das entsprechende Feld null.`;
+
+// Ruft die KI EINMAL mit dem kompletten, bereits fertigen Kapitel auf und liefert die validierte,
+// mechanisch abgesicherte Anonymisierung zurück. Nutzt dieselbe Paar-Zerlegung wie die Redaktion oben
+// (buildRedactionPairs).
+async function analyzeProtectionAnonymization(iv) {
+  const history = getHistory(iv.id);
+  const pairs = buildRedactionPairs(history);
+  if (pairs.length === 0) return { pairs: [], changes: [] };
+
+  const promptBody = pairs.map(p =>
+    `PAAR ${p.id}:\n` + (p.question ? `FRAGE: ${p.question}\n` : '') + (p.answer ? `ANTWORT: ${p.answer}\n` : '')
+  ).join('\n');
+  const userContent = `Hier ist das vollständige, fertige Interview als nummerierte Frage-Antwort-Paare:\n\n${promptBody}`;
+
+  async function attempt(extra) {
+    return callChat(PROTECTION_ANONYMIZATION_SYSTEM_PROMPT + (extra || ''), [{ role: 'user', content: userContent }], 4000);
+  }
+  const raw = await attempt();
+  let parsed;
+  try {
+    parsed = parseJsonResponse(raw);
+  } catch (err) {
+    try {
+      const raw2 = await attempt('\n\nWICHTIG: Gib AUSSCHLIESSLICH valides, vollständiges JSON zurück, ohne Markdown-Codeblock.');
+      parsed = parseJsonResponse(raw2);
+    } catch (err2) {
+      parsed = robustParseJson(raw, {});
+    }
+  }
+  return sanitizeAnonymizationResult(pairs, parsed);
+}
+
+// Mechanische Absicherung, getrennt von analyzeProtectionAnonymization gehalten (dieselbe Lektion wie
+// überall sonst in diesem Projekt: der vom Modell gelieferten Paar-Liste wird nicht blind vertraut).
+// Anders als bei der Redaktion/dem Reihenfolge-Vorschlag oben (wo bei Problemen die GESAMTE Antwort
+// verworfen wird) fällt diese Absicherung PRO PAAR einzeln zurück: liefert das Modell für ein
+// bestimmtes Paar nichts Brauchbares, bleibt GENAU DIESES Paar im Original-Wortlaut stehen, statt die
+// komplette Anonymisierung wegen eines einzelnen kaputten Paares zu verwerfen - wichtiger für den
+// Schutz der Person ist, dass möglichst viele identifizierende Stellen tatsächlich ersetzt werden.
+function sanitizeAnonymizationResult(pairs, parsed) {
+  const qaArr = Array.isArray(parsed && parsed.qa) ? parsed.qa : [];
+  const sameLength = qaArr.length === pairs.length;
+  const resultPairs = pairs.map((p, idx) => {
+    const replacement = sameLength ? qaArr[idx] : null;
+    const q = p.question === null ? null :
+      ((replacement && typeof replacement.question === 'string' && replacement.question.trim()) ? replacement.question.trim() : p.question);
+    const a = p.answer === null ? null :
+      ((replacement && typeof replacement.answer === 'string' && replacement.answer.trim()) ? replacement.answer.trim() : p.answer);
+    return { id: p.id, question: q, answer: a };
+  });
+  const changes = Array.isArray(parsed && parsed.changes)
+    ? parsed.changes
+        .filter(c => c && typeof c.original === 'string' && typeof c.replacement === 'string' &&
+          c.original.trim() && c.replacement.trim() && c.original.trim() !== c.replacement.trim())
+        .map(c => ({
+          original: c.original.trim(),
+          replacement: c.replacement.trim(),
+          typ: ['person', 'ort', 'zeit'].includes(c.typ) ? c.typ : 'sonstiges',
+          begruendung: (c.begruendung || '').toString().trim(),
+        }))
+    : [];
+  return { pairs: resultPairs, changes };
+}
+
+// Wandelt eine Paar-Liste (siehe buildRedactionPairs/sanitizeAnonymizationResult) zurück in eine
+// flache Nachrichtenliste für replaceHistory() - dieselbe Umkehr-Logik wie in finishQaEdit weiter
+// unten für qaEditPairs, hier als eigene, wiederverwendbare Funktion.
+function pairsToMessages(pairs) {
+  const messages = [];
+  for (const p of pairs) {
+    if (p.question !== null && p.answer !== null) {
+      messages.push({ role: 'ki', text: p.question }, { role: 'nutzer', text: p.answer });
+    } else if (p.question !== null) {
+      messages.push({ role: 'ki', text: p.question });
+    } else if (p.answer !== null) {
+      messages.push({ role: 'nutzer', text: p.answer });
+    }
+  }
+  return messages;
+}
+
+// Erklärtext für Schritt 1 des Schutz-Modals (siehe #protection-modal/openProtectionModal weiter
+// unten) - fasst den bereits im Chat gezeigten grünen Hinweis (buildProtectionHintBubble) noch einmal
+// zusammen und kündigt an, was gleich automatisch passiert. Passt sich an, ob Missbrauch, Flucht oder
+// beides erkannt wurde.
+function buildProtectionIntroText(iv) {
+  const abuse = !!iv.protectionAbuseFlag;
+  const flight = !!iv.protectionFlightFlag;
+  const parts = [];
+  parts.push('Aus rechtlichen Gründen sind wir verpflichtet, dich - und andere in deiner Geschichte vorkommende Personen - zu schützen.');
+  if (abuse) parts.push('Das gilt bei Missbrauch bzw. anderen strafrechtlich relevanten Themen sowohl für mutmaßliche Täter*innen als auch für Betroffene.');
+  if (flight) parts.push('Bei Flucht- und Verfolgungsgeschichten schützt es vor allem dich selbst.');
+  parts.push('Deshalb ändern wir jetzt automatisch Namen zu Rollenbezeichnungen (z. B. „Herr Müller" → „der Sportlehrer") und verallgemeinern Orte (z. B. „Paul-Klee-Gymnasium in Overath" → „ein Gymnasium in NRW"). Was tatsächlich passiert ist, verändert sich dadurch nicht - du bekommst gleich danach genau gezeigt, was geändert wurde.');
+  if (flight) parts.push('Zur Erinnerung: Nutze für den Zugriff auf diese Seite idealerweise ein VPN und wenn möglich den Tor-Browser, und merke dir deinen Zugangscode lieber oder notiere ihn handschriftlich, statt einen Screenshot davon zu machen.');
+  return parts.join(' ');
+}
+
+// Steuert, was der "Weiter"-Knopf im Schutz-Modal (#btn-protection-continue) danach auslöst - siehe
+// openProtectionModal/continueAfterProtection weiter unten. 'review' = normaler Weg direkt nach
+// "Durchlesen & bearbeiten" (siehe finishQaEdit); 'publish' = das zweite, unabhängige Sicherheitsnetz
+// kurz vor der Veröffentlichung hat erst DORT ausgelöst (siehe publishDirectly) - dann muss danach
+// die Veröffentlichung selbst fortgesetzt werden, statt (erneut) finalizeReview() aufzurufen.
+let protectionGateContext = 'review';
+
+// Öffnet Schritt 1 des Schutz-Modals (Erklärung + "Verstanden"-Knopf). "context" siehe
+// protectionGateContext oben.
+function openProtectionModal(iv, context) {
+  protectionGateContext = context || 'review';
+  el('protection-modal-intro-text').textContent = buildProtectionIntroText(iv);
+  el('protection-modal-intro').style.display = 'block';
+  el('protection-modal-loading').style.display = 'none';
+  el('protection-modal-error').style.display = 'none';
+  el('protection-modal-result').style.display = 'none';
+  el('protection-modal').classList.add('open');
+}
+
+// Löst die eigentliche Anonymisierung aus (Klick auf "Verstanden - jetzt schützen" ODER "Erneut
+// versuchen" nach einem Fehler). Schreibt das Ergebnis über replaceHistory() direkt ins Transkript
+// zurück und zeigt anschließend Schritt 2 des Modals (transparente Liste aller Änderungen) - siehe
+// Nutzer-Vorgabe "werden dem Autor transparent mitgeteilt".
+async function runProtectionAnonymization() {
+  if (!interviewId) return;
+  const iv = getInterview(interviewId);
+  if (!iv) return;
+  el('protection-modal-intro').style.display = 'none';
+  el('protection-modal-error').style.display = 'none';
+  el('protection-modal-loading').style.display = 'block';
+  try {
+    const result = await analyzeProtectionAnonymization(iv);
+    const newMessages = pairsToMessages(result.pairs);
+    if (newMessages.length > 0) replaceHistory(iv.id, newMessages);
+    iv.protectionAnonymized = true;
+    iv.protectionAnonymizationResult = { changes: result.changes, appliedAt: new Date().toISOString() };
+    saveDB();
+    renderMessages(getHistory(iv.id), iv);
+    el('protection-modal-loading').style.display = 'none';
+    const list = el('protection-modal-changes-list');
+    list.innerHTML = '';
+    if (result.changes.length === 0) {
+      el('protection-modal-no-changes').style.display = 'block';
+    } else {
+      el('protection-modal-no-changes').style.display = 'none';
+      for (const c of result.changes) {
+        const li = document.createElement('li');
+        li.textContent = `${c.original} → ${c.replacement}`;
+        list.appendChild(li);
+      }
+    }
+    el('protection-modal-result').style.display = 'block';
+  } catch (err) {
+    el('protection-modal-loading').style.display = 'none';
+    el('protection-modal-error-text').textContent = 'Die automatische Anpassung ist fehlgeschlagen (' + err.message + '). Das ist wichtig für deinen Schutz - bitte versuche es noch einmal.';
+    el('protection-modal-error').style.display = 'block';
+  }
+}
+
+// Klick auf "Weiter" in Schritt 2 des Schutz-Modals - siehe protectionGateContext oben.
+function continueAfterProtection() {
+  el('protection-modal').classList.remove('open');
+  const iv = interviewId ? getInterview(interviewId) : null;
+  if (protectionGateContext === 'publish' && iv) {
+    publishDirectly(iv);
+  } else {
+    finalizeReview();
+  }
+}
+
+// Ersetzt seit v2.8.0 den vorherigen direkten Aufruf von finalizeReview() am Ende von finishQaEdit
+// (siehe weiter unten) - schiebt das Schutz-Modal dazwischen, GENAU EINMAL pro Interview, falls
+// mindestens eines der beiden Flags gesetzt ist. Ist der Schutz bereits erledigt (oder war er nie
+// nötig), verhält sich das exakt wie vorher.
+function maybeGateOnProtectionThenFinalize(iv) {
+  if ((iv.protectionAbuseFlag || iv.protectionFlightFlag) && !iv.protectionAnonymized) {
+    openProtectionModal(iv, 'review');
+  } else {
+    finalizeReview();
+  }
 }
 
 // --- REIHENFOLGE-VORSCHLAG MIT ZUSTIMMUNG (v2.4.1, auf Wunsch des Nutzers) ----------------------
@@ -7516,6 +7968,9 @@ on('qa-edit-ack-checkbox', 'change', toggleQaEditDoneEnabled);
 on('btn-qa-edit-use-chat', 'click', useCorrectionChatInstead);
 on('btn-qa-edit-close', 'click', () => el('qa-edit-modal').classList.remove('open'));
 on('btn-qa-edit-done', 'click', finishQaEdit);
+on('btn-protection-confirm', 'click', runProtectionAnonymization);
+on('btn-protection-retry', 'click', runProtectionAnonymization);
+on('btn-protection-continue', 'click', continueAfterProtection);
 on('btn-my-story', 'click', openMyStoryModal);
 on('btn-mystory-close', 'click', closeMyStoryModal);
 on('btn-mystory-close-2', 'click', closeMyStoryModal);
