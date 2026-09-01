@@ -78,6 +78,18 @@
     padding: 2px 4px; line-height: 1; border-radius: 8px;
   }
   .dl-btn:hover { color: var(--sage); background: var(--accent-light); }
+  /* Auf Wunsch des Nutzers ("Wir sollten eine 'diesen Artikel melden' Funktion einführen ... so
+     dass der Administrator das noch löschen kann") - dezenter Button neben dem Download-Icon in
+     jeder Karte sowie zusätzlich in der Detailansicht (siehe .close-row unten). Bewusst zurückhaltend
+     eingefärbt (kein Rot/Alarm-Look in der normalen Kartenansicht), erst im Melde-Dialog selbst wird
+     es deutlicher. */
+  .card-top { position: relative; }
+  .report-btn {
+    border: none; background: transparent; color: var(--muted); cursor: pointer; font-size: 15px;
+    padding: 2px 4px; line-height: 1; border-radius: 8px; opacity: .7;
+  }
+  .report-btn:hover { color: #b45309; background: #fdf3ec; opacity: 1; }
+  .card-actions { display: flex; align-items: center; gap: 2px; }
   .card h3 { margin: 2px 0 0; font-size: 17px; line-height: 1.35; font-family: Georgia, "Times New Roman", serif; }
   .card .teaser { font-size: 13.5px; color: var(--muted); line-height: 1.5; flex: 1; }
   .card .meta-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 4px; }
@@ -116,6 +128,36 @@
     background: var(--accent-light); border-bottom: 1px solid var(--border);
     padding: 12px 24px; text-align: center; font-size: 13.5px; color: var(--sage); font-weight: 600;
   }
+
+  /* Melden-Dialog (siehe openReportModal/submitReport unten) - eigenes, kleines Overlay mit
+     höherem z-index als #detail-overlay (50), damit es auch aus der Detailansicht heraus aufgehen
+     kann, ohne diese vorher schließen zu müssen. */
+  #report-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(43,38,32,.55); z-index: 200;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #report-panel {
+    background: var(--panel); border-radius: 14px; max-width: 420px; width: 100%; padding: 24px 26px 26px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  #report-panel h2 { font-size: 17px; margin: 0 0 4px; }
+  #report-panel .report-sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+  .report-reason-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; font-size: 14px; cursor: pointer; }
+  .report-reason-row input { margin-top: 3px; }
+  #report-detail {
+    width: 100%; box-sizing: border-box; margin-top: 6px; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--border); font-size: 13.5px; font-family: inherit; resize: vertical; min-height: 60px;
+  }
+  #report-panel .report-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+  #report-panel button {
+    border-radius: 999px; padding: 9px 16px; font-size: 13.5px; font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+  }
+  #btn-report-cancel { background: #fff; color: var(--ink); }
+  #btn-report-submit { background: #b45309; border-color: #b45309; color: #fff; }
+  #btn-report-submit:disabled { opacity: .6; cursor: default; }
+  #report-status { font-size: 13px; margin-top: 10px; min-height: 16px; }
+  #report-status.error { color: #b91c1c; }
+  #report-status.ok { color: var(--sage); }
 </style>
 </head>
 <body>
@@ -152,6 +194,25 @@
 
 <div id="detail-overlay">
   <div id="detail-panel"></div>
+</div>
+
+<div id="report-overlay">
+  <div id="report-panel">
+    <h2>🚩 Geschichte melden</h2>
+    <div class="report-sub">Melde diese Geschichte, wenn sie gegen geltendes Recht oder die <a href="../agb/" target="_blank" rel="noopener">Nutzungsbedingungen</a> verstößt (z. B. eine Anleitung zu einer Straftat, eine Gewaltandrohung oder eine Verletzung von Persönlichkeitsrechten). Der Betreiber prüft jede Meldung von Hand.</div>
+    <form id="report-form">
+      <label class="report-reason-row"><input type="radio" name="reason" value="illegal_content" checked /> Rechtswidriger oder gefährdender Inhalt (z. B. Anleitung zu einer Straftat, Gewaltandrohung)</label>
+      <label class="report-reason-row"><input type="radio" name="reason" value="personal_rights" /> Verletzung von Persönlichkeitsrechten (z. B. eine erkennbare, nicht geschützte Person)</label>
+      <label class="report-reason-row"><input type="radio" name="reason" value="spam" /> Spam oder kein echter Erfahrungsbericht</label>
+      <label class="report-reason-row"><input type="radio" name="reason" value="other" /> Anderer Grund</label>
+      <textarea id="report-detail" maxlength="1000" placeholder="Optional: kurze Erläuterung für den Betreiber …"></textarea>
+      <div id="report-status"></div>
+      <div class="report-actions">
+        <button type="button" id="btn-report-cancel">Abbrechen</button>
+        <button type="submit" id="btn-report-submit">Melden</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <script>
@@ -256,12 +317,15 @@ function render() {
   el('story-grid').innerHTML = list.map(storyCardHtml).join('');
   el('story-grid').querySelectorAll('.card').forEach(card => {
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.dl-btn')) return;
+      if (e.target.closest('.dl-btn') || e.target.closest('.report-btn')) return;
       openDetail(card.dataset.id);
     });
   });
   el('story-grid').querySelectorAll('.dl-btn').forEach(btn => {
     btn.addEventListener('click', (e) => { e.stopPropagation(); downloadStory(btn.dataset.id); });
+  });
+  el('story-grid').querySelectorAll('.report-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openReportModal(btn.dataset.id); });
   });
 }
 
@@ -270,7 +334,10 @@ function storyCardHtml(s) {
   return `<div class="card" data-id="${s.id}">
     <div class="card-top">
       <span class="category-badge">${escapeHtml(s.category_label)}</span>
-      <button class="dl-btn" data-id="${s.id}" title="Als PDF herunterladen" aria-label="Als PDF herunterladen">⬇</button>
+      <div class="card-actions">
+        <button class="dl-btn" data-id="${s.id}" title="Als PDF herunterladen" aria-label="Als PDF herunterladen">⬇</button>
+        <button class="report-btn" data-id="${s.id}" title="Diese Geschichte melden" aria-label="Diese Geschichte melden">🚩</button>
+      </div>
     </div>
     <h3>${escapeHtml(s.title)}</h3>
     <div class="teaser">${escapeHtml(s.teaser || '')}</div>
@@ -289,7 +356,10 @@ function openDetail(id) {
     </div>`).join('');
   el('detail-panel').innerHTML = `
     <div class="close-row">
-      <button id="btn-detail-download">⬇ Als PDF herunterladen</button>
+      <div class="card-actions">
+        <button id="btn-detail-download">⬇ Als PDF herunterladen</button>
+        <button id="btn-detail-report" title="Diese Geschichte melden">🚩 Melden</button>
+      </div>
       <button id="btn-detail-close">Schließen ✕</button>
     </div>
     <h1>${escapeHtml(s.title)}</h1>
@@ -298,6 +368,7 @@ function openDetail(id) {
   el('detail-overlay').style.display = 'flex';
   document.getElementById('btn-detail-close').onclick = closeDetail;
   document.getElementById('btn-detail-download').onclick = () => downloadStory(id);
+  document.getElementById('btn-detail-report').onclick = () => openReportModal(id);
   history.pushState({ storyId: id }, '', '#story-' + id);
 }
 function closeDetail() {
@@ -308,6 +379,58 @@ el('detail-overlay').addEventListener('click', (e) => { if (e.target === el('det
 window.addEventListener('popstate', () => {
   const m = location.hash.match(/^#story-(.+)$/);
   if (m) openDetail(m[1]); else closeDetail();
+});
+
+// v1: "🚩 Melden" - siehe Kommentar bei report-overlay/.report-btn oben. Schreibt NICHT direkt in
+// die Datenbank (anon hat dafür keine RLS-Rechte), sondern ruft die Edge Function "report-story"
+// auf (server-seitig, mit Ratenbegrenzung, siehe dortiger Quelltext) - exakt dasselbe Muster wie
+// publish-story/manage-story im Interview. Jonas sieht eingehende Meldungen über den Supabase
+// Table Editor (Tabelle "reports") und kann eine Geschichte bei Bedarf entfernen.
+let reportStoryId = null;
+function openReportModal(id) {
+  reportStoryId = id;
+  el('report-form').reset();
+  const statusEl = el('report-status');
+  statusEl.textContent = '';
+  statusEl.className = '';
+  el('btn-report-submit').disabled = false;
+  el('btn-report-submit').textContent = 'Melden';
+  el('report-overlay').style.display = 'flex';
+}
+function closeReportModal() {
+  el('report-overlay').style.display = 'none';
+  reportStoryId = null;
+}
+el('btn-report-cancel').addEventListener('click', closeReportModal);
+el('report-overlay').addEventListener('click', (e) => { if (e.target === el('report-overlay')) closeReportModal(); });
+el('report-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!reportStoryId) return;
+  const reason = el('report-form').querySelector('input[name="reason"]:checked')?.value || 'other';
+  const detail = el('report-detail').value.trim();
+  const statusEl = el('report-status');
+  el('btn-report-submit').disabled = true;
+  el('btn-report-submit').textContent = 'Wird gesendet …';
+  statusEl.textContent = '';
+  statusEl.className = '';
+  try {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/report-story', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+      body: JSON.stringify({ story_id: reportStoryId, reason, detail }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ('Fehler ' + res.status));
+    statusEl.textContent = 'Danke – deine Meldung ist eingegangen und wird geprüft.';
+    statusEl.className = 'ok';
+    el('btn-report-submit').textContent = 'Gemeldet ✓';
+    setTimeout(closeReportModal, 1800);
+  } catch (err) {
+    statusEl.textContent = 'Die Meldung konnte nicht gesendet werden (' + err.message + '). Bitte später erneut versuchen.';
+    statusEl.className = 'error';
+    el('btn-report-submit').disabled = false;
+    el('btn-report-submit').textContent = 'Melden';
+  }
 });
 
 function downloadStory(id) {
