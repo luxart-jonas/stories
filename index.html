@@ -162,6 +162,61 @@
   .footer-links a { text-decoration: none; }
   .footer-links a:hover { color: var(--ink); }
   .footer-note { margin-top: 18px; font-size: 12.5px; color: var(--muted); }
+
+  /* NUR FÜR DIE TESTPHASE (siehe Kommentare bei .tester-banner im HTML weiter unten) - komplett
+     eigener, bewusst andersfarbiger Baustein (warmes Gelb/Amber statt des sonstigen Teal/Sage),
+     damit klar erkennbar ist, dass das ein temporärer Test-Hinweis ist und kein Teil des
+     eigentlichen arkaa-Designs. Erscheint absichtlich MEHRFACH auf der Seite (Wunsch des Nutzers:
+     "sollte mehrfach auf der Hauptseite auftauchen"), alle öffnen dasselbe Formular weiter unten. */
+  .tester-banner {
+    background: #fdf3e2; border: 1px solid #f0dfb8; border-radius: 14px;
+    padding: 22px 26px; margin: 40px auto; max-width: 720px;
+    text-align: center;
+  }
+  .tester-banner .tester-kicker { font-size: 13px; font-weight: 700; color: #92640c; margin-bottom: 6px; }
+  .tester-banner p { margin: 0 0 16px; font-size: 14.5px; color: #6b5217; }
+  .tester-banner button {
+    font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer;
+    padding: 11px 22px; border-radius: 999px; border: none; background: #c8860b; color: #fff;
+  }
+  .tester-banner button:hover { opacity: 0.92; }
+
+  #tester-feedback-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(43,38,32,.5); z-index: 300;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #tester-feedback-overlay.open { display: flex; }
+  #tester-feedback-panel {
+    background: #fff; border-radius: 16px; max-width: 460px; width: 100%; padding: 28px 30px 30px;
+  }
+  #tester-feedback-panel h3 { margin: 0 0 4px; font-size: 19px; }
+  #tester-feedback-panel .sub { font-size: 13.5px; color: var(--muted); margin-bottom: 18px; }
+  .star-row { display: flex; gap: 6px; margin-bottom: 16px; }
+  .star-row button {
+    background: none; border: none; cursor: pointer; font-size: 28px; line-height: 1; padding: 0;
+    color: #ddd3bd; transition: color 0.1s ease;
+  }
+  /* Aktiv-Zustand wird per JS gesetzt (setStarRating unten) - eine reine CSS-Lösung über
+     :hover/~ würde nur nachfolgende, nicht vorausgehende Sterne einfärben können, bei normaler
+     Lese-Reihenfolge 1→5 wäre das visuell falsch. */
+  .star-row button.active { color: #e2a63b; }
+  #tester-feedback-panel label { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 6px; }
+  #tester-feedback-panel input[type="text"], #tester-feedback-panel textarea {
+    width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--border); font-family: inherit; font-size: 14px;
+  }
+  #tester-feedback-panel textarea { min-height: 100px; resize: vertical; }
+  #tester-feedback-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  #tester-feedback-actions button {
+    font-family: inherit; font-weight: 600; font-size: 13.5px; cursor: pointer;
+    padding: 10px 18px; border-radius: 999px; border: 1px solid var(--border);
+  }
+  #btn-tester-feedback-cancel { background: #fff; color: var(--ink); }
+  #btn-tester-feedback-submit { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #btn-tester-feedback-submit:disabled { opacity: 0.6; cursor: default; }
+  #tester-feedback-status { font-size: 13px; margin-top: 10px; min-height: 16px; }
+  #tester-feedback-status.error { color: #b91c1c; }
+  #tester-feedback-status.ok { color: var(--sage); }
 </style>
 </head>
 <body>
@@ -211,6 +266,18 @@
       </div>
     </div>
   </section>
+
+  <!-- NUR FÜR DIE TESTPHASE: dieser Block (und die beiden weiteren mit der Klasse "tester-banner"
+       weiter unten, sowie #tester-feedback-overlay ganz am Seitenende samt zugehörigem <script>)
+       sind absichtlich als temporäre Test-Einladung markiert - nach der Testphase können sie
+       einfach entfernt werden, ohne den Rest der Seite zu berühren. -->
+  <div class="wrap">
+    <div class="tester-banner">
+      <div class="tester-kicker">🧪 Liebe Tester:innen</div>
+      <p>Hier könnt ihr die Idee und die Website bewerten und eigene Ideen hinzufügen.</p>
+      <button type="button" onclick="openTesterFeedback()">Feedback geben</button>
+    </div>
+  </div>
 
   <section id="idee" class="alt">
     <div class="wrap">
@@ -410,6 +477,15 @@
       </div>
     </div>
   </section>
+
+  <!-- NUR FÜR DIE TESTPHASE - siehe Kommentar beim ersten .tester-banner weiter oben. -->
+  <div class="wrap">
+    <div class="tester-banner">
+      <div class="tester-kicker">🧪 Liebe Tester:innen</div>
+      <p>Wie fühlt sich arkaa bisher an? Bewertet die Idee und die Website und lasst uns eigene Ideen wissen.</p>
+      <button type="button" onclick="openTesterFeedback()">Feedback geben</button>
+    </div>
+  </div>
 
   <section id="wofuer">
     <div class="wrap">
@@ -620,6 +696,15 @@
     </div>
   </section>
 
+  <!-- NUR FÜR DIE TESTPHASE - siehe Kommentar beim ersten .tester-banner weiter oben. -->
+  <div class="wrap">
+    <div class="tester-banner">
+      <div class="tester-kicker">🧪 Liebe Tester:innen</div>
+      <p>Ihr seid unten angekommen – letzte Chance für heute: Bewertet die Idee und die Website und teilt eigene Ideen mit uns.</p>
+      <button type="button" onclick="openTesterFeedback()">Feedback geben</button>
+    </div>
+  </div>
+
 </main>
 
 <footer>
@@ -642,6 +727,37 @@
   </div>
 </footer>
 
+<!-- NUR FÜR DIE TESTPHASE: gemeinsames Formular für alle drei .tester-banner oben - EIN Formular
+     statt dreier getrennter, damit es keine doppelten IDs gibt und die Auswertung an einer Stelle
+     landet. Schreibt über die Edge Function "submit-feedback" in die eigene, unabhängige Tabelle
+     "feedback" (siehe dortiger Kommentar) - nach der Testphase können dieser ganze Block, das
+     zugehörige <script> weiter unten und die drei .tester-banner-Blöcke einfach entfernt werden. -->
+<div id="tester-feedback-overlay">
+  <div id="tester-feedback-panel">
+    <h3>Feedback für arkaa</h3>
+    <div class="sub">Nur für die Testphase gedacht – sag uns ehrlich, was du von der Idee und der Website hältst, und was dir noch fehlt.</div>
+    <form id="tester-feedback-form">
+      <label>Wie gefällt dir arkaa bisher? (optional)</label>
+      <div class="star-row" id="star-row">
+        <button type="button" data-value="1" aria-label="1 Stern">★</button>
+        <button type="button" data-value="2" aria-label="2 Sterne">★</button>
+        <button type="button" data-value="3" aria-label="3 Sterne">★</button>
+        <button type="button" data-value="4" aria-label="4 Sterne">★</button>
+        <button type="button" data-value="5" aria-label="5 Sterne">★</button>
+      </div>
+      <label for="tester-feedback-comment">Deine Bewertung / eigene Ideen</label>
+      <textarea id="tester-feedback-comment" maxlength="3000" placeholder="Was gefällt dir? Was fehlt? Was würdest du anders machen?" required></textarea>
+      <label for="tester-feedback-name">Name oder Kürzel (optional)</label>
+      <input type="text" id="tester-feedback-name" maxlength="60" placeholder="Darf auch leer bleiben" />
+      <div id="tester-feedback-status"></div>
+      <div id="tester-feedback-actions">
+        <button type="button" id="btn-tester-feedback-cancel">Abbrechen</button>
+        <button type="submit" id="btn-tester-feedback-submit">Absenden</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
   // Ein gemeinsamer Selektor für beide Karten-Gruppen (Sicherheit + Wofür/Zielgruppen, siehe
   // #info-cards/#audience-cards oben) - dieselbe Klick-Mechanik, kein zweites Script nötig.
@@ -661,6 +777,75 @@
       navigator.serviceWorker.register('service-worker.js').catch(() => {});
     });
   }
+
+  // NUR FÜR DIE TESTPHASE: Logik für die drei .tester-banner + das gemeinsame Feedback-Formular
+  // oben (#tester-feedback-overlay). Schreibt über die Edge Function "submit-feedback" (dasselbe
+  // Muster wie report-story im Archiv) in die eigene, unabhängige Tabelle "feedback" - siehe
+  // dortige Kommentare. Nach der Testphase kann dieser gesamte Block gelöscht werden.
+  const FEEDBACK_SUPABASE_URL = 'https://ktwjvgiakwnkgxvluysj.supabase.co';
+  const FEEDBACK_SUPABASE_ANON_KEY = 'sb_publishable_crL838WKaqW2osm_f8x43Q_URrOYmR0';
+  let testerFeedbackRating = null;
+
+  function openTesterFeedback() {
+    testerFeedbackRating = null;
+    document.querySelectorAll('#star-row button').forEach(b => b.classList.remove('active'));
+    document.getElementById('tester-feedback-form').reset();
+    const statusEl = document.getElementById('tester-feedback-status');
+    statusEl.textContent = '';
+    statusEl.className = '';
+    document.getElementById('btn-tester-feedback-submit').disabled = false;
+    document.getElementById('btn-tester-feedback-submit').textContent = 'Absenden';
+    document.getElementById('tester-feedback-overlay').classList.add('open');
+  }
+  function closeTesterFeedback() {
+    document.getElementById('tester-feedback-overlay').classList.remove('open');
+  }
+  document.getElementById('btn-tester-feedback-cancel').addEventListener('click', closeTesterFeedback);
+  document.getElementById('tester-feedback-overlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('tester-feedback-overlay')) closeTesterFeedback();
+  });
+  document.querySelectorAll('#star-row button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      testerFeedbackRating = Number(btn.dataset.value);
+      document.querySelectorAll('#star-row button').forEach(b => {
+        b.classList.toggle('active', Number(b.dataset.value) <= testerFeedbackRating);
+      });
+    });
+  });
+  document.getElementById('tester-feedback-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const comment = document.getElementById('tester-feedback-comment').value.trim();
+    const name = document.getElementById('tester-feedback-name').value.trim();
+    const statusEl = document.getElementById('tester-feedback-status');
+    const submitBtn = document.getElementById('btn-tester-feedback-submit');
+    if (comment.length < 3) {
+      statusEl.textContent = 'Bitte schreib etwas mehr - mindestens ein paar Worte.';
+      statusEl.className = 'error';
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Wird gesendet …';
+    statusEl.textContent = '';
+    statusEl.className = '';
+    try {
+      const res = await fetch(FEEDBACK_SUPABASE_URL + '/functions/v1/submit-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: FEEDBACK_SUPABASE_ANON_KEY, Authorization: 'Bearer ' + FEEDBACK_SUPABASE_ANON_KEY },
+        body: JSON.stringify({ comment, name: name || null, rating: testerFeedbackRating }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('Fehler ' + res.status));
+      statusEl.textContent = 'Danke für dein Feedback! 🙏';
+      statusEl.className = 'ok';
+      submitBtn.textContent = 'Gesendet ✓';
+      setTimeout(closeTesterFeedback, 1600);
+    } catch (err) {
+      statusEl.textContent = 'Konnte nicht gesendet werden (' + err.message + '). Bitte später erneut versuchen.';
+      statusEl.className = 'error';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Absenden';
+    }
+  });
 </script>
 
 </body>
