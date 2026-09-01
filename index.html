@@ -217,6 +217,21 @@
   #tester-feedback-status { font-size: 13px; margin-top: 10px; min-height: 16px; }
   #tester-feedback-status.error { color: #b91c1c; }
   #tester-feedback-status.ok { color: var(--sage); }
+
+  /* NUR FÜR DIE TESTPHASE: schreibgeschützte Liste bereits abgegebener Bewertungen/Ideen im selben
+     Modal (Wunsch des Nutzers: "sollten die Tester nicht auch die Bewertungen der anderen sehen" -
+     AUSDRÜCKLICH OHNE Antwortfunktion, siehe Gespräch dazu). Liest aus der View "feedback_public"
+     (nie ip_hash) - siehe dortiger Kommentar in der Migration. */
+  #tester-feedback-list-wrap { margin-top: 26px; border-top: 1px solid var(--border); padding-top: 18px; }
+  #tester-feedback-list-wrap h4 { margin: 0 0 4px; font-size: 14.5px; }
+  #tester-feedback-list-wrap .sub { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
+  #tester-feedback-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .feedback-item { background: #faf7f2; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .feedback-item .fi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .feedback-item .fi-name { font-size: 12.5px; font-weight: 700; }
+  .feedback-item .fi-date { font-size: 11.5px; color: var(--muted); }
+  .feedback-item .fi-stars { color: #e2a63b; font-size: 13px; letter-spacing: 1px; }
+  .feedback-item .fi-comment { font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -755,6 +770,12 @@
         <button type="submit" id="btn-tester-feedback-submit">Absenden</button>
       </div>
     </form>
+
+    <div id="tester-feedback-list-wrap">
+      <h4>Was andere Tester bisher sagen</h4>
+      <div class="sub">Nur zum Lesen – keine Antwortfunktion.</div>
+      <div id="tester-feedback-list">Lädt …</div>
+    </div>
   </div>
 </div>
 
@@ -786,6 +807,38 @@
   const FEEDBACK_SUPABASE_ANON_KEY = 'sb_publishable_crL838WKaqW2osm_f8x43Q_URrOYmR0';
   let testerFeedbackRating = null;
 
+  function escapeTesterHtml(s) {
+    return (s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function formatTesterFeedbackDate(iso) {
+    try { return new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+    catch { return ''; }
+  }
+  // NUR FÜR DIE TESTPHASE: liest die schreibgeschützte View "feedback_public" (nie ip_hash, siehe
+  // dortiger Kommentar) - bewusst OHNE Antwortfunktion (ausdrücklicher Wunsch des Nutzers).
+  async function loadTesterFeedbackList() {
+    const listEl = document.getElementById('tester-feedback-list');
+    try {
+      const res = await fetch(FEEDBACK_SUPABASE_URL + '/rest/v1/feedback_public?select=*&order=created_at.desc&limit=50', {
+        headers: { apikey: FEEDBACK_SUPABASE_ANON_KEY, Authorization: 'Bearer ' + FEEDBACK_SUPABASE_ANON_KEY },
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+      if (rows.length === 0) { listEl.textContent = 'Noch kein Feedback – sei die erste Person!'; return; }
+      listEl.innerHTML = rows.map(r => `
+        <div class="feedback-item">
+          <div class="fi-top">
+            <span class="fi-name">${escapeTesterHtml(r.name || 'Anonym')}</span>
+            <span class="fi-date">${formatTesterFeedbackDate(r.created_at)}</span>
+          </div>
+          ${r.rating ? `<div class="fi-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>` : ''}
+          <div class="fi-comment">${escapeTesterHtml(r.comment)}</div>
+        </div>`).join('');
+    } catch (err) {
+      listEl.textContent = 'Konnte bisheriges Feedback gerade nicht laden.';
+    }
+  }
+
   function openTesterFeedback() {
     testerFeedbackRating = null;
     document.querySelectorAll('#star-row button').forEach(b => b.classList.remove('active'));
@@ -796,6 +849,7 @@
     document.getElementById('btn-tester-feedback-submit').disabled = false;
     document.getElementById('btn-tester-feedback-submit').textContent = 'Absenden';
     document.getElementById('tester-feedback-overlay').classList.add('open');
+    loadTesterFeedbackList();
   }
   function closeTesterFeedback() {
     document.getElementById('tester-feedback-overlay').classList.remove('open');
@@ -838,6 +892,7 @@
       statusEl.textContent = 'Danke für dein Feedback! 🙏';
       statusEl.className = 'ok';
       submitBtn.textContent = 'Gesendet ✓';
+      loadTesterFeedbackList();
       setTimeout(closeTesterFeedback, 1600);
     } catch (err) {
       statusEl.textContent = 'Konnte nicht gesendet werden (' + err.message + '). Bitte später erneut versuchen.';
