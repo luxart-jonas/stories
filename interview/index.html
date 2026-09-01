@@ -730,17 +730,20 @@
 <div class="modal-backdrop" id="settings-modal">
   <div class="modal">
     <h2>Einstellungen <span id="version-badge-modal" style="font-size:11px; color:var(--muted); font-weight:normal;"></span></h2>
-    <label for="set-provider">KI-Anbieter</label>
+
+    <div class="hint" style="margin-top:0; background:var(--accent-light, #dbeeec); padding:10px 12px; border-radius:8px;">✅ Du kannst direkt loslegen – arkaa stellt standardmäßig ein kostenloses, begrenztes KI-Kontingent zur Verfügung, dafür ist kein eigener API-Key nötig. Trage unten nur dann einen eigenen Key ein, wenn du lieber unbegrenzt selbst zahlen möchtest oder das gemeinsame Kontingent gerade ausgeschöpft ist.</div>
+
+    <label for="set-provider">KI-Anbieter (nur bei eigenem Key relevant)</label>
     <select id="set-provider">
       <option value="anthropic">Anthropic (Claude) – empfohlen, direkt aus dem Browser getestet</option>
       <option value="deepseek">DeepSeek – experimentell, ggf. CORS-Fehler im Browser</option>
     </select>
 
-    <label for="set-key">API-Key</label>
-    <input type="text" id="set-key" placeholder="sk-..." autocomplete="off" spellcheck="false" />
+    <label for="set-key">Eigener API-Key (optional)</label>
+    <input type="text" id="set-key" placeholder="Leer lassen, um das kostenlose arkaa-Kontingent zu nutzen" autocomplete="off" spellcheck="false" />
     <div class="hint" id="set-key-preview"></div>
     <div class="hint">Dein Key wird ausschließlich lokal in diesem Browser gespeichert (localStorage) – nie im Code oder auf GitHub. Auf jedem neuen Gerät/Browser musst du ihn einmal neu eingeben. (Bewusst als Klartext-Feld, kein Passwort-Feld – manche Browser überschreiben Passwort-Felder sonst automatisch per Autofill mit gespeicherten Zugangsdaten.)</div>
-    <div class="warn">⚠️ Da diese Seite komplett im Browser läuft, wird dein Key bei jedem KI-Aufruf direkt an den Anbieter gesendet. Teile die Seiten-URL nicht mit anderen, während dein Key eingetragen ist, und nutze idealerweise einen Key mit Kostenlimit.</div>
+    <div class="warn">⚠️ Da diese Seite komplett im Browser läuft, wird ein hier eingetragener eigener Key bei jedem KI-Aufruf direkt an den Anbieter gesendet. Teile die Seiten-URL nicht mit anderen, während dein eigener Key eingetragen ist, und nutze idealerweise einen Key mit Kostenlimit.</div>
 
     <div class="row" style="justify-content:flex-start;">
       <button id="btn-test-connection" type="button">Verbindung testen</button>
@@ -2518,8 +2521,27 @@ let SETTINGS = loadSettings();
 
 // --- KI-Provider-Modul (austauschbar) ----------------------------------------
 
+// v3.1, auf ausdrücklichen Wunsch des Nutzers ("das mit dem eigenen API-Key macht keiner. ich
+// würde gerne ein Kontingent zur Verfügung stellen ... können wir das machen ohne dass jemand
+// meinen API-Key stiehlt?"): Ist KEIN eigener Key hinterlegt (der Normalfall für praktisch alle
+// Testenden), läuft der Aufruf jetzt über die Edge Function "ai-chat" - dort liegt Jonas' echter
+// KI-Anbieter-Key (aktuell DeepSeek, siehe dortiger Kommentar - "ich die API Adresse ist von
+// deepseek") AUSSCHLIESSLICH server-seitig als Supabase-Secret, wird also nie an den Browser
+// gesendet und kann so auch nicht "gestohlen" werden (siehe großer Kommentar dort zu Ratenbegrenzung
+// + Gesamtbudget). Wer trotzdem einen eigenen Key einträgt (z.B. weil das gemeinsame Kontingent
+// gerade ausgeschöpft ist, oder für unbegrenzte eigene Nutzung), bekommt weiterhin exakt den alten,
+// direkten Weg zum jeweiligen Anbieter - daran ändert sich nichts.
 async function callChat(system, messages, maxTokens = 800) {
-  if (!SETTINGS.apiKey) { throw new Error('Bitte zuerst in den Einstellungen (⚙️) einen API-Key eintragen.'); }
+  if (!SETTINGS.apiKey) {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/ai-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+      body: JSON.stringify({ system, messages, max_tokens: maxTokens }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Kontingent-Fehler ${res.status}`);
+    return (data.text || '').trim();
+  }
 
   if (SETTINGS.provider === 'deepseek') {
     const model = SETTINGS.model || 'deepseek-chat';
@@ -8605,17 +8627,15 @@ try {
   refreshStoryView();
 } catch (err) { showFatalError('Fehler beim Laden des aktuellen Projekts: ' + err.message); }
 
-// Beim ersten Laden: falls kein Key hinterlegt ist, Einstellungen automatisch öffnen
+// v3.1: kein erzwungenes Öffnen der Einstellungen mehr, wenn kein eigener Key hinterlegt ist -
+// das ist jetzt der NORMALFALL (siehe callChat oben: läuft dann automatisch über das gemeinsame
+// arkaa-Kontingent). Die Einstellungen bleiben natürlich weiterhin über ⚙️ erreichbar, für alle,
+// die lieber einen eigenen Key nutzen möchten.
 try {
-  if (!SETTINGS.apiKey) {
-    statusEl.textContent = 'Bitte zuerst in den Einstellungen (⚙️) einen API-Key eintragen';
-    setTimeout(() => { if (!SETTINGS.apiKey) openSettings(); }, 300);
-  } else {
-    // v2.6.2, auf Wunsch des Nutzers ("ich weiß ja gar nicht ob ich ein neues Interview oder eine
-    // Simulation machen will. Da braucht nicht zu stehen."): keine Text mehr, der schon vorwegnimmt,
-    // welchen der beiden Startpunkte (echtes Interview oder Simulation) die Person wählen wird.
-    statusEl.textContent = 'Kein Interview ausgewählt';
-  }
+  // v2.6.2, auf Wunsch des Nutzers ("ich weiß ja gar nicht ob ich ein neues Interview oder eine
+  // Simulation machen will. Da braucht nicht zu stehen."): keine Text mehr, der schon vorwegnimmt,
+  // welchen der beiden Startpunkte (echtes Interview oder Simulation) die Person wählen wird.
+  statusEl.textContent = 'Kein Interview ausgewählt';
 } catch (err) { showFatalError('Fehler beim Start: ' + err.message); }
 
 // v2.8.1: Info-Kasten für Tester initial ein-/ausblenden (siehe updateTesterInfoBoxVisibility oben) -
