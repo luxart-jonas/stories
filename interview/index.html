@@ -4235,13 +4235,28 @@ function acknowledgeFinalHint() {
 // Wunsch des Nutzers ("die AGBs haben wir ja schon am Anfang ... bitte keine Abfrage mehr"): für die
 // Veröffentlichung selbst gibt es seitdem KEINEN eigenen zweiten AGB-Bestätigungsschritt mehr - der
 // Text unten (Punkt 3) wurde entsprechend angepasst, siehe publishDirectly/openPublishFlow.
+//
+// v3.0, auf ausdrücklichen Wunsch des Nutzers ("bitte kümmere dich auch um ein wirklich gutes Agb.
+// denke daran das ich niemanden belangen kann es gibt ja kein login. Trotzdem will ich mich
+// persönlich schützen"): deutlich überarbeitet. Kernidee der Überarbeitung: WEIL es kein Login/keine
+// Registrierung gibt, kann Jonas als Betreiber einzelne Nutzer:innen im Zweifel weder identifizieren
+// noch rechtlich in Anspruch nehmen - deshalb verlagert der Text die Verantwortung für rechtmäßige,
+// wahrheitsgemäße Angaben ausdrücklich auf die erzählende Person selbst (Punkt 5/6 unten) UND gibt dem
+// Betreiber im Gegenzug das ausdrückliche, jederzeitige Recht, Inhalte zu entfernen (Punkt 7,
+// verknüpft mit der neuen "🚩 Melden"-Funktion im Archiv). Die kurze Fassung bleibt bewusst kurz
+// gehalten (siehe frühere Notiz "die 3 wichtigsten Sachen"), bekommt aber einen 4. Punkt, weil die
+// Verantwortungsfrage für den Schutz des Betreibers zentral ist. Die ausführliche Fassung unten ist
+// weiterhin ein von Claude verfasster Entwurf, KEINE geprüfte Rechtsberatung - die vollständige,
+// nochmals ausführlichere Fassung liegt zusätzlich unter /agb/ (siehe agb/index.html), dorthin wird
+// unten auch verlinkt. Bitte weiterhin vor dem echten Launch fachlich/rechtlich prüfen (lassen).
 const ONBOARDING_START_AGB_HTML =
   '<div style="font-size:12.5px; background:#fdf3ec; border:1px solid #eddccb; padding:10px 12px; border-radius:8px; margin-bottom:14px; color:#8a5a2e; text-align:left;">' +
-    '<div style="margin-bottom:8px; font-style:italic; opacity:0.85;">Die meisten Menschen bestätigen Nutzungsbedingungen, ohne sie gelesen zu haben. Diese drei Dinge solltest du dir trotzdem bewusst machen:</div>' +
+    '<div style="margin-bottom:8px; font-style:italic; opacity:0.85;">Die meisten Menschen bestätigen Nutzungsbedingungen, ohne sie gelesen zu haben. Diese vier Dinge solltest du dir trotzdem bewusst machen:</div>' +
     '<div style="font-weight:700; margin-bottom:6px;">📋 Bevor es losgeht:</div>' +
     '<div style="margin-bottom:4px;">1. Deine Antworten werden gespeichert, damit du jederzeit pausieren und später genau dort weitermachen kannst.</div>' +
     '<div style="margin-bottom:4px;">2. Es gibt keine klassische Registrierung – nur dein Zugangscode (siehe voriger Schritt) ermöglicht dir später, deinen Eintrag zu bearbeiten oder zu löschen.</div>' +
-    '<div>3. Noch ist nichts öffentlich. Ob und wann deine Geschichte veröffentlicht wird, entscheidest du ganz am Schluss ausdrücklich selbst, mit einer eigenen, separaten Bestätigung.</div>' +
+    '<div style="margin-bottom:4px;">3. Noch ist nichts öffentlich. Ob und wann deine Geschichte veröffentlicht wird, entscheidest du ganz am Schluss ausdrücklich selbst, mit einer eigenen, separaten Bestätigung.</div>' +
+    '<div>4. Gerade weil es keine Registrierung gibt, bist du für die Wahrheit und Rechtmäßigkeit dessen, was du erzählst, selbst verantwortlich – rechtswidrige Inhalte entfernen wir, sobald wir davon erfahren.</div>' +
   '</div>' +
   '<div class="onboarding-agb-box">' +
     '<div style="font-weight:700; margin-bottom:8px; color:inherit;">Ausführliche Nutzungsbedingungen für die Teilnahme</div>' +
@@ -4249,8 +4264,12 @@ const ONBOARDING_START_AGB_HTML =
     '<p><strong>2. Freiwillig und jederzeit änderbar.</strong> Die Teilnahme ist freiwillig und du kannst jederzeit pausieren oder abbrechen. Am Ende kannst du außerdem noch einmal alles durchlesen, ändern oder einzelne Fragen löschen, bevor irgendetwas weiter passiert.</p>' +
     '<p><strong>3. Noch nichts ist öffentlich.</strong> Solange du nicht ausdrücklich veröffentlichst, ist deine Geschichte nur über deinen eigenen Zugangscode erreichbar. Am Ende entscheidest du mit einem eigenen, großen "Veröffentlichen"-Button ausdrücklich selbst, ob und wann das passiert - eigene, gesonderte Bedingungen gibt es dafür nicht noch einmal, die stehen bereits hier.</p>' +
     '<p><strong>4. Kein Passwort, sondern ein Code.</strong> Es gibt keine klassische Registrierung. Dein Zugangscode ist der einzige Weg, dein Interview später wiederzufinden, zu bearbeiten oder zu löschen - geht er verloren, kann er derzeit nicht wiederhergestellt werden.</p>' +
-    '<p><strong>5. Speicherung.</strong> Deine Angaben werden auf der technischen Infrastruktur unseres Hosting-Partners gespeichert. Eine Weitergabe an Dritte erfolgt nur, soweit das für den technischen Betrieb notwendig ist.</p>' +
-    '<p style="margin-bottom:0;"><strong>6. Kontakt.</strong> Bei Fragen kannst du dich jederzeit an [Kontakt-E-Mail] wenden.</p>' +
+    '<p><strong>5. Deine Verantwortung für deine Angaben.</strong> Du darfst arkaa nicht nutzen, um Inhalte zu verbreiten, die gegen geltendes Recht verstoßen - insbesondere keine Anleitungen zu Straftaten (z. B. zum Bau von Waffen oder Sprengsätzen), keine Gewaltandrohungen, keine strafbaren Beleidigungen oder Verleumdungen, und keine bewusst erfundenen Tatsachenbehauptungen über echte, identifizierbare Personen. Bei "Selbstbericht" und "Fremdbericht" bestätigst du, dass die Angaben nach bestem Wissen der Wahrheit entsprechen; bei "Simulation" ist von vornherein klar erkennbar gekennzeichnet, dass es sich um eine testweise generierte Geschichte handelt.</p>' +
+    '<p><strong>6. Warum das besonders wichtig ist: kein Login heißt auch keine Nachverfolgbarkeit.</strong> Weil es keine Registrierung gibt, kann arkaa im Regelfall nicht feststellen, wer eine bestimmte Geschichte eingereicht hat, und kann einzelne Personen deshalb auch nicht ohne Weiteres rechtlich in Anspruch nehmen. Genau das macht Punkt 5 so wichtig - die Verantwortung für rechtmäßige Inhalte liegt bei dir.</p>' +
+    '<p><strong>7. Melden &amp; Entfernen.</strong> Jede veröffentlichte Geschichte kann im Archiv über "🚩 Melden" gemeldet werden. Der Betreiber darf Inhalte, die gegen diese Bedingungen oder geltendes Recht verstoßen (oder bei denen ein begründeter Verdacht darauf besteht), jederzeit und ohne Ankündigung entfernen.</p>' +
+    '<p><strong>8. Speicherung.</strong> Deine Angaben werden auf der technischen Infrastruktur unseres Hosting-Partners gespeichert. Eine Weitergabe an Dritte erfolgt nur, soweit das für den technischen Betrieb notwendig ist oder gesetzlich verlangt wird.</p>' +
+    '<p><strong>9. Nutzungsrecht statt Rechteübertragung.</strong> Die Rechte an deiner Geschichte bleiben bei dir. Mit der Veröffentlichung räumst du arkaa lediglich das Recht ein, sie im Archiv zu speichern, öffentlich zugänglich zu machen und z. B. als PDF darzustellen.</p>' +
+    '<p style="margin-bottom:0;"><strong>10. Vollständige Fassung &amp; Kontakt.</strong> Die vollständigen Nutzungsbedingungen findest du unter <a href="../agb/" target="_blank" rel="noopener">arkaa.../agb</a>. Bei Fragen erreichst du uns unter <a href="mailto:luxart@gmx.de">luxart@gmx.de</a>.</p>' +
   '</div>';
 
 // v2.7.4: jeder Eintrag = ein Bildschirm der Einführung. "body(iv)" liefert den Inhalt (darf HTML
@@ -7103,14 +7122,25 @@ const PROTECTION_ANONYMIZATION_SYSTEM_PROMPT = `Du bist ein erfahrener Redakteur
   `("Ich heiße Alex (Name von der Redaktion geändert)" liest sich falsch). Trage diese Ersetzung trotzdem ` +
   `ganz normal in "changes" ein (mit typ "person"), damit sie in der Änderungsübersicht sichtbar bleibt - nur ` +
   `im FLIESSTEXT selbst bleibt der Zusatz weg.\n` +
-  `3. ORTE/INSTITUTIONEN/FIRMEN: Ersetze JEDE konkrete, identifizierende Orts-, Institutions- oder ` +
-  `Firmenangabe (Schulen, Straßen, Dörfer, kleine Orte, Kliniken, Firmen, Agenturen, Behörden, Stadtteile ` +
-  `etc.) durch eine sinnvolle Verallgemeinerung eine Ebene höher, die die Geschichte weiterhin verständlich ` +
-  `hält (z. B. "Paul-Klee-Gymnasium in Overath" -> "ein Gymnasium in NRW", "die Dorfschule in Kleinort" -> ` +
-  `"eine Dorfschule in Süddeutschland", "Marxen & Locke Werbeagentur in Hamburg" -> "eine Hamburger ` +
-  `Agentur"). Große, für die Anonymität unkritische Orte (z. B. ein bloßes Land oder eine Großstadt ohne ` +
-  `weitere Präzisierung) müssen NICHT verallgemeinert werden, wenn sie für sich genommen nicht identifizierend ` +
-  `sind.\n` +
+  `3. ORTE/INSTITUTIONEN/FIRMEN - NUR DAS WIRKLICH KLEINRÄUMIGE WIRD VERALLGEMEINERT: Auf ausdrücklichen ` +
+  `Wunsch des Betreibers gilt hier eine klare Grenze, die du NICHT überschreiten darfst - die frühere, ` +
+  `strengere Fassung dieser Regel ging ihm zu weit ("die Verschleierung geht zu weit ... auch ein Fluss wie ` +
+  `die Donau kann genannt werden, auch Großstädte können bleiben"):\n` +
+  `   - MUSS ERHALTEN BLEIBEN, NIEMALS verallgemeinern: das Herkunftsland bzw. die Herkunftsregion einer ` +
+  `Person (z. B. "Syrien", "die Türkei", "NRW"), Flüsse und andere große geografische Landmarken (z. B. "die ` +
+  `Donau", "der Rhein", "die Alpen"), sowie Großstädte (z. B. "Hamburg", "Köln", "Berlin", "Wien") - auch ` +
+  `wenn sie zusammen mit einer Rolle oder Institution genannt werden (siehe Hamburg-Beispiel unten).\n` +
+  `   - WIRD VERALLGEMEINERT (eine Ebene höher, Geschichte bleibt verständlich): konkrete Einzel-Institutionen ` +
+  `mit Eigennamen (Schulen, Kliniken, Firmen, Agenturen, Behörden - z. B. "Paul-Klee-Gymnasium" -> "ein ` +
+  `Gymnasium", "Marxen & Locke Werbeagentur" -> "eine Werbeagentur"), sowie kleinräumige Orte, die für sich ` +
+  `genommen schon sehr wenige Menschen infrage kommen lassen (kleine Dörfer, Kleinstädte, Stadtteile, ` +
+  `Straßennamen - z. B. "die Dorfschule in Kleinort" -> "eine Dorfschule"). Eine Großstadt darf dabei als ` +
+  `Kontext stehen bleiben, auch wenn die Institution selbst verallgemeinert wird (z. B. "Marxen & Locke ` +
+  `Werbeagentur in Hamburg" -> "eine Werbeagentur in Hamburg", NICHT "eine Hamburger Agentur" nötig - Hamburg ` +
+  `darf einfach so stehen bleiben).\n` +
+  `   - Im Zweifel bei einem Ort/einer Region: je größer/bekannter, desto eher STEHEN LASSEN. Nur bei ` +
+  `wirklich kleinen, seltenen Ortsnamen (Dörfer, Stadtteile) oder konkreten Einzel-Institutionen greift diese ` +
+  `Regel.\n` +
   `4. ZEITANGABEN: Nur wenn ein exaktes Datum in Kombination mit anderen Angaben identifizierend wirken ` +
   `könnte, darfst du es leicht verallgemeinern (z. B. ein exaktes Datum -> nur Monat und Jahreszeit, oder ein ` +
   `Jahr -> "Anfang der 2010er-Jahre"). Die zeitliche REIHENFOLGE und der ungefähre Abstand zwischen ` +
