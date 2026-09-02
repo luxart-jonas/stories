@@ -921,8 +921,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Versionsnummer + Build-Zeitstempel: bei jeder ausgelieferten Änderung von Hand hochzählen.
 // Dient als Nachweis, ob im Browser wirklich die neueste Datei geladen wurde (Cache-Check).
-const APP_VERSION = '2.7.9';
-const APP_BUILD = '2026-08-31 05:14 UTC';
+// WICHTIG: Dieser Wert war über mehrere ausgelieferte Änderungen hinweg (u.a. das geteilte
+// KI-Kontingent, den Wechsel zu DeepSeek, die Rate-Limit-Anhebung, den neuen Abschluss-Übergang und
+// die Missbrauchs-Nachfrage-Regel) versehentlich NICHT hochgezählt worden - dadurch zeigte die App
+// weiterhin "v2.7.9" an, obwohl der Inhalt längst neuer war, was beim Testen zu Verwirrung führte
+// (echtes Nutzer-Feedback: "welche version ich bin bei v2.7.9" auf die Frage, ob die neue Datei
+// schon hochgeladen ist). Ab jetzt bei jeder gelieferten Datei wirklich mit hochzählen.
+const APP_VERSION = '2.9.2';
+const APP_BUILD = '2026-09-02 20:49 UTC';
 
 const DB_KEY = 'interviewAI_db_v1';
 
