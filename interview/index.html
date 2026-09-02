@@ -1671,6 +1671,24 @@ achtete, ob sie abgelenkt war). Ob sich dadurch eine tiefere, bisher unerzählte
 nicht: Die Nachfrage selbst gehört zur gründlichen Ursachenklärung dazu, genau wie bei einem
 technischen oder zwischenmenschlichen Auslöser.
 
+SONDERFALL: KURZE DISCLOSURE VON MISSBRAUCH ODER GEWALT (WICHTIG, echtes Nutzer-Feedback – die KI
+wich hier bisher erkennbar aus und fragte gar nicht mehr weiter): Nennt die Person das eigentliche
+Geschehen zunächst nur in einem knappen, unausgeführten Satz – z. B. "Er hat mich missbraucht.",
+"Sie hat mich geschlagen.", "Ich wurde vergewaltigt." –, ist das noch KEIN ausreichend geklärtes
+Ereignis (siehe STORY GAP DETECTION oben): Es beantwortet ungefähr WAS geschah, nicht WAS GENAU. Wie
+bei jedem anderen Ereignis darfst du hier NICHT einfach zum nächsten Punkt übergehen, ohne wenigstens
+einmal nachgefragt zu haben, was genau passiert ist (dieselbe Kausalitäts-Logik wie in den Beispielen
+oben) – aber besonders behutsam und ausdrücklich freiwillig. Deine Frage bleibt weiterhin GENAU EIN
+Fragesatz (siehe MECHANISCHE FAUSTREGEL oben, kein separater Einleitungssatz davor), verbindet darin
+aber die eigentliche Bitte um mehr Konkretes fest mit der Erlaubnis, nicht zu antworten bzw. es in
+eigenen, allgemeineren Worten statt in expliziten Details zu beschreiben. Gute Beispiele für eine
+einzelne, behutsame Frage in so einem Moment: "Magst du mir sagen, was genau passiert ist, du musst
+dabei nicht ins Detail gehen und kannst es auch in eigenen, allgemeineren Worten umschreiben?" oder
+"Kannst du in groben Zügen beschreiben, was er getan hat, wenn du magst, auch ohne genaue Details?".
+Lehnt die Person daraufhin ab, bleibt vage oder wechselt erkennbar das Thema, akzeptiere das sofort
+und frage nicht ein zweites Mal auf dieselbe Weise nach (siehe KEINE FRAGEN-SCHLEIFE oben) – aber die
+eine, behutsame Nachfrage selbst darf nicht ausbleiben, nur weil das Thema schwer ist.
+
 GEWICHTUNG: EREIGNIS UND URSACHEN VOR NACHWIRKUNG (WICHTIG): Bei einem Interview über ein
 einzelnes, klar abgegrenztes Ereignis (z. B. einen Unfall) soll der GRÖSSTE Teil des Gesprächs auf
 die beteiligten Personen/Beziehungen, das eigentliche Ereignis und seine Ursachen entfallen – nicht
@@ -1899,21 +1917,45 @@ formulierst NICHT du, sondern die App selbst mit einem festen Übergangssatz –
 "message" lieferst, wird für diesen einen Turn ohnehin überschrieben. Antworte trotzdem ganz normal
 mit phase="closing".
 
+SONDERFALL abschlussfragen_gestellt=1 (die ANTWORT der Person auf die feste Übergangs-Einladung von
+oben, die ausdrücklich Raum gibt, noch etwas Eigenes einzubringen, bevor die vorbereiteten
+persönlichen Fragen kommen – v2.9.2, auf Wunsch des Nutzers): Anders als bei den späteren
+Abschlussfragen-Turns (siehe unten) hast du hier
+AUSNAHMSWEISE eine dritte Möglichkeit neben "weiter" (phase="closing") und "beenden" (phase="done"):
+Kündigt die Person hier tatsächlich etwas Neues an, wovon im bisherigen Gespräch noch nie die Rede
+war (z. B. "Ich möchte noch erzählen, was mit meiner Schwester passiert ist.", eine bisher unerwähnte
+Person, ein bisher unerwähntes Ereignis), antwortest du mit phase="interview" und stellst dazu EINE
+gezielte, konkrete Frage genau zu diesem neuen Inhalt – ganz normale Fakten-Fragen-Regeln gelten
+dabei (WER/WANN/WO/WAS/WARUM, siehe REIHENFOLGE BEI EINEM NEUEN EREIGNIS oben, keine Gefühlsfragen).
+Das ist die EINZIGE Stelle in der gesamten Abschlussphase, an der ein Rückwechsel zu "interview"
+erlaubt ist (siehe sonst "niemals wieder interview" bei den phase-Regeln unten) – sie greift NUR bei
+abschlussfragen_gestellt=1, NICHT bei späteren Abschlussfragen-Turns. Diese Zusatzrunde ist bewusst
+kurz gehalten (die App begrenzt sie zusätzlich hart auf wenige Fragen, unabhängig von dieser
+Anweisung) – vertiefe das neue Thema so weit, wie es für ein grundlegendes Verständnis nötig ist,
+aber baue daraus keine komplette neue Fakten-Runde auf; sobald es ausreichend erzählt ist oder die
+Person nichts Weiteres mehr dazu hat, wechselst du wieder zu phase="closing", und die vorbereiteten
+persönlichen Abschlussfragen setzen danach genau dort fort, wo sie stehengeblieben waren. Antwortet
+die Person auf die Einladung dagegen ablehnend, knapp oder ohne wirklich neuen Inhalt (z. B. "Nein,
+das war's.", "Nichts weiter."), bleibst du stattdessen bei phase="closing" wie im Normalfall unten
+beschrieben.
+
 AB DER ZWEITEN NACHRICHT DER ABSCHLUSSPHASE (abschlussfragen_gestellt=1 oder höher, bis zu insgesamt
-VIER Turns): Die tatsächliche Frage wird NICHT von dir formuliert, sondern von der App aus einem
-vorbereiteten, zur Geschichte passenden Plan eingesetzt – was du hier als "message" lieferst, wird
-für diese Turns ohnehin überschrieben, du musst dir also keine Formulierung ausdenken. Deine einzige
-Aufgabe an dieser Stelle ist die Entscheidung, OB überhaupt weitergemacht wird: Antwortet die Person
-auf die zuletzt gestellte Abschlussfrage ablehnend oder erkennbar knapp abwinkend (siehe KEINE
-FRAGEN-SCHLEIFE oben), beendest du die Sitzung SOFORT freundlich mit phase="done", auch wenn noch
-nicht alle vier gestellt wurden. Antwortet sie inhaltlich, bleibst du bei phase="closing". Sind
-bereits VIER Abschlussfragen gestellt (abschlussfragen_gestellt ist 5 oder höher), MUSST du in
-dieser Antwort phase="done" verwenden. Baue deine Abschiedsnachricht knapp und warm auf: ein kurzer
-Dank/Abschluss, die Erwähnung, dass alles automatisch gespeichert ist. Wurde die Sitzung beendet,
-OBWOHL laut internem Status noch Pflichtpunkte offen waren (z. B. weil die Person selbst abbrechen
-wollte), erwähne kurz, dass ihr bei Gelegenheit an genau dieser Stelle weitermachen könnt – erfinde
-dabei aber kein konkretes nächstes Thema und keine Sitzungsanzahl. Sind alle Pflichtpunkte bereits
-geklärt, ist keine Ankündigung einer Fortsetzung nötig.
+VIER Turns) – NORMALFALL, sofern nicht der Sonderfall oben (nur bei abschlussfragen_gestellt=1)
+bereits phase="interview" ausgelöst hat: Die tatsächliche Frage wird NICHT von dir formuliert,
+sondern von der App aus einem vorbereiteten, zur Geschichte passenden Plan eingesetzt – was du hier
+als "message" lieferst, wird für diese Turns ohnehin überschrieben, du musst dir also keine
+Formulierung ausdenken. Deine einzige Aufgabe an dieser Stelle ist die Entscheidung, OB überhaupt
+weitergemacht wird: Antwortet die Person auf die zuletzt gestellte Abschlussfrage ablehnend oder
+erkennbar knapp abwinkend (siehe KEINE FRAGEN-SCHLEIFE oben), beendest du die Sitzung SOFORT
+freundlich mit phase="done", auch wenn noch nicht alle vier gestellt wurden. Antwortet sie
+inhaltlich, bleibst du bei phase="closing". Sind bereits VIER Abschlussfragen gestellt
+(abschlussfragen_gestellt ist 5 oder höher), MUSST du in dieser Antwort phase="done" verwenden. Baue
+deine Abschiedsnachricht knapp und warm auf: ein kurzer Dank/Abschluss, die Erwähnung, dass alles
+automatisch gespeichert ist. Wurde die Sitzung beendet, OBWOHL laut internem Status noch
+Pflichtpunkte offen waren (z. B. weil die Person selbst abbrechen wollte), erwähne kurz, dass ihr bei
+Gelegenheit an genau dieser Stelle weitermachen könnt – erfinde dabei aber kein konkretes nächstes
+Thema und keine Sitzungsanzahl. Sind alle Pflichtpunkte bereits geklärt, ist keine Ankündigung einer
+Fortsetzung nötig.
 
 ---
 TECHNISCHES AUSGABEFORMAT (SEHR WICHTIG)
@@ -1950,7 +1992,10 @@ Regeln für das Feld "phase":
   internen Status) – erst dann "done", siehe unten. WICHTIG: Steht phase im internen Status bereits
   als "closing" da, bist du bereits in der Abschlussphase – melde für JEDE weitere Antwort in
   dieser Sitzung ebenfalls "closing" (niemals wieder "interview"), bis der Deckel (5) erreicht ist
-  oder die Person erkennbar fertig ist.
+  oder die Person erkennbar fertig ist. EINZIGE AUSNAHME von "niemals wieder interview": genau bei
+  abschlussfragen_gestellt=1, siehe SONDERFALL abschlussfragen_gestellt=1 in ABSCHLUSSPHASE oben –
+  dort darf "interview" ausnahmsweise noch einmal vorkommen, wenn die Person auf die
+  Übergangs-Einladung hin wirklich etwas Neues ankündigt.
 - "done": Du hast bereits VIER Abschlussfragen gestellt (abschlussfragen_gestellt ist bereits 5
   oder mehr), oder die Person hat eindeutig signalisiert, dass sie fertig ist (siehe KEINE
   FRAGEN-SCHLEIFE oben), und "message" enthält die freundliche Abschiedsnachricht wie in
@@ -2111,6 +2156,13 @@ function newInterviewRecord(id, projectId) {
     status: 'laufend',   // laufend | pausiert | in_pruefung | abgeschlossen
     phase: 'interview',  // interview | closing | done
     closingQuestionsAsked: 0,
+    // v2.9.2: zählt die Fragen der ZUSATZRUNDE NACH DER ABSCHLUSS-EINLADUNG (siehe SONDERFALL
+    // abschlussfragen_gestellt=1 in ABSCHLUSSPHASE, CLOSING_TRANSITION_TEXT und
+    // closingExtraRoundActive in requestAndHandleReply) - eigener Zähler statt Wiederverwendung von
+    // factQuestionsAsked, damit diese kurze Zusatzrunde unabhängig vom harten 20er-Fakten-Deckel
+    // mechanisch auf MAX_CLOSING_EXTRA_FACT_QUESTIONS begrenzt werden kann, egal was das Modell
+    // selbst vorschlägt.
+    closingExtraFactQuestionsAsked: 0,
     factQuestionsAsked: 0, // Anzahl TATSÄCHLICH GESTELLTER Fakten-Fragen in dieser Sitzung (siehe
     // HARD_FACT_QUESTION_CAP) – zählt JEDE Frage, die die Person als phase="interview" zu sehen
     // bekommt, egal ob sie aus der regulären Pflichtpunkt-Warteschlange oder aus der separaten
@@ -2237,7 +2289,28 @@ const MAX_CLOSING_QUESTIONS = 5;
 // exakt diesem festen Wortlaut, damit renderMessages ihn zuverlässig per Textvergleich erkennen und
 // als eigene, grün hervorgehobene Sprechblase darstellen kann (gleiches Muster wie
 // RESUME_MESSAGE_GENERIC an anderer Stelle der App).
-const CLOSING_TRANSITION_TEXT = 'Danke, damit habe ich die wichtigsten Fakten zum Ereignis zusammen. Darf ich dir zum Abschluss noch ein paar persönliche Fragen dazu stellen?';
+// v2.9.2, auf Wunsch des Nutzers ("das bitte ersetzen ... möchte ich dir aber noch einmal Raum
+// geben, an das zu denken, was dir selbst wichtig ist"): deutlich ausführlicher als vorher – gibt
+// der Person ausdrücklich Raum, VOR den vier/fünf vorbereiteten persönlichen Abschlussfragen noch
+// selbst ein Thema einzubringen, das bisher nicht zur Sprache kam (z. B. eine noch nicht erwähnte
+// Person). Die Zahl "25 Fragen" ist bewusst kein Marketing-Rundwert, sondern entspricht ungefähr
+// der Summe aus HARD_FACT_QUESTION_CAP (20) und MAX_CLOSING_QUESTIONS (5) weiter oben. Nutzt \n für
+// Absätze - die Sprechblase (.bubble, siehe CSS) hat white-space:pre-wrap, Zeilenumbrüche werden
+// also tatsächlich sichtbar dargestellt, nicht nur intern. Die Reaktion der Person auf genau diese
+// Nachricht wird von getInterviewReply/requestAndHandleReply besonders behandelt (siehe dortige
+// Kommentare "ZUSATZRUNDE NACH DER ABSCHLUSS-EINLADUNG") - kündigt sie dort tatsächlich etwas Neues
+// an, darf die KI ausnahmsweise noch einmal kurz mit phase="interview" nachfragen, bevor es mit den
+// vorbereiteten Abschlussfragen weitergeht.
+const CLOSING_TRANSITION_TEXT = 'Ich glaube, ich habe inzwischen ein gutes Bild von deiner Geschichte.\n\n' +
+  'Die meisten Interviews bei arkaa enden nach ungefähr 25 Fragen. Bevor wir zum Abschluss noch vier ' +
+  'oder fünf persönlichere Fragen machen, möchte ich dir aber noch einmal Raum geben, an das zu ' +
+  'denken, was dir selbst wichtig ist:\n\n' +
+  'Gibt es noch etwas, das du unbedingt erzählen möchtest?\n' +
+  'Vielleicht eine Person, von der bisher noch nicht die Rede war. Ein Erlebnis, das dir gerade ' +
+  'wieder eingefallen ist. Oder etwas, das dir besonders am Herzen liegt.\n' +
+  'Zum Beispiel: „Ich möchte noch erzählen, was mit meiner Schwester passiert ist.“\n\n' +
+  'Wenn dir noch etwas fehlt, erzähl es mir jetzt. Danach können wir mit den persönlichen Fragen ' +
+  'weitermachen.';
 
 // Ergänzt eine von der KI gelieferte, event-spezifische Slot-Liste mechanisch um die immer
 // vorhandenen Pflichtkategorien (falls die KI eine davon vergessen oder anders benannt hat) sowie
@@ -3073,6 +3146,13 @@ const CLOSING_FAREWELL_MESSAGE = 'Alles klar. Dann beenden wir die Sitzung hier 
 // 5 löst den bestehenden Deckel aus (siehe MAX_CLOSING_QUESTIONS oben) – zusammen also GENAU vier
 // persönliche Fragen im Normalfall, keine fünf.
 const MAX_CLOSING_QUESTIONS_SELECTED = 4;
+// v2.9.2: hartes Sicherheitsnetz für die ZUSATZRUNDE NACH DER ABSCHLUSS-EINLADUNG (siehe SONDERFALL
+// abschlussfragen_gestellt=1 in ABSCHLUSSPHASE, CLOSING_TRANSITION_TEXT, closingExtraRoundActive in
+// requestAndHandleReply) - unabhängig davon, ob sich das Modell an "halte diese Zusatzrunde kurz"
+// im Prompt hält, erzwingt die App spätestens nach dieser Anzahl Fragen mechanisch die Rückkehr zu
+// phase="closing", damit aus der kurzen Gelegenheit, noch etwas zu ergänzen, keine zweite, endlose
+// Fakten-Runde werden kann.
+const MAX_CLOSING_EXTRA_FACT_QUESTIONS = 5;
 const CLOSING_QUESTION_POOL = [
   { id: 1, template: 'Hat dieses Erlebnis dein Leben grundlegend verändert – und wenn ja, wie?' },
   { id: 2, template: 'Wie hat sich deine Beziehung zu den Menschen, die dir am nächsten stehen, durch das Erlebte verändert?' },
@@ -3223,14 +3303,28 @@ async function getInterviewReply(history, phase, closingQuestionsAsked, priorCha
         `bevor du zum Pflichtpunkt zurückkehrst.`
       : '') +
     (slot.allSlotsResolved
-      ? `\n\nALLE PFLICHTPUNKTE SIND BEREITS GEKLÄRT ODER ÜBERSPRUNGEN: Stelle KEINE weitere inhaltliche Frage mehr ` +
-        `zum Ereignis selbst. Wechsle jetzt gemäß ABSCHLUSSPHASE in phase="closing" (bis zu VIER persönliche ` +
-        `Abschlussfragen folgen, von der App aus einem Plan eingesetzt, siehe abschlussfragen_gestellt oben) – ` +
-        `oder direkt phase="done", falls ` +
-        `abschlussfragen_gestellt bereits 5 oder höher ist. WICHTIG: Ist phase oben bereits als "closing" ` +
-        `angegeben, bist du bereits in der Abschlussphase – melde für JEDE weitere Antwort in dieser Phase ` +
-        `weiterhin phase="closing" (niemals wieder zurück zu "interview"), bis du entweder den Deckel erreichst ` +
-        `oder die Person klar signalisiert, dass sie nichts mehr ergänzen möchte (dann phase="done").`
+      ? ((slot.closingExtraRoundActive || (phase === 'closing' && Number(closingQuestionsAsked) === 1))
+          ? `\n\nZUSATZRUNDE NACH DER ABSCHLUSS-EINLADUNG MÖGLICH (siehe SONDERFALL abschlussfragen_gestellt=1 in ` +
+            `ABSCHLUSSPHASE oben): Prüfe zuerst, ob die Person in ihrer letzten Antwort tatsächlich etwas Neues ` +
+            `angekündigt oder ergänzt hat, wovon vorher noch nie die Rede war (oder, falls diese Zusatzrunde schon ` +
+            `läuft, ob noch weiter dazu zu erfahren ist). Falls JA: Frage jetzt gezielt zu genau diesem neuen ` +
+            `Inhalt weiter (WER/WANN/WO/WAS/WARUM, wie in "REIHENFOLGE BEI EINEM NEUEN EREIGNIS" oben beschrieben, ` +
+            `keine Gefühlsfragen), mit phase="interview" – ist der neue Inhalt so weit erzählt, dass ein neutraler ` +
+            `Leser ihn verstehen würde, oder hat die Person erkennbar nichts mehr dazu zu ergänzen, wechsle ` +
+            `stattdessen zu phase="closing". Halte diese Zusatzrunde kurz (wenige gezielte Fragen genügen meist), ` +
+            `baue daraus keine komplette neue Fakten-Runde auf. Falls NEIN (die Antwort war ablehnend, knapp oder ` +
+            `ohne wirklich neuen Inhalt, z. B. "Nein, das war's."): Wechsle direkt zu phase="closing" wie im ` +
+            `Normalfall unten. In beiden Fällen gilt: Sobald du zu phase="closing" wechselst, setzen die ` +
+            `vorbereiteten persönlichen Abschlussfragen automatisch genau dort fort, wo sie stehengeblieben waren ` +
+            `– du musst dir dafür keine eigene Frage ausdenken.`
+          : `\n\nALLE PFLICHTPUNKTE SIND BEREITS GEKLÄRT ODER ÜBERSPRUNGEN: Stelle KEINE weitere inhaltliche Frage mehr ` +
+            `zum Ereignis selbst. Wechsle jetzt gemäß ABSCHLUSSPHASE in phase="closing" (bis zu VIER persönliche ` +
+            `Abschlussfragen folgen, von der App aus einem Plan eingesetzt, siehe abschlussfragen_gestellt oben) – ` +
+            `oder direkt phase="done", falls ` +
+            `abschlussfragen_gestellt bereits 5 oder höher ist. WICHTIG: Ist phase oben bereits als "closing" ` +
+            `angegeben, bist du bereits in der Abschlussphase – melde für JEDE weitere Antwort in dieser Phase ` +
+            `weiterhin phase="closing" (niemals wieder zurück zu "interview"), bis du entweder den Deckel erreichst ` +
+            `oder die Person klar signalisiert, dass sie nichts mehr ergänzen möchte (dann phase="done").`)
       : '') +
     (priorChaptersContext
       ? `\n\nNUR ZUR INTERNEN ORIENTIERUNG (niemals wörtlich wiedergeben oder erwähnen): Übersicht bereits ` +
@@ -4733,6 +4827,17 @@ async function requestAndHandleReply(iv) {
   let resolvedRegularSlot = null;
   let resolvedPersonDescriptor = null;
 
+  // ZUSATZRUNDE NACH DER ABSCHLUSS-EINLADUNG (v2.9.2, siehe SONDERFALL abschlussfragen_gestellt=1
+  // in ABSCHLUSSPHASE/CLOSING_TRANSITION_TEXT oben): iv.phase steht hier ausnahmsweise wieder auf
+  // "interview", OBWOHL iv.closingQuestionsAsked bereits >= 1 ist - das kann NUR bedeuten, dass die
+  // Person auf die feste Übergangs-Einladung hin etwas Neues angekündigt hat und die KI daraufhin
+  // (siehe unten, phase === 'interview' Fall) noch einmal in die normale Fakten-Klärung
+  // zurückgewechselt ist. In diesem Fall braucht das Modell einen anderen Status-Hinweis als sonst
+  // bei bereits abgeschlossenem Faktencheck (siehe getInterviewReply/statusNote unten) - sonst
+  // widerspricht sich der Prompt selbst (einerseits "frag jetzt zum neuen Thema nach", andererseits
+  // "stelle keine weitere inhaltliche Frage mehr").
+  const closingExtraRoundActive = iv.phase === 'interview' && (iv.closingQuestionsAsked || 0) >= 1;
+
   if (personDescriptor) {
     const offenCount = project.factSlots.filter(s => s.status === 'offen').length;
     const totalCount = project.factSlots.length;
@@ -4762,6 +4867,7 @@ async function requestAndHandleReply(iv) {
       const slotInfo = {
         currentSlot: candidateSlot, offenCount, totalCount,
         allSlotsResolved: !candidateSlot && totalCount > 0,
+        closingExtraRoundActive,
       };
       const result = await getInterviewReply(history, iv.phase, iv.closingQuestionsAsked, priorChaptersContext, sessionInfo, slotInfo, iv.factQuestionsAsked);
       if (candidateSlot && result.phase === 'interview' && result.forbiddenTopicAfterRetry && attempts < MAX_SLOT_ATTEMPTS) {
@@ -4777,6 +4883,22 @@ async function requestAndHandleReply(iv) {
     const slotInfo = { currentSlot: null, offenCount: 0, totalCount: 0, allSlotsResolved: false };
     const result = await getInterviewReply(history, iv.phase, iv.closingQuestionsAsked, priorChaptersContext, sessionInfo, slotInfo, iv.factQuestionsAsked);
     message = result.message; phase = result.phase;
+  }
+
+  // HARTES SICHERHEITSNETZ für die ZUSATZRUNDE NACH DER ABSCHLUSS-EINLADUNG (siehe SONDERFALL
+  // abschlussfragen_gestellt=1 in ABSCHLUSSPHASE, CLOSING_TRANSITION_TEXT, closingExtraRoundActive
+  // oben): Greift sowohl beim allerersten Wechsel dorthin (iv.phase war noch "closing", das Modell
+  // hat gerade erst auf phase="interview" gewechselt) als auch bei jeder weiteren Frage innerhalb
+  // der bereits laufenden Zusatzrunde. Unabhängig davon, ob sich das Modell an die Prompt-Anweisung
+  // "halte diese Zusatzrunde kurz" hält, erzwingt die App spätestens nach
+  // MAX_CLOSING_EXTRA_FACT_QUESTIONS Fragen die Rückkehr zu phase="closing" - sonst könnte aus der
+  // kurzen Gelegenheit, noch etwas zu ergänzen, eine zweite, endlose Fakten-Runde werden.
+  if (phase === 'interview' && (iv.closingQuestionsAsked || 0) >= 1) {
+    iv.closingExtraFactQuestionsAsked = (iv.closingExtraFactQuestionsAsked || 0) + 1;
+    if (iv.closingExtraFactQuestionsAsked > MAX_CLOSING_EXTRA_FACT_QUESTIONS) {
+      phase = 'closing';
+      message = 'Danke, das nehme ich gerne mit in deine Geschichte auf. Machen wir jetzt mit den restlichen Fragen weiter.';
+    }
   }
 
   // v2.4.4, auf Wunsch des Nutzers ("gibt der KI einfach 20 Fragen ... die KI soll sich dann 4
